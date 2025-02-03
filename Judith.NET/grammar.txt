@@ -1,0 +1,60 @@
+﻿top_level_stmt  > declaration
+				;
+
+declaration     > var_decl
+                ;
+
+var_decl        > ( "const" | "var" ) IDENTIFIER ( ":" IDENTIFIER )? ( "=" expression )?
+				;
+
+expression      > addition_expr
+				| unary
+				| binary
+				| grouping
+				;
+
+addition_expr   > math_expr (( "+" | "-" ) math_expr)*
+				;
+
+math_expr		> unary_left (( "*" | "/") unary_left)*
+
+unary_left		> ( "not" | "-" | "~" ) unary_left
+				| primary
+				;
+
+primary			> literal_expr
+				| identifier_expr
+				| "(" expression ")"
+
+identifier_expr > IDENTIFIER
+				;
+
+literal_expr	> literal
+				;
+
+literal			> NUMBER
+				| STRING
+				| "true"
+				| "false"
+				| "null"
+				;
+
+-----------
+
+unary			> ( "-" | "not" ) expression
+				;
+
+binary			> expression operator expression
+				;
+
+operator		> "=="
+				| "!="
+				| "<"
+				| "<="
+				| ">"
+				| ">="
+				| "+"
+				| "-"
+				| "*"
+				| "/"
+				;

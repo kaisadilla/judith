@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.10.34916.146
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Judith.NET", "Judith.NET.csproj", "{E6E4FB9F-E68D-4980-8410-E057326B4AC5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Judith.NET.Tests", "..\Judith.NET.Tests\Judith.NET.Tests.csproj", "{510AE0AB-53C7-4EFF-894B-4DC9B5620E70}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E6E4FB9F-E68D-4980-8410-E057326B4AC5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E6E4FB9F-E68D-4980-8410-E057326B4AC5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E6E4FB9F-E68D-4980-8410-E057326B4AC5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E6E4FB9F-E68D-4980-8410-E057326B4AC5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{510AE0AB-53C7-4EFF-894B-4DC9B5620E70}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{510AE0AB-53C7-4EFF-894B-4DC9B5620E70}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{510AE0AB-53C7-4EFF-894B-4DC9B5620E70}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{510AE0AB-53C7-4EFF-894B-4DC9B5620E70}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {06DA3AF8-6449-41A1-9C29-18F87FA960A8}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,24 @@
+const my_string
+var my_string
+const fld1: Num
+const fld1, fld2
+const fld1, var fld2
+const fld1, fld2: Num
+const fld1: Num, fld2: String
+const fld1, var fld2: Num
+const fld1: Num, var fld2: String
+
+--15 * 5
+--12 + 3 * 1
+--9.9 * 5.5 - 16.6
+--true
+--(7.72)
+--not 15
+---.42
+---my_var
+--21 + 11
+--7.71 - 0.71
+--6 + 2 + 1 - -6
+--15 + 9
+--my_var
+--my_var + 3 - 15
