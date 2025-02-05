@@ -6,14 +6,14 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.syntax;
 
-public class WhileStatement : Statement {
+public class WhileExpression : Expression {
     public Expression Test { get; init; }
     public Statement Body { get; init; }
 
     public Token? WhileToken { get; init; }
 
-    public WhileStatement (Expression test, Statement body)
-        : base(SyntaxKind.WhileStatement)
+    public WhileExpression (Expression test, Statement body)
+        : base(SyntaxKind.WhileExpression)
     {
         Test = test;
         Body = body;

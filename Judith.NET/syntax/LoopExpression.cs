@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.syntax;
 
-public class LoopStatement : Statement {
+public class LoopExpression : Expression {
     public Statement Body { get; init; }
 
     public Token? LoopToken { get; init; }
 
-    public LoopStatement (Statement body) : base(SyntaxKind.LoopStatement) {
+    public LoopExpression (Statement body) : base(SyntaxKind.LoopExpression) {
         Body = body;
     }
 

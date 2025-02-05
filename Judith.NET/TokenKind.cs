@@ -58,6 +58,11 @@ public enum TokenKind {
     KwFor,
     KwIn,
     KwDo,
+    KwReturn,
+    KwYield,
+    KwBreak,
+    KwContinue,
+    KwGoto,
 
     // Directives
 

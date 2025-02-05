@@ -112,6 +112,103 @@ public static class SyntaxFactory {
         return assignExpr;
     }
 
+    public static IfExpression IfExpression (
+        Token ifToken, Expression test, Statement consequent
+    ) {
+        var ifExpr = new IfExpression(test, consequent, null) {
+            IfToken = ifToken,
+            ElseToken = null,
+        };
+        ifExpr.SetSpan(new(ifToken.Start, consequent.Span.End));
+
+        return ifExpr;
+    }
+
+    public static IfExpression IfExpression (
+        Token ifToken,
+        Expression test,
+        Statement consequent,
+        Token elseToken,
+        Statement alternate
+    ) {
+        var ifExpr = new IfExpression(test, consequent, alternate) {
+            IfToken = ifToken,
+            ElseToken = elseToken,
+        };
+        ifExpr.SetSpan(new(ifToken.Start, alternate.Span.End));
+
+        return ifExpr;
+    }
+
+    public static MatchExpression MatchExpression (
+        Token matchToken,
+        Expression discriminant,
+        Token doToken,
+        List<MatchCase> cases,
+        Token endToken
+    ) {
+        var matchExpr = new MatchExpression(discriminant, cases) {
+            MatchToken = matchToken,
+            DoToken = doToken,
+            EndToken = endToken,
+        };
+        matchExpr.SetSpan(new(matchToken.Start, endToken.End));
+
+        return matchExpr;
+    }
+
+    public static MatchCase MatchCase (
+        Token? elseToken, List<Expression> tests, Statement consequent
+    ) {
+        var matchCase = new MatchCase(tests, consequent, tests.Count == 0) {
+            ElseToken = elseToken,
+        };
+        if (elseToken is null) {
+            matchCase.SetSpan(new(tests[0].Span.Start, consequent.Span.End));
+        }
+        else {
+            matchCase.SetSpan(new(elseToken.Start, consequent.Span.End));
+        }
+
+        return matchCase;
+    }
+
+    public static LoopExpression LoopExpression (Token loopToken, Statement body) {
+        var loopExpr = new LoopExpression(body) {
+            LoopToken = loopToken,
+        };
+        loopExpr.SetSpan(new(loopToken.Start, body.Span.End));
+
+        return loopExpr;
+    }
+
+    public static WhileExpression WhileExpression (
+        Token whileToken, Expression test, Statement body
+    ) {
+        var whileExpr = new WhileExpression(test, body) {
+            WhileToken = whileToken,
+        };
+        whileExpr.SetSpan(new(whileToken.Start, body.Span.End));
+
+        return whileExpr;
+    }
+
+    public static ForeachExpression ForeachExpression (
+        Token foreachToken,
+        FieldDeclarationExpression initializer,
+        Token inToken,
+        Expression enumerable,
+        Statement body
+    ) {
+        var foreachExpr = new ForeachExpression(initializer, enumerable, body) {
+            ForeachToken = foreachToken,
+            InToken = inToken,
+        };
+        foreachExpr.SetSpan(new(foreachToken.Start, body.Span.End));
+
+        return foreachExpr;
+    }
+
     public static SingleFieldDeclarationExpression SingleFieldDeclarationExpression (
         FieldDeclarator declarator, EqualsValueClause? initializer
     ) {
@@ -180,100 +277,25 @@ public static class SyntaxFactory {
         return arrowStmt;
     }
 
-    public static IfStatement IfStatement (
-        Token ifToken, Expression test, Statement consequent
+    public static ReturnStatement ReturnStatement (
+        Token returnToken, Expression expression
     ) {
-        var ifStmt = new IfStatement(test, consequent, null) {
-            IfToken = ifToken,
-            ElseToken = null,
+        var returnStmt = new ReturnStatement(expression) {
+            ReturnToken = returnToken,
         };
-        ifStmt.SetSpan(new(ifToken.Start, consequent.Span.End));
+        returnStmt.SetSpan(new(returnToken.Start, expression.Span.End));
 
-        return ifStmt;
+        return returnStmt;
     }
 
-    public static IfStatement IfStatement (
-        Token ifToken,
-        Expression test,
-        Statement consequent,
-        Token elseToken,
-        Statement alternate
+    public static YieldStatement YieldStatement (
+        Token yieldToken, Expression expression
     ) {
-        var ifStmt = new IfStatement(test, consequent, alternate) {
-            IfToken = ifToken,
-            ElseToken = elseToken,
+        var yieldStmt = new YieldStatement(expression) {
+            YieldToken = yieldToken,
         };
-        ifStmt.SetSpan(new(ifToken.Start, alternate.Span.End));
+        yieldStmt.SetSpan(new(yieldToken.Start, expression.Span.End));
 
-        return ifStmt;
-    }
-
-    public static MatchStatement MatchStatement (
-        Token matchToken,
-        Expression discriminant,
-        Token doToken,
-        List<MatchCase> cases,
-        Token endToken
-    ) {
-        var matchStmt = new MatchStatement(discriminant, cases) {
-            MatchToken = matchToken,
-            DoToken = doToken,
-            EndToken = endToken,
-        };
-        matchStmt.SetSpan(new(matchToken.Start, endToken.End));
-
-        return matchStmt;
-    }
-
-    public static MatchCase MatchCase (
-        Token? elseToken, List<Expression> tests, Statement consequent
-    ) {
-        var matchCase = new MatchCase(tests, consequent, tests.Count == 0) {
-            ElseToken = elseToken,
-        };
-        if (elseToken is null) {
-            matchCase.SetSpan(new(tests[0].Span.Start, consequent.Span.End));
-        }
-        else {
-            matchCase.SetSpan(new(elseToken.Start, consequent.Span.End));
-        }
-
-        return matchCase;
-    }
-
-    public static LoopStatement LoopStatement (Token loopToken, Statement body) {
-        var loopStmt = new LoopStatement(body) {
-            LoopToken = loopToken,
-        };
-        loopStmt.SetSpan(new(loopToken.Start, body.Span.End));
-
-        return loopStmt;
-    }
-
-    public static WhileStatement WhileStatement (
-        Token whileToken, Expression test, Statement body
-    ) {
-        var whileStmt = new WhileStatement(test, body) {
-            WhileToken = whileToken,
-        };
-        whileStmt.SetSpan(new(whileToken.Start, body.Span.End));
-
-        return whileStmt;
-    }
-
-    public static ForeachStatement ForeachStatement (
-        Token foreachToken,
-        FieldDeclarationExpression initializer,
-        Token inToken,
-        Expression enumerable,
-        Statement body
-    ) {
-        var foreachStmt = new ForeachStatement(initializer, enumerable, body) {
-            ForeachToken = foreachToken,
-            InToken = inToken,
-        };
-        foreachStmt.SetSpan(new(foreachToken.Start, body.Span.End));
-
-        return foreachStmt;
+        return yieldStmt;
     }
 }

@@ -11,21 +11,26 @@ namespace Judith.NET.syntax;
 [JsonConverter(typeof(StringEnumConverter))]
 public enum SyntaxKind {
     LocalDeclarationStatement,
-    IfStatement,
-    MatchStatement,
-    LoopStatement,
-    WhileStatement,
-    ForeachStatement,
-    ExpressionStatement,
     BlockStatement,
     ArrowStatement,
+    ReturnStatement,
+    YieldStatement,
+    BreakStatement,
+    ContinueStatement,
 
-    EqualsValueClause,
+    ExpressionStatement,
 
     GroupExpression,
 
     SingleFieldDeclarationExpression,
     MultipleFieldDeclarationExpression,
+
+    IfExpression,
+    MatchExpression,
+    LoopExpression,
+    WhileExpression,
+    ForeachExpression,
+
     AssignmentExpression,
     BinaryExpression,
     LeftUnaryExpression,
@@ -37,6 +42,7 @@ public enum SyntaxKind {
     Operator,
 
     FieldDeclarator,
+    EqualsValueClause,
     MatchCase,
 }
 

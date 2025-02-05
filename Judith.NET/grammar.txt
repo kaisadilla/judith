@@ -5,33 +5,44 @@
 declaration         > var_decl_init
                     ;
 
-block_or_arrow(i)   > arrow_stmt | block_stmt(i)
+block_or_arrow{i}   > arrow_stmt | block_stmt{i}
                     ;
 
 arrow_stmt          > "=>" statement
                     ;
                     
-block_stmt(i)       > ${i} top_level_stmt*
+block_stmt{i}       > ${i} top_level_stmt*
                     
 statement           > if_stmt
                     | expression_stmt
                     ;
                     
-if_stmt             > "if" expression block_or_arrow("then") ( "elsif" block_or_arrow("then") )* ( "else" block_or_arrow() )? "end"
+if_stmt             > "if" expression block_or_arrow{"then"} ( "elsif" block_or_arrow{"then"} )* ( "else" block_or_arrow() )? "end"
                     ;
 
-match_stmt          > "match" expression "do" ( pattern block_stmt("do") )* ( "else" block_stmt("") )? "end"
+match_stmt          > "match" expression "do" ( pattern block_stmt{"do"} )* ( "else" block_stmt{""} )? "end"
                     ;
 
-loop_stmt           > "loop" block_or_arrow("do") "end"
+loop_stmt           > "loop" block_or_arrow{"do"} "end"
                     ;
 
-while_stmt          > "while" expression block_or_arrow("do") "end"
+while_stmt          > "while" expression block_or_arrow{"do"} "end"
                     ;
 
-foreach_stmt        > "foreach" var_decl in expression block_or_arrow("do") "end"
+foreach_stmt        > "foreach" var_decl in expression block_or_arrow{"do"} "end"
+                    ;
+
+return_stmt         > "return" expression? ( "when" expression )?
+                    ;
+
+yield_stmt          > "yield" expression? ( "when" expression )?
+                    ;
+
+control_stmt        > ( "break" | "continue" ) ( "when" expression )?
+                    ;
                     
 expression_stmt     > expression
+                    ;
                     
 expression          > addition_expr
                     | unary
@@ -52,7 +63,7 @@ comparison_expr     > addition_expr (( "==" | "!=" | "<" | "<=" | ">" | ">=" ) a
 addition_expr       > math_expr (( "+" | "-" ) math_expr)*
                     ;
                     
-math_expr           > unary_left (( "*" | "/") unary_left)*
+math_expr           > unary_left (( "*" | "/"} unary_left)*
                     ;
                     
 unary_left*         > ( "not" | "-" | "~" ) unary_left
@@ -61,7 +72,7 @@ unary_left*         > ( "not" | "-" | "~" ) unary_left
                     
 primary             > literal_expr
                     | identifier_expr
-                    | "(" expression ")"
+                    | "{" expression "}"
                     ;
                     
 identifier_expr     > IDENTIFIER

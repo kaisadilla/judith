@@ -1,5 +1,16 @@
 var name = "Kevin"
 
+if name == "Kevin" then
+    console + lmao
+elsif name == "Kovin" then
+    console + pluslol
+else
+    console + idkdude
+end
+
+--return 15
+--yield 6 + 3 * kevin
+
 match name do
 	"Kevin" do
 		name = "Kevin the best"
@@ -21,14 +32,14 @@ while i < 20 => name2 = `ExtraKevin`
 for const i in my_list do
 	i + 3
 end
-
-for i in my_list do
-	i + 3
-end
-
-for index, obj in my_list do
-	index + obj
-end
+--
+--for i in my_list do
+--	i + 3
+--end
+--
+--for index, obj in my_list do
+--	index + obj
+--end
 
 --if name == "Kevin" then
 --    name = `Joseph`

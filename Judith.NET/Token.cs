@@ -100,6 +100,11 @@ public class Token {
             TokenKind.KwFor => "for",
             TokenKind.KwIn => "in",
             TokenKind.KwDo => "do",
+            TokenKind.KwReturn => "return",
+            TokenKind.KwYield => "yield",
+            TokenKind.KwBreak => "break",
+            TokenKind.KwContinue => "continue",
+            TokenKind.KwGoto => "goto",
 
             // Directives
 

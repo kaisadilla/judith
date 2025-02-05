@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.syntax;
 
-public class IfStatement : Statement {
+public class IfExpression : Expression {
     public Expression Test { get; init; }
     public Statement Consequent { get; init; }
     public Statement? Alternate { get; init; }
@@ -15,8 +15,8 @@ public class IfStatement : Statement {
     public Token? IfToken { get; init; }
     public Token? ElseToken { get; init; }
 
-    public IfStatement (Expression test, Statement consequent, Statement? alternate)
-        : base(SyntaxKind.IfStatement)
+    public IfExpression (Expression test, Statement consequent, Statement? alternate)
+        : base(SyntaxKind.IfExpression)
     {
         Test = test;
         Consequent = consequent;
@@ -24,9 +24,6 @@ public class IfStatement : Statement {
     }
 
     public override string ToString () {
-        //return $"|if>test:> {Test} <:, consequent:> {Consequent} <:, " +
-        //    $"alternate:> {Alternate} <:<|";
-
         return "|if> " + Stringify(new {
             Test = Test.ToString(),
             Consequent = Consequent.ToString(),

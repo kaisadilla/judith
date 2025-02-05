@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.syntax;
 
-public class MatchStatement : Statement {
+public class MatchExpression : Expression {
     public Expression Discriminant { get; init; }
     public List<MatchCase> Cases { get; init; }
 
@@ -14,8 +14,8 @@ public class MatchStatement : Statement {
     public Token? DoToken { get; init; }
     public Token? EndToken { get; init; }
 
-    public MatchStatement (Expression discriminant, List<MatchCase> cases)
-        : base(SyntaxKind.MatchStatement)
+    public MatchExpression (Expression discriminant, List<MatchCase> cases)
+        : base(SyntaxKind.MatchExpression)
     {
         Discriminant = discriminant;
         Cases = cases;

@@ -10,13 +10,16 @@ namespace Judith.NET;
 public class Lexer {
     private static readonly Dictionary<string, TokenKind> KEYWORDS = new() {
         ["and"] = TokenKind.KwAnd,
+        ["break"] = TokenKind.KwBreak,
         ["const"] = TokenKind.KwConst,
+        ["continue"] = TokenKind.KwContinue,
         ["do"] = TokenKind.KwDo,
         ["else"] = TokenKind.KwElse,
         ["elsif"] = TokenKind.KwElsif,
         ["end"] = TokenKind.KwEnd,
         ["false"] = TokenKind.KwFalse,
         ["for"] = TokenKind.KwFor,
+        ["goto"] = TokenKind.KwGoto,
         ["if"] = TokenKind.KwIf,
         ["in"] = TokenKind.KwIn,
         ["loop"] = TokenKind.KwLoop,
@@ -24,11 +27,13 @@ public class Lexer {
         ["not"] = TokenKind.KwNot,
         ["null"] = TokenKind.KwNull,
         ["or"] = TokenKind.KwOr,
+        ["return"] = TokenKind.KwReturn,
         ["then"] = TokenKind.KwThen,
         ["true"] = TokenKind.KwTrue,
         ["undefined"] = TokenKind.KwUndefined,
         ["var"] = TokenKind.KwVar,
         ["while"] = TokenKind.KwWhile,
+        ["yield"] = TokenKind.KwYield,
     };
 
     public MessageContainer? Messages { get; private set; }

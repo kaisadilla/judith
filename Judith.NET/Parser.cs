@@ -253,20 +253,11 @@ public class Parser {
     }
 
     private Statement Statement () {
-        if (Match(TokenKind.KwIf)) {
-            return IfStatement();
+        if (Match(TokenKind.KwReturn)) {
+            return ReturnStatement();
         }
-        else if (Match(TokenKind.KwMatch)) {
-            return MatchStatement();
-        }
-        else if (Match(TokenKind.KwLoop)) {
-            return LoopStatement();
-        }
-        else if (Match(TokenKind.KwWhile)) {
-            return WhileStatement();
-        }
-        else if (Match(TokenKind.KwFor)) {
-            return ForeachStatement();
+        else if (Match(TokenKind.KwYield)) {
+            return YieldStatement();
         }
         else {
             return ExpressionStatement();
@@ -313,7 +304,46 @@ public class Parser {
         return sf.ArrowStatement(arrowToken, stmt);
     }
 
-    private IfStatement IfStatement () {
+    public ReturnStatement ReturnStatement () {
+        Token returnToken = PeekPrevious();
+        Expression expr = Expression();
+
+        return sf.ReturnStatement(returnToken, expr);
+    }
+
+    public YieldStatement YieldStatement () {
+        Token yieldToken = PeekPrevious();
+        Expression expr = Expression();
+
+        return sf.YieldStatement(yieldToken, expr);
+    }
+
+    private ExpressionStatement ExpressionStatement () {
+        var expr = Expression();
+
+        return sf.ExpressionStatement(expr);
+    }
+
+    private Expression Expression () {
+        if (Match(TokenKind.KwIf)) {
+            return IfExpression();
+        }
+        else if (Match(TokenKind.KwMatch)) {
+            return MatchExpression();
+        }
+        else if (Match(TokenKind.KwLoop)) {
+            return LoopExpression();
+        }
+        else if (Match(TokenKind.KwWhile)) {
+            return WhileExpression();
+        }
+        else if (Match(TokenKind.KwFor)) {
+            return ForeachExpression();
+        }
+        return AssignmentExpression();
+    }
+
+    private IfExpression IfExpression () {
         Token ifToken = PeekPrevious();
         Expression test = Expression();
 
@@ -340,24 +370,25 @@ public class Parser {
             throw new Exception($"Invalid consequent kind: {consequent.Kind}");
         }
 
-        IfStatement _Elsif () {
+        IfExpression _Elsif () {
             var elsifToken = PeekPrevious();
-            var alternate = IfStatement();
-            return sf.IfStatement(ifToken, test, consequent, elsifToken, alternate);
+            var alternate = IfExpression();
+            var alternateStmt = sf.ExpressionStatement(alternate);
+            return sf.IfExpression(ifToken, test, consequent, elsifToken, alternateStmt);
         }
 
-        IfStatement _Else () {
+        IfExpression _Else () {
             var elseToken = PeekPrevious();
             var alternate = BlockOrArrowStatement(null);
-            return sf.IfStatement(ifToken, test, consequent, elseToken, alternate);
+            return sf.IfExpression(ifToken, test, consequent, elseToken, alternate);
         }
 
-        IfStatement _If () {
-            return sf.IfStatement(ifToken, test, consequent);
+        IfExpression _If () {
+            return sf.IfExpression(ifToken, test, consequent);
         }
     }
 
-    public MatchStatement MatchStatement () {
+    public MatchExpression MatchExpression () {
         var matchToken = PeekPrevious();
         var discriminant = Expression();
 
@@ -374,7 +405,7 @@ public class Parser {
             throw Error(CompilerMessage.Parser.EndExpected(Peek().Line));
         }
 
-        return sf.MatchStatement(matchToken, discriminant, doToken, cases, endToken);
+        return sf.MatchExpression(matchToken, discriminant, doToken, cases, endToken);
     }
 
     public MatchCase MatchCase () {
@@ -401,24 +432,24 @@ public class Parser {
         return sf.MatchCase(elseToken, tests, consequent);
     }
 
-    public LoopStatement LoopStatement () {
+    public LoopExpression LoopExpression () {
         Token loopToken = PeekPrevious();
 
         BodyStatement body = BlockOrArrowStatement(null);
 
-        return sf.LoopStatement(loopToken, body);
+        return sf.LoopExpression(loopToken, body);
     }
 
-    public WhileStatement WhileStatement () {
+    public WhileExpression WhileExpression () {
         Token whileToken = PeekPrevious();
         Expression test = Expression();
 
         BodyStatement body = BlockOrArrowStatement(TokenKind.KwDo);
 
-        return sf.WhileStatement(whileToken, test, body);
+        return sf.WhileExpression(whileToken, test, body);
     }
 
-    public ForeachStatement ForeachStatement () {
+    public ForeachExpression ForeachExpression () {
         Token foreachToken = PeekPrevious();
         FieldDeclarationExpression initializer = ImplicitFieldDeclarationExpression();
 
@@ -429,17 +460,7 @@ public class Parser {
         Expression enumerable = Expression();
         BodyStatement body = BlockOrArrowStatement(TokenKind.KwDo);
 
-        return sf.ForeachStatement(foreachToken, initializer, inToken, enumerable, body);
-    }
-
-    private ExpressionStatement ExpressionStatement () {
-        var expr = Expression();
-
-        return sf.ExpressionStatement(expr);
-    }
-
-    private Expression Expression () {
-        return AssignmentExpression();
+        return sf.ForeachExpression(foreachToken, initializer, inToken, enumerable, body);
     }
 
     // "="

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.syntax;
 
-public class ForeachStatement : Statement {
+public class ForeachExpression : Expression {
     public FieldDeclarationExpression Initializer { get; init; }
     public Expression Enumerable { get; init; }
     public Statement Body { get; init; }
@@ -14,12 +14,12 @@ public class ForeachStatement : Statement {
     public Token? ForeachToken { get; init; }
     public Token? InToken { get; init; }
 
-    public ForeachStatement (
+    public ForeachExpression (
         FieldDeclarationExpression initializer,
         Expression enumerable,
         Statement body
     )
-        : base(SyntaxKind.ForeachStatement)
+        : base(SyntaxKind.ForeachExpression)
     {
         Initializer = initializer;
         Enumerable = enumerable;
