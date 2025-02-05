@@ -9,13 +9,26 @@ namespace Judith.NET;
 
 public class Lexer {
     private static readonly Dictionary<string, TokenKind> KEYWORDS = new() {
+        ["and"] = TokenKind.KwAnd,
         ["const"] = TokenKind.KwConst,
+        ["do"] = TokenKind.KwDo,
+        ["else"] = TokenKind.KwElse,
+        ["elsif"] = TokenKind.KwElsif,
+        ["end"] = TokenKind.KwEnd,
         ["false"] = TokenKind.KwFalse,
+        ["for"] = TokenKind.KwFor,
+        ["if"] = TokenKind.KwIf,
+        ["in"] = TokenKind.KwIn,
+        ["loop"] = TokenKind.KwLoop,
+        ["match"] = TokenKind.KwMatch,
         ["not"] = TokenKind.KwNot,
         ["null"] = TokenKind.KwNull,
+        ["or"] = TokenKind.KwOr,
+        ["then"] = TokenKind.KwThen,
         ["true"] = TokenKind.KwTrue,
         ["undefined"] = TokenKind.KwUndefined,
         ["var"] = TokenKind.KwVar,
+        ["while"] = TokenKind.KwWhile,
     };
 
     public MessageContainer? Messages { get; private set; }
@@ -99,7 +112,36 @@ public class Lexer {
             case '/':
                 return MakeToken(TokenKind.Slash);
             case '=':
+                if (Match('=')) {
+                    return MakeToken(TokenKind.EqualEqual);
+                }
+                if (Match('>')) {
+                    return MakeToken(TokenKind.EqualArrow);
+                }
+
                 return MakeToken(TokenKind.Equal);
+            case '!':
+                if (Match('=')) {
+                    return MakeToken(TokenKind.BangEqual);
+                }
+
+                return MakeToken(TokenKind.Bang);
+            case '<':
+                if (Match('=')) {
+                    return MakeToken(TokenKind.LessEqual);
+                }
+
+                return MakeToken(TokenKind.Less);
+            case '>':
+                if (Match('=')) {
+                    return MakeToken(TokenKind.GreaterEqual);
+                }
+
+                return MakeToken(TokenKind.Greater);
+            case '"':
+                return ScanString('"', _column - 1);
+            case '`':
+                return ScanString('`', _column - 1);
         }
 
         // Positive number (token that starts with number leading char).
@@ -116,9 +158,7 @@ public class Lexer {
         }
 
         // Couldn't match this character to anything, so it's an error.
-        Messages?.Add(CompilerMessage.Lexer.UnexpectedCharacter(c));
-        HasError = true;
-
+        Error(CompilerMessage.Lexer.UnexpectedCharacter(_line, c));
         return null;
     }
 
@@ -254,7 +294,7 @@ public class Lexer {
     /// starts the comment (e.g. '--') has been consumed already.
     /// </summary>
     private Token? ScanSingleLineComment () {
-        while (Peek() != '\n' && IsAtEnd() == false) {
+        while (Peek() != '\r' && Peek() != '\n' && IsAtEnd() == false) {
             Advance();
         }
         
@@ -332,7 +372,14 @@ public class Lexer {
     public Token? ScanIdentifierOrString () {
         int startColumn = _column - 1;
 
-        while (IsIdentifierChar(Peek())) {
+        // We can be scanning an identifier (including keywords) or a string
+        // literal led by flags (e.g. ef"my string").
+        while (IsIdentifierChar(Peek()) || Peek() == '"' || Peek() == '`') {
+            // If we encounter a string delimiter character, this is a string
+            // with leading flags.
+            if (Match('"')) return ScanString('"', startColumn);
+            if (Match('`')) return ScanString('`', startColumn);
+
             Advance();
         }
 
@@ -340,6 +387,46 @@ public class Lexer {
         var kind = KEYWORDS.GetValueOrDefault(lexeme, TokenKind.Identifier);
 
         return MakeToken(kind);
+    }
+
+    /// <summary>
+    /// Scans a string token until its end. This method assumes that everything
+    /// up to the FIRST quote in the string has been consumed already. For
+    /// example, for the token |"test"|, only " has been already consumed. For
+    /// a string with flags, like |f"test"|, f" has already been consumed. For
+    /// a string with multiple delimiting quotes, like |ff"""test"""|, only the
+    /// first delimiting quote (and characters before it) have been consumed:
+    /// ff" (""test""" hasn't been consumed yet).
+    /// </summary>
+    /// <param name="quotingChar">The character used as delimiter.</param>
+    /// <param name="startColumn">The column the string started at.</param>
+    /// <returns></returns>
+    public Token? ScanString (char quotingChar, int startColumn) {
+        int openingQuotes = 1; // the one that triggered this call.
+        while (Match(quotingChar)) openingQuotes++;
+
+        // empty string: "". Note that two quotes cannot delimit a string (e.g.
+        // ""test"" is not possible, as it would be parsed as [""][test][""].
+        if (openingQuotes == 2) {
+            return MakeStringToken(quotingChar, 1, startColumn);
+        }
+
+        // the string will only end when it encounters as many quoting chars in
+        // a row as those used to start the string.
+        int closingQuotes = 0;
+        while (closingQuotes < openingQuotes && IsAtEnd() == false) {
+            char c = Advance();
+
+            if (c == quotingChar) closingQuotes++;
+            else closingQuotes = 0; // If a non-quote char is found, the counter is reset.
+        }
+
+        if (IsAtEnd()) {
+            Error(CompilerMessage.Lexer.UnterminatedString(_line));
+            return null;
+        }
+
+        return MakeStringToken(quotingChar, openingQuotes, startColumn);
     }
     #endregion
 
@@ -349,5 +436,29 @@ public class Lexer {
 
         return new Token(kind, lexeme, _tokenStart, _cursor, _line);
     }
+
+    private StringToken MakeStringToken (char quotingChar, int quoteCount, int columnIndex) {
+        string lexeme = ExtractLexeme(_tokenStart, _cursor);
+        var stringKind = quoteCount switch {
+            1 => StringLiteralKind.Regular,
+            _ => StringLiteralKind.Raw,
+        };
+
+        return new StringToken(
+            lexeme: lexeme,
+            start: _tokenStart,
+            end: _cursor,
+            line: _line,
+            stringKind: stringKind,
+            delimiter: quotingChar,
+            delimiterCount: quoteCount,
+            columnIndex: columnIndex
+        );
+    }
     #endregion
+
+    private void Error (CompilerMessage message) {
+        HasError = true;
+        Messages?.Add(message);
+    }
 }

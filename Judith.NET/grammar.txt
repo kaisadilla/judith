@@ -1,60 +1,86 @@
-﻿top_level_stmt  > declaration
-				;
+﻿top_level_stmt      > declaration
+                    | statement
+                    ;
+                    
+declaration         > var_decl_init
+                    ;
 
-declaration     > var_decl
-                ;
+block_or_arrow(i)   > arrow_stmt | block_stmt(i)
+                    ;
 
-var_decl        > ( "const" | "var" ) IDENTIFIER ( ":" IDENTIFIER )? ( "=" expression )?
-				;
+arrow_stmt          > "=>" statement
+                    ;
+                    
+block_stmt(i)       > ${i} top_level_stmt*
+                    
+statement           > if_stmt
+                    | expression_stmt
+                    ;
+                    
+if_stmt             > "if" expression block_or_arrow("then") ( "elsif" block_or_arrow("then") )* ( "else" block_or_arrow() )? "end"
+                    ;
 
-expression      > addition_expr
-				| unary
-				| binary
-				| grouping
-				;
+match_stmt          > "match" expression "do" ( pattern block_stmt("do") )* ( "else" block_stmt("") )? "end"
+                    ;
 
-addition_expr   > math_expr (( "+" | "-" ) math_expr)*
-				;
+loop_stmt           > "loop" block_or_arrow("do") "end"
+                    ;
 
-math_expr		> unary_left (( "*" | "/") unary_left)*
+while_stmt          > "while" expression block_or_arrow("do") "end"
+                    ;
 
-unary_left		> ( "not" | "-" | "~" ) unary_left
-				| primary
-				;
+foreach_stmt        > "foreach" var_decl in expression block_or_arrow("do") "end"
+                    
+expression_stmt     > expression
+                    
+expression          > addition_expr
+                    | unary
+                    | binary
+                    | grouping
+                    ;
+                    
+assignment_expr     > logical_expr "=" logical_expr
+                    | logical_expr
+                    ;
+                    
+logical_expr        > comparison_expr (( "and" | "or" ) comparison_expr)* -- The choice to make "and" and "or" have the same precedence is deliberate.
+                    ;
+                    
+comparison_expr     > addition_expr (( "==" | "!=" | "<" | "<=" | ">" | ">=" ) addition_expr)*
+                    ;
+                    
+addition_expr       > math_expr (( "+" | "-" ) math_expr)*
+                    ;
+                    
+math_expr           > unary_left (( "*" | "/") unary_left)*
+                    ;
+                    
+unary_left*         > ( "not" | "-" | "~" ) unary_left
+                    | primary
+                    ;
+                    
+primary             > literal_expr
+                    | identifier_expr
+                    | "(" expression ")"
+                    ;
+                    
+identifier_expr     > IDENTIFIER
+                    ;
+                    
+literal_expr        > literal
+                    ;
+                    
+literal             > NUMBER
+                    | STRING
+                    | "true"
+                    | "false"
+                    | "null"
+                    ;
+                    
+var_decl            > ( "const" | "var" ) IDENTIFIER ( ":" IDENTIFIER )?
+                    ;
 
-primary			> literal_expr
-				| identifier_expr
-				| "(" expression ")"
+var_decl_init       > var_decl ( "=" expression )?
+                    ;
 
-identifier_expr > IDENTIFIER
-				;
-
-literal_expr	> literal
-				;
-
-literal			> NUMBER
-				| STRING
-				| "true"
-				| "false"
-				| "null"
-				;
-
------------
-
-unary			> ( "-" | "not" ) expression
-				;
-
-binary			> expression operator expression
-				;
-
-operator		> "=="
-				| "!="
-				| "<"
-				| "<="
-				| ">"
-				| ">="
-				| "+"
-				| "-"
-				| "*"
-				| "/"
-				;
+* -> Right-associative.

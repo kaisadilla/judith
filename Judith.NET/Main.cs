@@ -18,10 +18,7 @@ foreach (var token in lexer.Tokens!) {
 }
 Console.WriteLine();
 
-Console.WriteLine($"Errors: {messages.Errors.Count} ---");
-foreach (var error in messages.Errors) {
-    Console.WriteLine(error);
-}
+PrintErrors();
 
 Parser parser = new(lexer.Tokens, messages);
 parser.Parse();
@@ -35,3 +32,11 @@ foreach (var node in parser.Nodes!) {
 }
 
 File.WriteAllText(AppContext.BaseDirectory + "/res/test.ast.json", astJson);
+PrintErrors();
+
+void PrintErrors () {
+    Console.WriteLine($"Errors: {messages.Errors.Count} ---");
+    foreach (var error in messages.Errors) {
+        Console.WriteLine(error);
+    }
+}

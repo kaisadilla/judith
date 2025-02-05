@@ -31,6 +31,7 @@ public class Parser {
         while (IsAtEnd() == false) {
             try {
                 SkipComments();
+                if (IsAtEnd()) break;
 
                 SyntaxNode? node = TopLevelStatement();
 
@@ -153,8 +154,11 @@ public class Parser {
         else if (Match(TokenKind.KwVar)) {
             return LocalDeclarationStatement(FieldKind.Variable);
         }
+        else {
+            return Statement();
+        }
 
-        throw Error(CompilerMessage.Parser.InvalidTopLevelStatement());
+        //throw Error(CompilerMessage.Parser.InvalidTopLevelStatement());
     }
 
     private LocalDeclarationStatement LocalDeclarationStatement (
@@ -165,16 +169,45 @@ public class Parser {
         return sf.LocalDeclarationStatement(fieldDecl);
     }
 
+    /// <summary>
+    /// Parses a field declaration that may be implicit (i.e. not qualified with
+    /// either "const" or "var"). Unlike <see cref="FieldDeclarationExpression(FieldKind)"/>,
+    /// this method assumes that the mutability keyword, if it exists, has not
+    /// been consumed yet.
+    /// </summary>
+    /// <returns></returns>
+    private FieldDeclarationExpression ImplicitFieldDeclarationExpression () {
+        Token? mutabilityToken = Peek();
+        if (mutabilityToken.Kind == TokenKind.Identifier) {
+            return FieldDeclarationExpression(FieldKind.Constant);
+        }
+        if (mutabilityToken.Kind == TokenKind.KwConst) {
+            Advance();
+            return FieldDeclarationExpression(FieldKind.Constant);
+        }
+        if (mutabilityToken.Kind == TokenKind.KwVar) {
+            Advance();
+            return FieldDeclarationExpression(FieldKind.Variable);
+        }
+
+        throw Error(CompilerMessage.Parser.FieldDeclarationExpected(mutabilityToken.Line));
+    }
+
     private FieldDeclarationExpression FieldDeclarationExpression (
         FieldKind fieldKind
     ) {
         Token? fieldKindToken = PeekPrevious();
+        // If the last keyword is not const or var, then this is an implicit
+        // "const" and there's no token for it.
+        if (fieldKindToken.Kind != TokenKind.KwConst && fieldKindToken.Kind != TokenKind.KwVar) {
+            fieldKindToken = null;
+        }
 
         // This is the beginning of the declaration, so the next token must be
         // an identifier. We just check it's there, FieldDeclarator() will be
         // the one consuming it.
         if (Peek().Kind != TokenKind.Identifier) {
-            throw Error(CompilerMessage.Parser.IdentifierExpected());
+            throw Error(CompilerMessage.Parser.IdentifierExpected(Peek().Line));
         }
 
         List<FieldDeclarator> declarators = new();
@@ -198,48 +231,257 @@ public class Parser {
             }
         }
 
+        EqualsValueClause? initializer = null;
+
+        if (Match(TokenKind.Equal)) {
+            Token equalsToken = PeekPrevious();
+            Expression expr = Expression();
+
+            if (expr is null) {
+                throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+            }
+
+            initializer = sf.EqualsValueClause(expr, equalsToken);
+        }
+
         if (declarators.Count == 1) {
-            return sf.SingleFieldDeclarationExpression(declarators[0]);
+            return sf.SingleFieldDeclarationExpression(declarators[0], initializer);
         }
         else {
-            return sf.MultipleFieldDeclarationExpression(declarators);
+            return sf.MultipleFieldDeclarationExpression(declarators, initializer);
         }
     }
 
-    private Expression Expression () {
-        return AdditionBinaryExpression();
+    private Statement Statement () {
+        if (Match(TokenKind.KwIf)) {
+            return IfStatement();
+        }
+        else if (Match(TokenKind.KwMatch)) {
+            return MatchStatement();
+        }
+        else if (Match(TokenKind.KwLoop)) {
+            return LoopStatement();
+        }
+        else if (Match(TokenKind.KwWhile)) {
+            return WhileStatement();
+        }
+        else if (Match(TokenKind.KwFor)) {
+            return ForeachStatement();
+        }
+        else {
+            return ExpressionStatement();
+        }
     }
 
-    private FieldDeclarator FieldDeclarator (FieldKind fieldKind, Token? fieldKindToken) {
-        // If we find a "const" or "var", that's the new mutability.
-        if (Match(TokenKind.KwConst)) {
-            fieldKindToken = PeekPrevious();
-            fieldKind = FieldKind.Constant;
+    private BodyStatement BlockOrArrowStatement (TokenKind? openingToken) {
+        if (Match(TokenKind.EqualArrow)) {
+            return ArrowStatement();
         }
-        else if (Match(TokenKind.KwVar)) {
-            fieldKindToken = PeekPrevious();
-            fieldKind = FieldKind.Variable;
+        else if (openingToken == null || Match(openingToken.Value)) {
+            return BlockStatement();
+        }
+        else {
+            throw Error(CompilerMessage.Parser.BlockOpeningKeywordExpected(
+                Peek().Line, Token.GetTokenName(openingToken.Value), Peek()
+            ));
+        }
+    }
+
+    private BlockStatement BlockStatement () {
+        List<Statement> statements = new();
+
+        Token openingToken = PeekPrevious();
+        while (MatchBlockEndingToken() == false && IsAtEnd() == false) {
+            var stmt = TopLevelStatement();
+            if (stmt is not null) {
+                statements.Add(stmt);
+            }
+        }
+        Token closingToken = PeekPrevious();
+
+        return sf.BlockStatement(openingToken, statements, closingToken);
+    }
+
+    private ArrowStatement ArrowStatement () {
+        Token arrowToken = PeekPrevious();
+        if (arrowToken.Kind != TokenKind.EqualArrow) throw Error(
+            CompilerMessage.Parser.ArrowExpected(arrowToken.Line, arrowToken)
+        );
+
+        Statement stmt = Statement();
+
+        return sf.ArrowStatement(arrowToken, stmt);
+    }
+
+    private IfStatement IfStatement () {
+        Token ifToken = PeekPrevious();
+        Expression test = Expression();
+
+        BodyStatement consequent = BlockOrArrowStatement(TokenKind.KwThen);
+
+        if (consequent.Kind == SyntaxKind.BlockStatement) {
+            BlockStatement block = (BlockStatement)consequent;
+            if (block.ClosingToken == null) {
+                throw new Exception(
+                    "Block consequent in IfStatement() needs an closing token."
+                );
+            }
+
+            if (block.ClosingToken.Kind == TokenKind.KwElsif) return _Elsif();
+            if (block.ClosingToken.Kind == TokenKind.KwElse) return _Else();
+            return _If();
+        }
+        else if (consequent.Kind == SyntaxKind.ArrowStatement) {
+            if (Match(TokenKind.KwElsif)) return _Elsif();
+            if (Match(TokenKind.KwElse)) return _Else();
+            return _If();
+        }
+        else {
+            throw new Exception($"Invalid consequent kind: {consequent.Kind}");
         }
 
-        if (TryConsume(TokenKind.Identifier, out Token? identifierToken) == false) {
-            throw Error(CompilerMessage.Parser.IdentifierExpected());
+        IfStatement _Elsif () {
+            var elsifToken = PeekPrevious();
+            var alternate = IfStatement();
+            return sf.IfStatement(ifToken, test, consequent, elsifToken, alternate);
         }
 
-        IdentifierExpression? type = null;
-        if (Match(TokenKind.Colon)) {
-            type = IdentifierExpression();
+        IfStatement _Else () {
+            var elseToken = PeekPrevious();
+            var alternate = BlockOrArrowStatement(null);
+            return sf.IfStatement(ifToken, test, consequent, elseToken, alternate);
+        }
 
-            if (type == null) {
-                throw Error(CompilerMessage.Parser.TypeExpected());
+        IfStatement _If () {
+            return sf.IfStatement(ifToken, test, consequent);
+        }
+    }
+
+    public MatchStatement MatchStatement () {
+        var matchToken = PeekPrevious();
+        var discriminant = Expression();
+
+        if (TryConsume(TokenKind.KwDo, out Token? doToken) == false) {
+            throw Error(CompilerMessage.Parser.DoExpected(Peek().Line));
+        }
+
+        List<MatchCase> cases = new();
+        while (CheckLiteral() || Check(TokenKind.KwElse)) {
+            cases.Add(MatchCase());
+        }
+
+        if (TryConsume(TokenKind.KwEnd, out Token? endToken) == false) {
+            throw Error(CompilerMessage.Parser.EndExpected(Peek().Line));
+        }
+
+        return sf.MatchStatement(matchToken, discriminant, doToken, cases, endToken);
+    }
+
+    public MatchCase MatchCase () {
+        List<Expression> tests = new();
+
+        // If "else" is matched, this is the default case and we don't need to
+        // try to get patterns. If it doesn't, then one or more patterns
+        // (separated by commas) must appear next.
+        if (TryConsume(TokenKind.KwElse, out Token? elseToken) == false) {
+            while (CheckLiteral()) {
+                LiteralExpression? literal = LiteralExpression();
+                if (literal is not null) tests.Add(literal);
+
+                // After each literal, there must be a comma for a subsequent
+                // literal to be a valid token.
+                if (Match(TokenKind.Comma) == false) {
+                    break;
+                }
             }
         }
 
-        return sf.FieldDeclarator(
-            fieldKindToken,
-            sf.Identifier(identifierToken),
-            fieldKind,
-            type
-        );
+        var consequent = BlockOrArrowStatement(elseToken == null ? TokenKind.KwDo : null);
+
+        return sf.MatchCase(elseToken, tests, consequent);
+    }
+
+    public LoopStatement LoopStatement () {
+        Token loopToken = PeekPrevious();
+
+        BodyStatement body = BlockOrArrowStatement(null);
+
+        return sf.LoopStatement(loopToken, body);
+    }
+
+    public WhileStatement WhileStatement () {
+        Token whileToken = PeekPrevious();
+        Expression test = Expression();
+
+        BodyStatement body = BlockOrArrowStatement(TokenKind.KwDo);
+
+        return sf.WhileStatement(whileToken, test, body);
+    }
+
+    public ForeachStatement ForeachStatement () {
+        Token foreachToken = PeekPrevious();
+        FieldDeclarationExpression initializer = ImplicitFieldDeclarationExpression();
+
+        if (TryConsume(TokenKind.KwIn, out Token? inToken) == false) {
+            throw Error(CompilerMessage.Parser.InExpected(Peek().Line));
+        }
+
+        Expression enumerable = Expression();
+        BodyStatement body = BlockOrArrowStatement(TokenKind.KwDo);
+
+        return sf.ForeachStatement(foreachToken, initializer, inToken, enumerable, body);
+    }
+
+    private ExpressionStatement ExpressionStatement () {
+        var expr = Expression();
+
+        return sf.ExpressionStatement(expr);
+    }
+
+    private Expression Expression () {
+        return AssignmentExpression();
+    }
+
+    // "="
+    private Expression AssignmentExpression () {
+        Expression expr = LogicalBinaryExpression();
+
+        if (Match(TokenKind.Equal)) {
+            Token equalToken = PeekPrevious();
+            var right = AssignmentExpression();
+
+            return sf.AssignmentExpression(expr, equalToken, right);
+        }
+
+        return expr;
+    }
+
+    // "and" | "or"
+    private Expression LogicalBinaryExpression () {
+        Expression expr = ComparisonBinaryExpression();
+
+        while (MatchLogicalToken()) {
+            Token op = PeekPrevious();
+            Expression right = ComparisonBinaryExpression();
+
+            expr = sf.BinaryExpression(expr, sf.Operator(op), right);
+        }
+
+        return expr;
+    }
+
+    // "==" | "!=" | "<" | "<=" | ">" | ">="
+    private Expression ComparisonBinaryExpression () {
+        Expression expr = AdditionBinaryExpression();
+
+        while (MatchComparisonToken()) {
+            Token op = PeekPrevious();
+            Expression right = AdditionBinaryExpression();
+
+            expr = sf.BinaryExpression(expr, sf.Operator(op), right);
+        }
+
+        return expr;
     }
 
     // "+" | "-"
@@ -270,6 +512,7 @@ public class Parser {
         return expr;
     }
 
+    // "not"
     private Expression LeftUnaryExpression () {
         if (MatchLeftUnaryToken()) {
             Token op = PeekPrevious();
@@ -291,7 +534,7 @@ public class Parser {
             Expression expr = Expression();
 
             if (TryConsume(TokenKind.RightParen, out Token? rightParen) == false) {
-                throw Error(CompilerMessage.Parser.RightParenExpected());
+                throw Error(CompilerMessage.Parser.RightParenExpected(Peek().Line));
             }
             
             return sf.GroupExpression(expr, leftParen, rightParen);
@@ -302,7 +545,7 @@ public class Parser {
             return identifier;
         }
 
-        throw Error(CompilerMessage.Parser.UnexpectedToken(Advance()));
+        throw Error(CompilerMessage.Parser.UnexpectedToken(Peek().Line, Advance()));
     }
 
     private IdentifierExpression? IdentifierExpression () {
@@ -337,13 +580,73 @@ public class Parser {
         if (Match(TokenKind.Number)) {
             return sf.Literal(token);
         }
-        else {
-            return null;
+        if (Match(TokenKind.String)) {
+            return sf.Literal(token);
         }
+
+        return null;
+    }
+
+    private FieldDeclarator FieldDeclarator (FieldKind fieldKind, Token? fieldKindToken) {
+        // If we find a "const" or "var", that's the new mutability.
+        if (Match(TokenKind.KwConst)) {
+            fieldKindToken = PeekPrevious();
+            fieldKind = FieldKind.Constant;
+        }
+        else if (Match(TokenKind.KwVar)) {
+            fieldKindToken = PeekPrevious();
+            fieldKind = FieldKind.Variable;
+        }
+
+        if (TryConsume(TokenKind.Identifier, out Token? identifierToken) == false) {
+            throw Error(CompilerMessage.Parser.IdentifierExpected(Peek().Line));
+        }
+
+        IdentifierExpression? type = null;
+        if (Match(TokenKind.Colon)) {
+            type = IdentifierExpression();
+
+            if (type == null) {
+                throw Error(CompilerMessage.Parser.TypeExpected(Peek().Line));
+            }
+        }
+
+        return sf.FieldDeclarator(
+            fieldKindToken,
+            sf.Identifier(identifierToken),
+            fieldKind,
+            type
+        );
     }
     #endregion
 
     #region Token matching
+    private bool MatchBlockEndingToken () {
+        return Match(
+            TokenKind.KwEnd,
+            TokenKind.KwElse,
+            TokenKind.KwElsif
+        );
+    }
+
+    private bool MatchLogicalToken () {
+        return Match(
+            TokenKind.KwAnd,
+            TokenKind.KwOr
+        );
+    }
+
+    private bool MatchComparisonToken () {
+        return Match(
+            TokenKind.EqualEqual,
+            TokenKind.BangEqual,
+            TokenKind.Less,
+            TokenKind.LessEqual,
+            TokenKind.Greater,
+            TokenKind.GreaterEqual
+        );
+    }
+
     private bool MatchAdditionToken () {
         return Match(
             TokenKind.Plus,
@@ -362,6 +665,13 @@ public class Parser {
         return Match(
             TokenKind.KwNot,
             TokenKind.Minus
+        );
+    }
+
+    private bool CheckLiteral () {
+        return Check(
+            TokenKind.Number,
+            TokenKind.String
         );
     }
     #endregion

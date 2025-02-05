@@ -44,6 +44,18 @@ public static class SyntaxFactory {
         return decl;
     }
 
+    public static EqualsValueClause EqualsValueClause (
+        Expression value, Token equalsToken
+    ) {
+        var clause = new EqualsValueClause(value) {
+            EqualsToken = equalsToken
+        };
+
+        clause.SetSpan(new(clause.EqualsToken.Start, clause.Value.Span.End));
+
+        return clause;
+    }
+
     public static IdentifierExpression IdentifierExpression (Identifier identifier) {
         var idExpr = new IdentifierExpression(identifier);
         idExpr.SetSpan(identifier.Span);
@@ -89,10 +101,21 @@ public static class SyntaxFactory {
         return binaryExpr;
     }
 
-    public static SingleFieldDeclarationExpression SingleFieldDeclarationExpression (
-        FieldDeclarator declarator
+    public static AssignmentExpression AssignmentExpression (
+        Expression left, Token equalsToken, Expression right
     ) {
-        var declExpr = new SingleFieldDeclarationExpression(declarator);
+        var assignExpr = new AssignmentExpression(left, right) {
+            EqualsToken = equalsToken,
+        };
+        assignExpr.SetSpan(new(assignExpr.Left.Span.Start, assignExpr.Right.Span.End));
+
+        return assignExpr;
+    }
+
+    public static SingleFieldDeclarationExpression SingleFieldDeclarationExpression (
+        FieldDeclarator declarator, EqualsValueClause? initializer
+    ) {
+        var declExpr = new SingleFieldDeclarationExpression(declarator, initializer);
 
         int start = declExpr.Declarator.Span.Start;
         int end = declExpr.Declarator.Span.End; // TODO: Initializer.
@@ -102,14 +125,14 @@ public static class SyntaxFactory {
     }
 
     public static MultipleFieldDeclarationExpression MultipleFieldDeclarationExpression (
-        List<FieldDeclarator> declarators
+        List<FieldDeclarator> declarators, EqualsValueClause? initializer
     ) {
         if (declarators.Count == 0) throw new Exception(
             "There must be at least one declarator in a " +
             "multiple variable declaration statement."
         );
 
-        var declExpr = new MultipleFieldDeclarationExpression(declarators);
+        var declExpr = new MultipleFieldDeclarationExpression(declarators, initializer);
         
         int start = declExpr.Declarators[0].Span.Start;
         int end = declExpr.Declarators[^1].Span.End; // TODO: Initializer.
@@ -125,5 +148,132 @@ public static class SyntaxFactory {
         declStmt.SetSpan(declStmt.Declaration.Span);
 
         return declStmt;
+    }
+
+    public static ExpressionStatement ExpressionStatement (Expression expr) {
+        var exprStmt = new ExpressionStatement(expr);
+        exprStmt.SetSpan(expr.Span);
+
+        return exprStmt;
+    }
+
+    public static BlockStatement BlockStatement (
+        Token openingToken, List<Statement> statements, Token closingToken
+    ) {
+        var blockStmt = new BlockStatement(statements) {
+            OpeningToken = openingToken,
+            ClosingToken = closingToken,
+        };
+        blockStmt.SetSpan(new(openingToken.Start, closingToken.End));
+
+        return blockStmt;
+    }
+
+    public static ArrowStatement ArrowStatement (
+        Token arrowToken, Statement statement
+    ) {
+        var arrowStmt = new ArrowStatement(statement) {
+            ArrowToken = arrowToken,
+        };
+        arrowStmt.SetSpan(new(arrowToken.Start, statement.Span.End));
+
+        return arrowStmt;
+    }
+
+    public static IfStatement IfStatement (
+        Token ifToken, Expression test, Statement consequent
+    ) {
+        var ifStmt = new IfStatement(test, consequent, null) {
+            IfToken = ifToken,
+            ElseToken = null,
+        };
+        ifStmt.SetSpan(new(ifToken.Start, consequent.Span.End));
+
+        return ifStmt;
+    }
+
+    public static IfStatement IfStatement (
+        Token ifToken,
+        Expression test,
+        Statement consequent,
+        Token elseToken,
+        Statement alternate
+    ) {
+        var ifStmt = new IfStatement(test, consequent, alternate) {
+            IfToken = ifToken,
+            ElseToken = elseToken,
+        };
+        ifStmt.SetSpan(new(ifToken.Start, alternate.Span.End));
+
+        return ifStmt;
+    }
+
+    public static MatchStatement MatchStatement (
+        Token matchToken,
+        Expression discriminant,
+        Token doToken,
+        List<MatchCase> cases,
+        Token endToken
+    ) {
+        var matchStmt = new MatchStatement(discriminant, cases) {
+            MatchToken = matchToken,
+            DoToken = doToken,
+            EndToken = endToken,
+        };
+        matchStmt.SetSpan(new(matchToken.Start, endToken.End));
+
+        return matchStmt;
+    }
+
+    public static MatchCase MatchCase (
+        Token? elseToken, List<Expression> tests, Statement consequent
+    ) {
+        var matchCase = new MatchCase(tests, consequent, tests.Count == 0) {
+            ElseToken = elseToken,
+        };
+        if (elseToken is null) {
+            matchCase.SetSpan(new(tests[0].Span.Start, consequent.Span.End));
+        }
+        else {
+            matchCase.SetSpan(new(elseToken.Start, consequent.Span.End));
+        }
+
+        return matchCase;
+    }
+
+    public static LoopStatement LoopStatement (Token loopToken, Statement body) {
+        var loopStmt = new LoopStatement(body) {
+            LoopToken = loopToken,
+        };
+        loopStmt.SetSpan(new(loopToken.Start, body.Span.End));
+
+        return loopStmt;
+    }
+
+    public static WhileStatement WhileStatement (
+        Token whileToken, Expression test, Statement body
+    ) {
+        var whileStmt = new WhileStatement(test, body) {
+            WhileToken = whileToken,
+        };
+        whileStmt.SetSpan(new(whileToken.Start, body.Span.End));
+
+        return whileStmt;
+    }
+
+    public static ForeachStatement ForeachStatement (
+        Token foreachToken,
+        FieldDeclarationExpression initializer,
+        Token inToken,
+        Expression enumerable,
+        Statement body
+    ) {
+        var foreachStmt = new ForeachStatement(initializer, enumerable, body) {
+            ForeachToken = foreachToken,
+            InToken = inToken,
+        };
+        foreachStmt.SetSpan(new(foreachToken.Start, body.Span.End));
+
+        return foreachStmt;
     }
 }

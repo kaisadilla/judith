@@ -17,8 +17,16 @@ public enum TokenKind {
     Asterisk,
     Slash,
     Equal,
+    Bang,
 
     // Two-character tokens.
+    EqualEqual,
+    BangEqual,
+    Less,
+    LessEqual,
+    Greater,
+    GreaterEqual,
+    EqualArrow,
 
     // Three-character tokens.
 
@@ -37,6 +45,19 @@ public enum TokenKind {
     KwNull,
     KwUndefined,
     KwNot,
+    KwAnd,
+    KwOr,
+    KwEnd,
+    KwIf,
+    KwElse,
+    KwElsif,
+    KwMatch,
+    KwThen,
+    KwLoop,
+    KwWhile,
+    KwFor,
+    KwIn,
+    KwDo,
 
     // Directives
 
@@ -45,4 +66,9 @@ public enum TokenKind {
 
     EOF,
     Error,
+}
+
+public enum StringLiteralKind {
+    Regular,
+    Raw,
 }

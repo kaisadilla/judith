@@ -12,32 +12,48 @@ public abstract class FieldDeclarationExpression : Expression {
 
 public class SingleFieldDeclarationExpression : FieldDeclarationExpression {
     public FieldDeclarator Declarator { get; init; }
+    public EqualsValueClause? Initializer { get; init; }
 
     public SingleFieldDeclarationExpression (
-        FieldDeclarator declarator
+        FieldDeclarator declarator, EqualsValueClause? initializer
     )
         : base(SyntaxKind.SingleFieldDeclarationExpression)
     {
         Declarator = declarator;
+        Initializer = initializer;
     }
 
     public override string ToString () {
-        return $"{Declarator}";
+        string str = $"{Declarator}";
+
+        if (Initializer != null) {
+            str += $" {Initializer}";
+        }
+
+        return str;
     }
 }
 
 public class MultipleFieldDeclarationExpression : FieldDeclarationExpression {
     public List<FieldDeclarator> Declarators { get; init; }
+    public EqualsValueClause? Initializer { get; init; }
 
     public MultipleFieldDeclarationExpression (
-        List<FieldDeclarator> declarators
+        List<FieldDeclarator> declarators, EqualsValueClause? initializer
     )
         : base(SyntaxKind.MultipleFieldDeclarationExpression)
     {
         Declarators = declarators;
+        Initializer = initializer;
     }
 
     public override string ToString () {
-        return $"({string.Join(", ", Declarators)})";
+        string str = $"({string.Join(", ", Declarators)})";
+
+        if (Initializer != null) {
+            str += $" {Initializer}";
+        }
+
+        return str;
     }
 }

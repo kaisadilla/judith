@@ -25,6 +25,17 @@ public abstract class SyntaxNode {
     }
 
     public abstract override string ToString ();
+
+    /// <summary>
+    /// Given an object, returns a string that can be used in ToString() methods
+    /// to represent the information given with correct indentation.
+    /// </summary>
+    /// <param name="obj"></param>
+    /// <returns></returns>
+    protected static string Stringify (object obj) {
+        return JsonConvert.SerializeObject(obj, Formatting.Indented)
+            .Replace("\\r\\n", "\r\n");
+    }
 }
 
 public struct SourceSpan {

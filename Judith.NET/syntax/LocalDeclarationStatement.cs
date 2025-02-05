@@ -16,6 +16,6 @@ public class LocalDeclarationStatement : Statement {
     }
 
     public override string ToString () {
-        return $"{Declaration}";
+        return $"|local_decl> {Declaration} <|";
     }
 }
