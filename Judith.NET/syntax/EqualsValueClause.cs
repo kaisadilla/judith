@@ -14,6 +14,10 @@ public class EqualsValueClause : SyntaxNode {
         Value = value;
     }
 
+    public override void Accept (SyntaxVisitor visitor) {
+        visitor.Visit(this);
+    }
+
     public override string ToString () {
         return $"(= {Value})";
     }

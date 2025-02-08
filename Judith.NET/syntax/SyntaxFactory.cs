@@ -34,10 +34,10 @@ public static class SyntaxFactory {
         IdentifierExpression? type
     ) {
         var decl = new FieldDeclarator(identifier, fieldKind, type) {
-            KindToken = fieldKindToken,
+            FieldKindToken = fieldKindToken,
         };
 
-        int start = decl.KindToken?.Start ?? decl.Identifier.Span.Start;
+        int start = decl.FieldKindToken?.Start ?? decl.Identifier.Span.Start;
         int end = decl.Type?.Span.End ?? decl.Identifier.Span.End;
         decl.SetSpan(new(start, end));
 
@@ -297,5 +297,55 @@ public static class SyntaxFactory {
         yieldStmt.SetSpan(new(yieldToken.Start, expression.Span.End));
 
         return yieldStmt;
+    }
+
+    public static FunctionItem FunctionItem (
+        Token funcToken,
+        Identifier name,
+        ParameterList parameters,
+        IdentifierExpression? returnType,
+        Statement body
+    ) {
+        var funcItem = new FunctionItem(name, parameters, returnType, body) {
+            FuncToken = funcToken,
+        };
+        funcItem.SetSpan(new(funcToken.Start, body.Span.End));
+
+        return funcItem;
+    }
+
+    public static ParameterList ParameterList(
+        Token leftParenToken, List<Parameter> parameters, Token rightParenToken
+    ) {
+        var paramList = new ParameterList(parameters) {
+            LeftParenthesisToken = leftParenToken,
+            RightParenthesisToken = rightParenToken,
+        };
+        paramList.SetSpan(new(leftParenToken.Start, rightParenToken.End));
+
+        return paramList;
+    }
+
+    public static Parameter Parameter (
+        Token? fieldKindToken,
+        Identifier identifier,
+        FieldKind fieldKind,
+        IdentifierExpression? type,
+        EqualsValueClause? defaultValue
+    ) {
+        var parameter = new Parameter(identifier, fieldKind, type, defaultValue) {
+            FieldKindToken = fieldKindToken,
+        };
+
+        int start = parameter.FieldKindToken?.Start ?? parameter.Identifier.Span.Start;
+        int end = true switch { // I oppose C# allowing this kind of esoteric expressions.
+            true when defaultValue is not null => defaultValue.Span.End,
+            true when type is not null => type.Span.End,
+            _ => identifier.Span.End,
+        };
+
+        parameter.SetSpan(new(start, end));
+
+        return parameter;
     }
 }

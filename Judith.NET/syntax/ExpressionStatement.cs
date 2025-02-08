@@ -15,6 +15,10 @@ public class ExpressionStatement : Statement {
         Expression = expression;
     }
 
+    public override void Accept (SyntaxVisitor visitor) {
+        visitor.Visit(this);
+    }
+
     public override string ToString () {
         return $"|> {Expression} <|";
     }

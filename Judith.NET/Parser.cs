@@ -18,7 +18,7 @@ public class Parser {
     private readonly List<Token> _tokens;
     private int _cursor = 0;
 
-    public List<SyntaxNode>? Nodes = null;
+    public List<SyntaxNode>? Nodes { get; private set; } = null;
 
     public Parser (List<Token> tokens, MessageContainer? messages = null) {
         _tokens = tokens;
@@ -33,7 +33,7 @@ public class Parser {
                 SkipComments();
                 if (IsAtEnd()) break;
 
-                SyntaxNode? node = TopLevelStatement();
+                SyntaxNode? node = TopLevelNode();
 
                 if (node is not null) {
                     Nodes.Add(node);
@@ -147,18 +147,96 @@ public class Parser {
     #endregion
 
     #region Parsing methods
-    private Statement TopLevelStatement () {
-        if (Match(TokenKind.KwConst)) {
-            return LocalDeclarationStatement(FieldKind.Constant);
-        }
-        else if (Match(TokenKind.KwVar)) {
-            return LocalDeclarationStatement(FieldKind.Variable);
-        }
-        else {
-            return Statement();
+    private SyntaxNode TopLevelNode () {
+        if (Match(TokenKind.KwFunc)) {
+            return FunctionItem();
         }
 
-        //throw Error(CompilerMessage.Parser.InvalidTopLevelStatement());
+        return Statement();
+    }
+
+    private FunctionItem FunctionItem () {
+        Token funcToken = PeekPrevious();
+
+        if (TryConsume(TokenKind.Identifier, out Token? identifierToken) == false) {
+            throw Error(CompilerMessage.Parser.IdentifierExpected(Peek().Line));
+        }
+
+        ParameterList parameters = ParameterList();
+        IdentifierExpression? returnType = OptionalTypeAnnotation();
+        BodyStatement body = BlockStatement(); // TODO: Decide if we'll allow arrow bodies.
+
+        return sf.FunctionItem(
+            funcToken,
+            sf.Identifier(identifierToken),
+            parameters,
+            returnType,
+            body
+        );
+    }
+
+    private ParameterList ParameterList () {
+        if (TryConsume(TokenKind.LeftParen, out Token? leftParenToken) == false) {
+            throw Error(CompilerMessage.Parser.LeftParenExpected(Peek().Line));
+        }
+
+        List<Parameter> parameters = new();
+        if (Check(TokenKind.RightParen) == false) {
+            do {
+                FieldDeclarationExpression decl = ImplicitFieldDeclarationExpression();
+                var paramsInDecl = ExtractParamsFromFieldDeclaration(decl);
+                parameters.AddRange(paramsInDecl);
+            }
+            while (Match(TokenKind.Comma) && Peek().Kind != TokenKind.RightParen);
+        }
+
+        if (TryConsume(TokenKind.RightParen, out Token? rightParenToken) == false) {
+            throw Error(CompilerMessage.Parser.RightParenExpected(Peek().Line));
+        }
+
+        return sf.ParameterList(leftParenToken, parameters, rightParenToken);
+    }
+
+    private List<Parameter> ExtractParamsFromFieldDeclaration (
+        FieldDeclarationExpression expr
+    ) {
+        List<Parameter> parameters = new();
+        if (expr.Kind == SyntaxKind.SingleFieldDeclarationExpression) {
+            var decl = (SingleFieldDeclarationExpression)expr;
+            parameters.Add(sf.Parameter(
+                decl.Declarator.FieldKindToken,
+                decl.Declarator.Identifier,
+                decl.Declarator.FieldKind,
+                decl.Declarator.Type,
+                decl.Initializer
+            ));
+        }
+        else if (expr.Kind == SyntaxKind.MultipleFieldDeclarationExpression) {
+            var decl = (MultipleFieldDeclarationExpression)expr;
+
+            EqualsValueClause? initializer = null;
+            for (int i = 0; i < decl.Declarators.Count; i++) {
+                // If this expression has an initializer, in parameter declaration
+                // syntax that initializer becomes the default value of the last
+                // parameter declared.
+                if (i == decl.Declarators.Count - 1) initializer = decl.Initializer;
+
+                parameters.Add(sf.Parameter(
+                    decl.Declarators[i].FieldKindToken,
+                    decl.Declarators[i].Identifier,
+                    decl.Declarators[i].FieldKind,
+                    decl.Declarators[i].Type,
+                    initializer
+                ));
+            }
+        }
+        else {
+            throw new Exception(
+                "FieldDeclarationExpection doesn't have correct kind."
+            );
+        }
+
+        return parameters;
     }
 
     private LocalDeclarationStatement LocalDeclarationStatement (
@@ -167,6 +245,24 @@ public class Parser {
         FieldDeclarationExpression fieldDecl = FieldDeclarationExpression(fieldKind);
         
         return sf.LocalDeclarationStatement(fieldDecl);
+    }
+
+    private Statement Statement () {
+        if (Match(TokenKind.KwConst)) {
+            return LocalDeclarationStatement(FieldKind.Constant);
+        }
+        else if (Match(TokenKind.KwVar)) {
+            return LocalDeclarationStatement(FieldKind.Variable);
+        }
+        if (Match(TokenKind.KwReturn)) {
+            return ReturnStatement();
+        }
+        else if (Match(TokenKind.KwYield)) {
+            return YieldStatement();
+        }
+        else {
+            return ExpressionStatement();
+        }
     }
 
     /// <summary>
@@ -252,18 +348,6 @@ public class Parser {
         }
     }
 
-    private Statement Statement () {
-        if (Match(TokenKind.KwReturn)) {
-            return ReturnStatement();
-        }
-        else if (Match(TokenKind.KwYield)) {
-            return YieldStatement();
-        }
-        else {
-            return ExpressionStatement();
-        }
-    }
-
     private BodyStatement BlockOrArrowStatement (TokenKind? openingToken) {
         if (Match(TokenKind.EqualArrow)) {
             return ArrowStatement();
@@ -283,7 +367,7 @@ public class Parser {
 
         Token openingToken = PeekPrevious();
         while (MatchBlockEndingToken() == false && IsAtEnd() == false) {
-            var stmt = TopLevelStatement();
+            var stmt = Statement();
             if (stmt is not null) {
                 statements.Add(stmt);
             }
@@ -579,6 +663,22 @@ public class Parser {
         return null;
     }
 
+    /// <summary>
+    /// Returns an identifier expression used as a type annotation if there's
+    /// one, or null if there isn't.
+    /// </summary>
+    private IdentifierExpression? OptionalTypeAnnotation () {
+        if (Match(TokenKind.Colon) == false) return null;
+
+        IdentifierExpression? type = IdentifierExpression();
+
+        if (type == null) throw Error(
+            CompilerMessage.Parser.TypeExpected(Peek().Line)
+        );
+
+        return type;
+    }
+
     private LiteralExpression? LiteralExpression () {
         Literal? literal = Literal();
 
@@ -623,14 +723,7 @@ public class Parser {
             throw Error(CompilerMessage.Parser.IdentifierExpected(Peek().Line));
         }
 
-        IdentifierExpression? type = null;
-        if (Match(TokenKind.Colon)) {
-            type = IdentifierExpression();
-
-            if (type == null) {
-                throw Error(CompilerMessage.Parser.TypeExpected(Peek().Line));
-            }
-        }
+        IdentifierExpression? type = OptionalTypeAnnotation();
 
         return sf.FieldDeclarator(
             fieldKindToken,

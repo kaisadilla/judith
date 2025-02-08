@@ -19,6 +19,10 @@ public class WhileExpression : Expression {
         Body = body;
     }
 
+    public override void Accept (SyntaxVisitor visitor) {
+        visitor.Visit(this);
+    }
+
     public override string ToString () {
         return "|while> " + Stringify(new {
             Test = Test.ToString(),

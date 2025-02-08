@@ -15,6 +15,10 @@ public class LocalDeclarationStatement : Statement {
         Declaration = declaration;
     }
 
+    public override void Accept (SyntaxVisitor visitor) {
+        visitor.Visit(this);
+    }
+
     public override string ToString () {
         return $"|local_decl> {Declaration} <|";
     }

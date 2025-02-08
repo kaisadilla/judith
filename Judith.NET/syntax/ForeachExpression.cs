@@ -26,6 +26,10 @@ public class ForeachExpression : Expression {
         Body = body;
     }
 
+    public override void Accept (SyntaxVisitor visitor) {
+        visitor.Visit(this);
+    }
+
     public override string ToString () {
         return "|foreach> " + Stringify(new {
             Initializer = Initializer.ToString(),

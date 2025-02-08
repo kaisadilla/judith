@@ -100,6 +100,16 @@ public class CompilerMessage {
             );
         }
 
+        public static CompilerMessage LeftParenExpected (int line) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.Parser,
+                (int)MessageCode.LeftParenExpected,
+                $"'(' expected.",
+                line
+            );
+        }
+
         public static CompilerMessage RightParenExpected (int line) {
             return new(
                 MessageKind.Error,
@@ -178,6 +188,16 @@ public class CompilerMessage {
                 MessageOrigin.Parser,
                 (int)MessageCode.EndExpected,
                 $"'End' expected.",
+                line
+            );
+        }
+
+        public static CompilerMessage ParameterExpected (int line) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.Parser,
+                (int)MessageCode.ParameterExpected,
+                $"Parameter expected.",
                 line
             );
         }

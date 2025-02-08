@@ -1,5 +1,6 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using Judith.NET;
+using Judith.NET.analysis;
 using Judith.NET.message;
 using Newtonsoft.Json;
 
@@ -40,3 +41,6 @@ void PrintErrors () {
         Console.WriteLine(error);
     }
 }
+
+SymbolAnalyzer symbolAnalyzer = new();
+symbolAnalyzer.DoTheVisitStuff(parser.Nodes);

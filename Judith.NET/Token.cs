@@ -105,6 +105,7 @@ public class Token {
             TokenKind.KwBreak => "break",
             TokenKind.KwContinue => "continue",
             TokenKind.KwGoto => "goto",
+            TokenKind.KwFunc => "func",
 
             // Directives
 

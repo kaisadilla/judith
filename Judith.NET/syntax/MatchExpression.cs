@@ -21,6 +21,10 @@ public class MatchExpression : Expression {
         Cases = cases;
     }
 
+    public override void Accept (SyntaxVisitor visitor) {
+        visitor.Visit(this);
+    }
+
     public override string ToString () {
         return "|match> " + Stringify(new {
             Discriminant = Discriminant.ToString(),

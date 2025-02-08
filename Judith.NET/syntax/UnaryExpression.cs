@@ -21,6 +21,10 @@ public class LeftUnaryExpression : UnaryExpression {
         Expression = expr;
     }
 
+    public override void Accept (SyntaxVisitor visitor) {
+        visitor.Visit(this);
+    }
+
     public override string ToString () {
         return $"({Operator} {Expression})";
     }

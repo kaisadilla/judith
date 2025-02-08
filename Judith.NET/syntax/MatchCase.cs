@@ -21,6 +21,10 @@ public class MatchCase : SyntaxNode {
         IsElseCase = isElseCase;
     }
 
+    public override void Accept (SyntaxVisitor visitor) {
+        visitor.Visit(this);
+    }
+
     public override string ToString () {
         return "|match case> " + Stringify(new {
             Tests = Tests.Select(t => t.ToString()),

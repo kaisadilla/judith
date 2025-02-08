@@ -10,6 +10,8 @@ namespace Judith.NET.syntax;
 
 [JsonConverter(typeof(StringEnumConverter))]
 public enum SyntaxKind {
+    FunctionItem,
+
     LocalDeclarationStatement,
     BlockStatement,
     ArrowStatement,
@@ -44,6 +46,8 @@ public enum SyntaxKind {
     FieldDeclarator,
     EqualsValueClause,
     MatchCase,
+    Parameter,
+    ParameterList,
 }
 
 [JsonConverter(typeof(StringEnumConverter))]

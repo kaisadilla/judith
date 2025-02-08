@@ -57,7 +57,7 @@ assignment_expr     > logical_expr "=" logical_expr
 logical_expr        > comparison_expr (( "and" | "or" ) comparison_expr)* -- The choice to make "and" and "or" have the same precedence is deliberate.
                     ;
                     
-comparison_expr     > addition_expr (( "==" | "!=" | "<" | "<=" | ">" | ">=" ) addition_expr)*
+comparison_expr     > addition_expr (( "==" | "!=" | "===" | "!==" | "<" | "<=" | ">" | ">=" ) addition_expr)*
                     ;
                     
 addition_expr       > math_expr (( "+" | "-" ) math_expr)*

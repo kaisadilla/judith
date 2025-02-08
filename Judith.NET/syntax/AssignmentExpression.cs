@@ -21,6 +21,10 @@ public class AssignmentExpression : Expression {
         Right = right;
     }
 
+    public override void Accept (SyntaxVisitor visitor) {
+        visitor.Visit(this);
+    }
+
     public override string ToString () {
         return $"({Left} = {Right})";
     }

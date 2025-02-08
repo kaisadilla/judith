@@ -23,6 +23,10 @@ public class SingleFieldDeclarationExpression : FieldDeclarationExpression {
         Initializer = initializer;
     }
 
+    public override void Accept (SyntaxVisitor visitor) {
+        visitor.Visit(this);
+    }
+
     public override string ToString () {
         string str = $"{Declarator}";
 
@@ -45,6 +49,10 @@ public class MultipleFieldDeclarationExpression : FieldDeclarationExpression {
     {
         Declarators = declarators;
         Initializer = initializer;
+    }
+
+    public override void Accept (SyntaxVisitor visitor) {
+        visitor.Visit(this);
     }
 
     public override string ToString () {

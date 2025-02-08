@@ -15,6 +15,10 @@ public class YieldStatement : Statement {
         Expression = expression;
     }
 
+    public override void Accept (SyntaxVisitor visitor) {
+        visitor.Visit(this);
+    }
+
     public override string ToString () {
         return "|yield> " + Expression.ToString() + " <|";
     }

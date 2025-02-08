@@ -6,15 +6,14 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.syntax;
 
-public class GroupExpression : Expression {
-    public Expression Expression { get; init; }
+public class ParameterList : SyntaxNode {
+    public List<Parameter> Parameters { get; init; }
+
     public Token? LeftParenthesisToken { get; init; }
     public Token? RightParenthesisToken { get; init; }
 
-    public GroupExpression (Expression expression)
-        : base(SyntaxKind.GroupExpression)
-    {
-        Expression = expression;
+    public ParameterList (List<Parameter> parameters) : base (SyntaxKind.ParameterList) {
+        Parameters = parameters;
     }
 
     public override void Accept (SyntaxVisitor visitor) {
@@ -22,6 +21,6 @@ public class GroupExpression : Expression {
     }
 
     public override string ToString () {
-        return $"({Expression})";
+        return "( " + Stringify(Parameters.Select(p => p.ToString())) + " )";
     }
 }

@@ -13,6 +13,10 @@ public class LiteralExpression : Expression {
         Literal = literal;
     }
 
+    public override void Accept (SyntaxVisitor visitor) {
+        visitor.Visit(this);
+    }
+
     public override string ToString () {
         return $"{Literal}";
     }

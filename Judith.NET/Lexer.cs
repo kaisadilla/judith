@@ -19,6 +19,7 @@ public class Lexer {
         ["end"] = TokenKind.KwEnd,
         ["false"] = TokenKind.KwFalse,
         ["for"] = TokenKind.KwFor,
+        ["func"] = TokenKind.KwFunc,
         ["goto"] = TokenKind.KwGoto,
         ["if"] = TokenKind.KwIf,
         ["in"] = TokenKind.KwIn,
@@ -118,6 +119,10 @@ public class Lexer {
                 return MakeToken(TokenKind.Slash);
             case '=':
                 if (Match('=')) {
+                    if (Match('=')) {
+                        return MakeToken(TokenKind.EqualEqualEqual);
+                    }
+
                     return MakeToken(TokenKind.EqualEqual);
                 }
                 if (Match('>')) {
@@ -127,6 +132,10 @@ public class Lexer {
                 return MakeToken(TokenKind.Equal);
             case '!':
                 if (Match('=')) {
+                    if (Match('=')) {
+                        return MakeToken(TokenKind.BangEqualEqual);
+                    }
+
                     return MakeToken(TokenKind.BangEqual);
                 }
 

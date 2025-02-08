@@ -15,6 +15,7 @@ public enum MessageCode {
     UnexpectedToken = 2_000,
     IdentifierExpected,
     TypeExpected,
+    LeftParenExpected,
     RightParenExpected,
     ExpressionExpected,
     FieldDeclarationExpected,
@@ -23,5 +24,6 @@ public enum MessageCode {
     InExpected,
     DoExpected,
     EndExpected,
+    ParameterExpected,
     InvalidTopLevelStatement,
 }

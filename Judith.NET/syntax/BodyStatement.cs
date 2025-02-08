@@ -22,6 +22,10 @@ public class BlockStatement : BodyStatement {
         Statements = statements;
     }
 
+    public override void Accept (SyntaxVisitor visitor) {
+        visitor.Visit(this);
+    }
+
     public override string ToString () {
         return "|block> " + Stringify(new {
             Statements = Statements.Select(stmt => stmt.ToString()),
@@ -35,6 +39,10 @@ public class ArrowStatement : BodyStatement {
 
     public ArrowStatement (Statement statement) : base(SyntaxKind.ArrowStatement) {
         Statement = statement;
+    }
+
+    public override void Accept (SyntaxVisitor visitor) {
+        visitor.Visit(this);
     }
 
     public override string ToString () {

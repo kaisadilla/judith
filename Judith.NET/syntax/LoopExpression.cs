@@ -15,6 +15,10 @@ public class LoopExpression : Expression {
         Body = body;
     }
 
+    public override void Accept (SyntaxVisitor visitor) {
+        visitor.Visit(this);
+    }
+
     public override string ToString () {
         return "|loop> " + Stringify(new { Body = Body.ToString() }) + " <|";
     }

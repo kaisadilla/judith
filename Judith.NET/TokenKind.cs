@@ -29,6 +29,8 @@ public enum TokenKind {
     EqualArrow,
 
     // Three-character tokens.
+    EqualEqualEqual,
+    BangEqualEqual,
 
     // % operators
 
@@ -63,6 +65,7 @@ public enum TokenKind {
     KwBreak,
     KwContinue,
     KwGoto,
+    KwFunc,
 
     // Directives
 

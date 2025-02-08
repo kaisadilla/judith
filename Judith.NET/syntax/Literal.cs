@@ -18,6 +18,10 @@ public class Literal : SyntaxNode {
         RawToken = rawToken;
     }
 
+    public override void Accept (SyntaxVisitor visitor) {
+        visitor.Visit(this);
+    }
+
     public override string ToString () {
         return $"{RawToken?.Lexeme ?? "<unknown literal>"}";
     }

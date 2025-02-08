@@ -24,6 +24,8 @@ public abstract class SyntaxNode {
         Span = span;
     }
 
+    public abstract void Accept (SyntaxVisitor visitor);
+
     public abstract override string ToString ();
 
     /// <summary>
@@ -34,6 +36,11 @@ public abstract class SyntaxNode {
     /// <returns></returns>
     protected static string Stringify (object obj) {
         return JsonConvert.SerializeObject(obj, Formatting.Indented)
+            .Replace("\\r\\n", "\r\n");
+    }
+
+    protected static string Stringify<T> (List<T> list) {
+        return JsonConvert.SerializeObject(list, Formatting.Indented)
             .Replace("\\r\\n", "\r\n");
     }
 }

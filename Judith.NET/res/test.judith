@@ -1,105 +1,12 @@
-var name = "Kevin"
+func add_four (a, b, c, d: Num = 3) : Num
+	const e = a + b
+	const f = c + d
+	return e + f * 1
 
-if name == "Kevin" then
-    console + lmao
-elsif name == "Kovin" then
-    console + pluslol
-else
-    console + idkdude
+	--func insertedinside ()
+	--	const a = 3
+	--end
 end
 
---return 15
---yield 6 + 3 * kevin
-
-match name do
-	"Kevin" do
-		name = "Kevin the best"
-	end
-	"Joseph", "Isaiah" do
-		name = "Joseph and Isaiah"
-	end
-	else
-		name = "??????"
-	end
+func second_out ()
 end
-
-while i < 5 do
-    const name2 = "Kevin 2"
-end
-
-while i < 20 => name2 = `ExtraKevin`
-
-for const i in my_list do
-	i + 3
-end
---
---for i in my_list do
---	i + 3
---end
---
---for index, obj in my_list do
---	index + obj
---end
-
---if name == "Kevin" then
---    name = `Joseph`
---else
---    name = "Whoever"
---end
---
---if name == "Ignatius" => name = "Uber"
---elsif name == "Laramy" => name = "Ymaral"
---else => name = "Whenever"
-
---const str = "Double quotes"
---var str2 = `Backticks`
---str2 = f"formatted"
---str2 = f"string
---    in two"
---str2 = """
---    {
---        "some_json_arr": [
---            "incl",
---            "excl"
---        ]
---    }
---"""
-
---const another = some_val / 3
---some_val = 35
---3 + 3 + 3
---3 < 2
---5 < my_val < 12
---8 > 7 > 6 > 5 > 4
---3 + 1 > 5
---my_var < 8 * 2
---not true
---true and false
---true or 3 or 5 and 2
-
---const my_string
---var my_string
---const fld1: Num
---const fld1, fld2
---const fld1, var fld2
---const fld1, fld2: Num
---const fld1: Num, fld2: String
---const fld1, var fld2: Num
---const fld1: Num, var fld2: String
---const my_num = 5
---var num1, num2 = 6
-
---15 * 5
---12 + 3 * 1
---9.9 * 5.5 - 16.6
---true
---(7.72)
---not 15
----.42
----my_var
---21 + 11
---7.71 - 0.71
---6 + 2 + 1 - -6
---15 + 9
---my_var
---my_var + 3 - 15

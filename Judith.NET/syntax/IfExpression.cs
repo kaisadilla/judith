@@ -23,6 +23,10 @@ public class IfExpression : Expression {
         Alternate = alternate;
     }
 
+    public override void Accept (SyntaxVisitor visitor) {
+        visitor.Visit(this);
+    }
+
     public override string ToString () {
         return "|if> " + Stringify(new {
             Test = Test.ToString(),
