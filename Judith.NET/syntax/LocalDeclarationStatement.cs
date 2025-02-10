@@ -13,6 +13,8 @@ public class LocalDeclarationStatement : Statement {
         : base(SyntaxKind.LocalDeclarationStatement)
     {
         Declaration = declaration;
+
+        Children.Add(Declaration);
     }
 
     public override void Accept (SyntaxVisitor visitor) {

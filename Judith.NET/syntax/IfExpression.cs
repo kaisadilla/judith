@@ -21,6 +21,9 @@ public class IfExpression : Expression {
         Test = test;
         Consequent = consequent;
         Alternate = alternate;
+
+        Children.Add(Test, Consequent);
+        if (Alternate != null) Children.Add(Alternate);
     }
 
     public override void Accept (SyntaxVisitor visitor) {

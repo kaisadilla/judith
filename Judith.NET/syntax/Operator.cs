@@ -7,12 +7,14 @@ using System.Threading.Tasks;
 namespace Judith.NET.syntax;
 
 public class Operator : SyntaxNode {
-    public Token? RawToken { get; private set; }
+    public OperatorKind OperatorKind { get; private init; }
+
+    public Token? RawToken { get; init; }
 
     private Operator () : base(SyntaxKind.Operator) { }
 
-    public Operator (Token? rawToken) : this() {
-        RawToken = rawToken;
+    public Operator (OperatorKind operatorKind) : this() {
+        OperatorKind = operatorKind;
     }
 
     public override void Accept (SyntaxVisitor visitor) {

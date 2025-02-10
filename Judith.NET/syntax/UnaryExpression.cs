@@ -11,14 +11,16 @@ public abstract class UnaryExpression : Expression {
 }
 
 public class LeftUnaryExpression : UnaryExpression {
-    public Expression Expression { get; init; }
     public Operator Operator { get; init; }
+    public Expression Expression { get; init; }
 
     public LeftUnaryExpression (Operator op, Expression expr)
         : base(SyntaxKind.LeftUnaryExpression)
     {
         Operator = op;
         Expression = expr;
+
+        Children.Add(Operator, Expression);
     }
 
     public override void Accept (SyntaxVisitor visitor) {

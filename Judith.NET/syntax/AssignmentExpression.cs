@@ -19,6 +19,8 @@ public class AssignmentExpression : Expression {
     {
         Left = left;
         Right = right;
+
+        Children.Add(Left, Right);
     }
 
     public override void Accept (SyntaxVisitor visitor) {

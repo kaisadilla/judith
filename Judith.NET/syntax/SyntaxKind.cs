@@ -48,6 +48,8 @@ public enum SyntaxKind {
     MatchCase,
     Parameter,
     ParameterList,
+
+    P_PrintStatement,
 }
 
 [JsonConverter(typeof(StringEnumConverter))]
@@ -62,10 +64,10 @@ public enum LiteralKind {
 
     // Basic
     String,
-    Number, // by default, float64
     Character,
+    Keyword, // literals like 'true' or 'null'.
 
-    // Advanced (common name - suffix)
+    // Numbers (common name - suffix)
     Int8, // sbyte - i8
     Int16, // short - i16
     Int32, // int - i32
@@ -76,9 +78,25 @@ public enum LiteralKind {
     UnsignedInt64, // ulong - u64
     Float16, // single - f16
     Float32, // float - f32
-    Float64, // double - f64
+    Float64, // double - f64 (can appear without suffix)
     NativeInt, // nint - in
     NativeUnsignedInt, // nuint - un
     NativeFloat, // nfloat - fn
     Decimal, // decimal - d
+}
+
+public enum OperatorKind {
+    Add, // +
+    Subtract, // -
+    Multiply, // *
+    Divide, // /
+    Equals, // ==
+    NotEquals, // !=
+    LessThan, // <
+    LessThanOrEqualTo, // <=
+    GreaterThan, // >
+    GreaterThanOrEqualTo, // >=
+    LogicalAnd, // and
+    LogicalOr, // or
+    //UserDefined, // % followed by identifier.
 }

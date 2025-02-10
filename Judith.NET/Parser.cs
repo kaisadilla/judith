@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-using sf = Judith.NET.syntax.SyntaxFactory;
+using SF = Judith.NET.syntax.SyntaxFactory;
 
 namespace Judith.NET;
 
@@ -21,16 +21,16 @@ public class Parser {
     public List<SyntaxNode>? Nodes { get; private set; } = null;
 
     public Parser (List<Token> tokens, MessageContainer? messages = null) {
-        _tokens = tokens;
+        _tokens = tokens.Where(t => t.Kind != TokenKind.Comment).ToList(); // TODO: incorporate comments, whitespaces and enters to tokens as trivia in the lexer.
         Messages = messages;
     }
 
+    [MemberNotNull(nameof(Nodes))]
     public void Parse () {
         Nodes = new();
 
         while (IsAtEnd() == false) {
             try {
-                SkipComments();
                 if (IsAtEnd()) break;
 
                 SyntaxNode? node = TopLevelNode();
@@ -166,9 +166,9 @@ public class Parser {
         IdentifierExpression? returnType = OptionalTypeAnnotation();
         BodyStatement body = BlockStatement(); // TODO: Decide if we'll allow arrow bodies.
 
-        return sf.FunctionItem(
+        return SF.FunctionItem(
             funcToken,
-            sf.Identifier(identifierToken),
+            SF.Identifier(identifierToken),
             parameters,
             returnType,
             body
@@ -194,7 +194,7 @@ public class Parser {
             throw Error(CompilerMessage.Parser.RightParenExpected(Peek().Line));
         }
 
-        return sf.ParameterList(leftParenToken, parameters, rightParenToken);
+        return SF.ParameterList(leftParenToken, parameters, rightParenToken);
     }
 
     private List<Parameter> ExtractParamsFromFieldDeclaration (
@@ -203,7 +203,7 @@ public class Parser {
         List<Parameter> parameters = new();
         if (expr.Kind == SyntaxKind.SingleFieldDeclarationExpression) {
             var decl = (SingleFieldDeclarationExpression)expr;
-            parameters.Add(sf.Parameter(
+            parameters.Add(SF.Parameter(
                 decl.Declarator.FieldKindToken,
                 decl.Declarator.Identifier,
                 decl.Declarator.FieldKind,
@@ -221,7 +221,7 @@ public class Parser {
                 // parameter declared.
                 if (i == decl.Declarators.Count - 1) initializer = decl.Initializer;
 
-                parameters.Add(sf.Parameter(
+                parameters.Add(SF.Parameter(
                     decl.Declarators[i].FieldKindToken,
                     decl.Declarators[i].Identifier,
                     decl.Declarators[i].FieldKind,
@@ -244,7 +244,7 @@ public class Parser {
     ) {
         FieldDeclarationExpression fieldDecl = FieldDeclarationExpression(fieldKind);
         
-        return sf.LocalDeclarationStatement(fieldDecl);
+        return SF.LocalDeclarationStatement(fieldDecl);
     }
 
     private Statement Statement () {
@@ -259,6 +259,9 @@ public class Parser {
         }
         else if (Match(TokenKind.KwYield)) {
             return YieldStatement();
+        }
+        else if (Match(TokenKind.PkwPrint)) {
+            return PrivPrintStmt();
         }
         else {
             return ExpressionStatement();
@@ -337,14 +340,14 @@ public class Parser {
                 throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
             }
 
-            initializer = sf.EqualsValueClause(expr, equalsToken);
+            initializer = SF.EqualsValueClause(expr, equalsToken);
         }
 
         if (declarators.Count == 1) {
-            return sf.SingleFieldDeclarationExpression(declarators[0], initializer);
+            return SF.SingleFieldDeclarationExpression(declarators[0], initializer);
         }
         else {
-            return sf.MultipleFieldDeclarationExpression(declarators, initializer);
+            return SF.MultipleFieldDeclarationExpression(declarators, initializer);
         }
     }
 
@@ -374,7 +377,7 @@ public class Parser {
         }
         Token closingToken = PeekPrevious();
 
-        return sf.BlockStatement(openingToken, statements, closingToken);
+        return SF.BlockStatement(openingToken, statements, closingToken);
     }
 
     private ArrowStatement ArrowStatement () {
@@ -385,27 +388,27 @@ public class Parser {
 
         Statement stmt = Statement();
 
-        return sf.ArrowStatement(arrowToken, stmt);
+        return SF.ArrowStatement(arrowToken, stmt);
     }
 
     public ReturnStatement ReturnStatement () {
         Token returnToken = PeekPrevious();
         Expression expr = Expression();
 
-        return sf.ReturnStatement(returnToken, expr);
+        return SF.ReturnStatement(returnToken, expr);
     }
 
     public YieldStatement YieldStatement () {
         Token yieldToken = PeekPrevious();
         Expression expr = Expression();
 
-        return sf.YieldStatement(yieldToken, expr);
+        return SF.YieldStatement(yieldToken, expr);
     }
 
     private ExpressionStatement ExpressionStatement () {
         var expr = Expression();
 
-        return sf.ExpressionStatement(expr);
+        return SF.ExpressionStatement(expr);
     }
 
     private Expression Expression () {
@@ -457,18 +460,18 @@ public class Parser {
         IfExpression _Elsif () {
             var elsifToken = PeekPrevious();
             var alternate = IfExpression();
-            var alternateStmt = sf.ExpressionStatement(alternate);
-            return sf.IfExpression(ifToken, test, consequent, elsifToken, alternateStmt);
+            var alternateStmt = SF.ExpressionStatement(alternate);
+            return SF.IfExpression(ifToken, test, consequent, elsifToken, alternateStmt);
         }
 
         IfExpression _Else () {
             var elseToken = PeekPrevious();
             var alternate = BlockOrArrowStatement(null);
-            return sf.IfExpression(ifToken, test, consequent, elseToken, alternate);
+            return SF.IfExpression(ifToken, test, consequent, elseToken, alternate);
         }
 
         IfExpression _If () {
-            return sf.IfExpression(ifToken, test, consequent);
+            return SF.IfExpression(ifToken, test, consequent);
         }
     }
 
@@ -489,7 +492,7 @@ public class Parser {
             throw Error(CompilerMessage.Parser.EndExpected(Peek().Line));
         }
 
-        return sf.MatchExpression(matchToken, discriminant, doToken, cases, endToken);
+        return SF.MatchExpression(matchToken, discriminant, doToken, cases, endToken);
     }
 
     public MatchCase MatchCase () {
@@ -513,7 +516,7 @@ public class Parser {
 
         var consequent = BlockOrArrowStatement(elseToken == null ? TokenKind.KwDo : null);
 
-        return sf.MatchCase(elseToken, tests, consequent);
+        return SF.MatchCase(elseToken, tests, consequent);
     }
 
     public LoopExpression LoopExpression () {
@@ -521,7 +524,7 @@ public class Parser {
 
         BodyStatement body = BlockOrArrowStatement(null);
 
-        return sf.LoopExpression(loopToken, body);
+        return SF.LoopExpression(loopToken, body);
     }
 
     public WhileExpression WhileExpression () {
@@ -530,7 +533,7 @@ public class Parser {
 
         BodyStatement body = BlockOrArrowStatement(TokenKind.KwDo);
 
-        return sf.WhileExpression(whileToken, test, body);
+        return SF.WhileExpression(whileToken, test, body);
     }
 
     public ForeachExpression ForeachExpression () {
@@ -544,7 +547,7 @@ public class Parser {
         Expression enumerable = Expression();
         BodyStatement body = BlockOrArrowStatement(TokenKind.KwDo);
 
-        return sf.ForeachExpression(foreachToken, initializer, inToken, enumerable, body);
+        return SF.ForeachExpression(foreachToken, initializer, inToken, enumerable, body);
     }
 
     // "="
@@ -555,7 +558,7 @@ public class Parser {
             Token equalToken = PeekPrevious();
             var right = AssignmentExpression();
 
-            return sf.AssignmentExpression(expr, equalToken, right);
+            return SF.AssignmentExpression(expr, equalToken, right);
         }
 
         return expr;
@@ -566,10 +569,10 @@ public class Parser {
         Expression expr = ComparisonBinaryExpression();
 
         while (MatchLogicalToken()) {
-            Token op = PeekPrevious();
+            Operator op = Operator();
             Expression right = ComparisonBinaryExpression();
 
-            expr = sf.BinaryExpression(expr, sf.Operator(op), right);
+            expr = SF.BinaryExpression(expr, op, right);
         }
 
         return expr;
@@ -580,10 +583,10 @@ public class Parser {
         Expression expr = AdditionBinaryExpression();
 
         while (MatchComparisonToken()) {
-            Token op = PeekPrevious();
+            Operator op = Operator();
             Expression right = AdditionBinaryExpression();
 
-            expr = sf.BinaryExpression(expr, sf.Operator(op), right);
+            expr = SF.BinaryExpression(expr, op, right);
         }
 
         return expr;
@@ -594,10 +597,10 @@ public class Parser {
         Expression expr = MathBinaryExpression();
 
         while (MatchAdditionToken()) {
-            Token op = PeekPrevious();
+            Operator op = Operator();
             Expression right = MathBinaryExpression();
 
-            expr = sf.BinaryExpression(expr, sf.Operator(op), right);
+            expr = SF.BinaryExpression(expr, op, right);
         }
 
         return expr;
@@ -608,10 +611,10 @@ public class Parser {
         Expression expr = LeftUnaryExpression();
 
         while (MatchMathToken()) {
-            Token op = PeekPrevious();
+            Operator op = Operator();
             Expression right = LeftUnaryExpression();
 
-            expr = sf.BinaryExpression(expr, sf.Operator(op), right);
+            expr = SF.BinaryExpression(expr, op, right);
         }
 
         return expr;
@@ -620,9 +623,9 @@ public class Parser {
     // "not"
     private Expression LeftUnaryExpression () {
         if (MatchLeftUnaryToken()) {
-            Token op = PeekPrevious();
+            Operator op = Operator();
             var right = LeftUnaryExpression();
-            return sf.LeftUnaryExpression(sf.Operator(op), right);
+            return SF.LeftUnaryExpression(op, right);
         }
 
         return Primary();
@@ -642,7 +645,7 @@ public class Parser {
                 throw Error(CompilerMessage.Parser.RightParenExpected(Peek().Line));
             }
             
-            return sf.GroupExpression(expr, leftParen, rightParen);
+            return SF.GroupExpression(expr, leftParen, rightParen);
         }
 
         IdentifierExpression? identifier = IdentifierExpression();
@@ -656,8 +659,8 @@ public class Parser {
     private IdentifierExpression? IdentifierExpression () {
         if (Match(TokenKind.Identifier)) {
             Token identifierToken = PeekPrevious();
-            var id = sf.Identifier(identifierToken);
-            return sf.IdentifierExpression(id);
+            var id = SF.Identifier(identifierToken);
+            return SF.IdentifierExpression(id);
         }
         
         return null;
@@ -683,7 +686,7 @@ public class Parser {
         Literal? literal = Literal();
 
         if (literal is not null) {
-            return sf.LiteralExpression(literal);
+            return SF.LiteralExpression(literal);
         }
 
         return null;
@@ -693,19 +696,56 @@ public class Parser {
         var token = Peek();
 
         if (Match(TokenKind.KwTrue)) {
-            return sf.Literal(token);
+            return BooleanLiteral(token);
         }
         if (Match(TokenKind.KwFalse)) {
-            return sf.Literal(token);
+            return BooleanLiteral(token);
         }
         if (Match(TokenKind.Number)) {
-            return sf.Literal(token);
+            return NumberLiteral(token);
         }
         if (Match(TokenKind.String)) {
-            return sf.Literal(token);
+            return SF.Literal(token);
         }
 
         return null;
+    }
+
+    private Literal NumberLiteral (Token token) {
+        // The part of the lexeme that represents the number, removing
+        // underscores as they don't have any meaning.
+        string numberString = token.Lexeme.Replace("_", "");
+        // If it contains a dot, it's decimal and will be hold in a double.
+        // Same applies if it's expressed in scientific notation: XeY.
+        bool isDecimal = numberString.Contains('.') || numberString.Contains('e');
+
+        if (isDecimal) {
+            if (double.TryParse(numberString, out double val)) {
+                return SF.NumberLiteral(token, val);
+            }
+            else {
+                throw Error(CompilerMessage.Parser.InvalidFloatLiteral(token.Line));
+            }
+        }
+        else {
+            if (long.TryParse(numberString, out long val)) {
+                return SF.NumberLiteral(token, val);
+            }
+            else {
+                throw Error(CompilerMessage.Parser.InvalidIntegerLiteral(token.Line));
+            }
+        }
+    }
+
+    private Literal BooleanLiteral (Token token) {
+        if (token.Kind == TokenKind.KwTrue) {
+            return SF.BooleanLiteral(token, true);
+        }
+        if (token.Kind == TokenKind.KwFalse) {
+            return SF.BooleanLiteral(token, false);
+        }
+
+        throw new Exception("Trying to parse an invalid token as a boolean.");
     }
 
     private FieldDeclarator FieldDeclarator (FieldKind fieldKind, Token? fieldKindToken) {
@@ -725,12 +765,43 @@ public class Parser {
 
         IdentifierExpression? type = OptionalTypeAnnotation();
 
-        return sf.FieldDeclarator(
+        return SF.FieldDeclarator(
             fieldKindToken,
-            sf.Identifier(identifierToken),
+            SF.Identifier(identifierToken),
             fieldKind,
             type
         );
+    }
+
+    private Operator Operator () {
+        Token token = PeekPrevious();
+        return token.Kind switch {
+            TokenKind.Plus => _Op(OperatorKind.Add),
+            TokenKind.Minus => _Op(OperatorKind.Subtract),
+            TokenKind.Asterisk => _Op(OperatorKind.Multiply),
+            TokenKind.Slash => _Op(OperatorKind.Divide),
+            TokenKind.EqualEqual => _Op(OperatorKind.Equals),
+            TokenKind.BangEqual => _Op(OperatorKind.NotEquals),
+            TokenKind.Less => _Op(OperatorKind.LessThan),
+            TokenKind.LessEqual => _Op(OperatorKind.LessThanOrEqualTo),
+            TokenKind.Greater => _Op(OperatorKind.GreaterThan),
+            TokenKind.GreaterEqual => _Op(OperatorKind.GreaterThanOrEqualTo),
+            TokenKind.KwAnd => _Op(OperatorKind.LogicalAnd),
+            TokenKind.KwOr => _Op(OperatorKind.LogicalOr),
+            _ => throw new Exception(
+                $"Cannot parse {token.Kind} as an Operator."
+            ),
+        };
+        Operator _Op (OperatorKind opKind) {
+            return SF.Operator(token, opKind);
+        }
+    }
+
+    private PrivPrintStmt PrivPrintStmt () {
+        Token p_printToken = PeekPrevious();
+        Expression expr = Expression();
+
+        return SF.PrivPrintStmt(p_printToken, expr);
     }
     #endregion
 

@@ -13,6 +13,8 @@ public class ReturnStatement : Statement {
 
     public ReturnStatement (Expression expression) : base(SyntaxKind.ReturnStatement) {
         Expression = expression;
+
+        Children.Add(Expression);
     }
 
     public override void Accept (SyntaxVisitor visitor) {

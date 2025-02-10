@@ -24,6 +24,8 @@ public class ForeachExpression : Expression {
         Initializer = initializer;
         Enumerable = enumerable;
         Body = body;
+
+        Children.Add(Initializer, Enumerable, Body);
     }
 
     public override void Accept (SyntaxVisitor visitor) {

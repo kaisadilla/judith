@@ -11,6 +11,12 @@ public abstract class SyntaxNode {
     [JsonProperty(Order = -1_000_000)]
     public SyntaxKind Kind { get; private set; }
     public SourceSpan Span { get; private set; }
+    public int Line { get; private set; } = -1;
+
+    /// <summary>
+    /// Contains references to all the nodes that are children of this one.
+    /// </summary>
+    public List<SyntaxNode> Children { get; private set; } = new();
 
     protected SyntaxNode (SyntaxKind kind) {
         Kind = kind;
@@ -22,6 +28,10 @@ public abstract class SyntaxNode {
     /// </summary>
     public void SetSpan (SourceSpan span) {
         Span = span;
+    }
+
+    public void SetLine (int line) {
+        Line = line;
     }
 
     public abstract void Accept (SyntaxVisitor visitor);

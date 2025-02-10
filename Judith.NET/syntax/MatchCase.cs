@@ -19,6 +19,9 @@ public class MatchCase : SyntaxNode {
         Tests = tests;
         Consequent = consequent;
         IsElseCase = isElseCase;
+
+        Children.AddRange(Tests);
+        Children.Add(Consequent);
     }
 
     public override void Accept (SyntaxVisitor visitor) {

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Judith.NET.syntax;
 
 public class FunctionItem : Item {
-    public Identifier Name { get; init; }
+    public Identifier Identifier { get; init; }
     public ParameterList Parameters { get; init; }
     public IdentifierExpression? ReturnType { get; init; }
     public Statement Body { get; init; }
@@ -23,10 +23,14 @@ public class FunctionItem : Item {
     )
         : base(SyntaxKind.FunctionItem)
     {
-        Name = name;
+        Identifier = name;
         Parameters = parameters;
         ReturnType = returnType;
         Body = body;
+
+        Children.Add(Identifier, Parameters, Body);
+
+        if (ReturnType != null) Children.Add(ReturnType);
     }
 
     public override void Accept (SyntaxVisitor visitor) {
@@ -35,7 +39,7 @@ public class FunctionItem : Item {
 
     public override string ToString () {
         return "|ITEM function> " + Stringify(new {
-            Name = Name.ToString(),
+            Name = Identifier.ToString(),
             Parameters = Parameters.ToString(),
             ReturnType = ReturnType?.ToString(),
             Body = Body.ToString(),

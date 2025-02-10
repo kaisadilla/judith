@@ -12,6 +12,8 @@ public class EqualsValueClause : SyntaxNode {
 
     public EqualsValueClause (Expression value) : base(SyntaxKind.EqualsValueClause) {
         Value = value;
+
+        Children.Add(Value);
     }
 
     public override void Accept (SyntaxVisitor visitor) {

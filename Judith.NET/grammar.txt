@@ -14,6 +14,13 @@ arrow_stmt          > "=>" statement
 block_stmt{i}       > ${i} top_level_stmt*
                     
 statement           > if_stmt
+                    | match_stmt
+					| loop_stmt
+					| while_stmt
+					| foreach_stmt
+					| return_stmt
+					| yield_stmt
+					| control_stmt
                     | expression_stmt
                     ;
                     
@@ -95,3 +102,7 @@ var_decl_init       > var_decl ( "=" expression )?
                     ;
 
 * -> Right-associative.
+
+
+----------------
+__p_print

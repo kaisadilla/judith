@@ -13,6 +13,8 @@ public class IdentifierExpression : Expression {
         : base(SyntaxKind.IdentifierExpression)
     {
         Identifier = identifier;
+
+        Children.Add(Identifier);
     }
 
     public override void Accept (SyntaxVisitor visitor) {

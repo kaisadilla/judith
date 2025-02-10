@@ -20,6 +20,8 @@ public class BlockStatement : BodyStatement {
         : base(SyntaxKind.BlockStatement)
     {
         Statements = statements;
+
+        Children.AddRange(Statements);
     }
 
     public override void Accept (SyntaxVisitor visitor) {
@@ -39,6 +41,8 @@ public class ArrowStatement : BodyStatement {
 
     public ArrowStatement (Statement statement) : base(SyntaxKind.ArrowStatement) {
         Statement = statement;
+
+        Children.Add(Statement);
     }
 
     public override void Accept (SyntaxVisitor visitor) {

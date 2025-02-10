@@ -13,6 +13,8 @@ public class LoopExpression : Expression {
 
     public LoopExpression (Statement body) : base(SyntaxKind.LoopExpression) {
         Body = body;
+
+        Children.Add(Body);
     }
 
     public override void Accept (SyntaxVisitor visitor) {

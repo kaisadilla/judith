@@ -107,6 +107,9 @@ public class Token {
             TokenKind.KwGoto => "goto",
             TokenKind.KwFunc => "func",
 
+            // Private keywords
+            TokenKind.PkwPrint => "__p_print",
+
             // Directives
 
             // Other

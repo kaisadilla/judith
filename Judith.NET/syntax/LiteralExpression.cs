@@ -11,6 +11,8 @@ public class LiteralExpression : Expression {
 
     public LiteralExpression (Literal literal) : base(SyntaxKind.LiteralExpression) {
         Literal = literal;
+
+        Children.Add(Literal);
     }
 
     public override void Accept (SyntaxVisitor visitor) {

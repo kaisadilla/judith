@@ -26,4 +26,6 @@ public enum MessageCode {
     EndExpected,
     ParameterExpected,
     InvalidTopLevelStatement,
+    InvalidIntegerLiteral,
+    InvalidFloatLiteral,
 }

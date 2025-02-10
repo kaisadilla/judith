@@ -13,6 +13,8 @@ public class YieldStatement : Statement {
 
     public YieldStatement (Expression expression) : base(SyntaxKind.YieldStatement) {
         Expression = expression;
+
+        Children.Add(Expression);
     }
 
     public override void Accept (SyntaxVisitor visitor) {

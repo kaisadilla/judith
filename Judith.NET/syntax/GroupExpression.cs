@@ -15,6 +15,8 @@ public class GroupExpression : Expression {
         : base(SyntaxKind.GroupExpression)
     {
         Expression = expression;
+
+        Children.Add(Expression);
     }
 
     public override void Accept (SyntaxVisitor visitor) {

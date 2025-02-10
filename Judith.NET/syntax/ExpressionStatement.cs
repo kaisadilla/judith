@@ -13,6 +13,8 @@ public class ExpressionStatement : Statement {
         : base(SyntaxKind.ExpressionStatement)
     {
         Expression = expression;
+
+        Children.Add(Expression);
     }
 
     public override void Accept (SyntaxVisitor visitor) {

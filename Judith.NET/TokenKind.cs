@@ -67,6 +67,9 @@ public enum TokenKind {
     KwGoto,
     KwFunc,
 
+    // Private keywords
+    PkwPrint,
+
     // Directives
 
     // Other

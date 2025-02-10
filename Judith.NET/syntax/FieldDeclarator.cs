@@ -18,6 +18,9 @@ public class FieldDeclarator : SyntaxNode {
         Identifier = identifier;
         FieldKind = fieldKind;
         Type = type;
+
+        Children.Add(Identifier);
+        if (Type != null) Children.Add(Type);
     }
 
     public override void Accept (SyntaxVisitor visitor) {

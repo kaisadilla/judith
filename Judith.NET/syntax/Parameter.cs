@@ -26,6 +26,10 @@ public class Parameter : SyntaxNode {
         FieldKind = fieldKind;
         Type = type;
         DefaultValue = defaultValue;
+
+        Children.Add(Identifier);
+        if (Type != null) Children.Add(Type);
+        if (DefaultValue != null) Children.Add(DefaultValue);
     }
 
     public override void Accept (SyntaxVisitor visitor) {

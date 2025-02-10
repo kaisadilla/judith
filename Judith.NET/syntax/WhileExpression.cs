@@ -17,6 +17,8 @@ public class WhileExpression : Expression {
     {
         Test = test;
         Body = body;
+
+        Children.Add(Test, Body);
     }
 
     public override void Accept (SyntaxVisitor visitor) {

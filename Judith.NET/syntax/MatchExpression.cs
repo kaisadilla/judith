@@ -19,6 +19,9 @@ public class MatchExpression : Expression {
     {
         Discriminant = discriminant;
         Cases = cases;
+
+        Children.Add(Discriminant);
+        Children.AddRange(Cases);
     }
 
     public override void Accept (SyntaxVisitor visitor) {

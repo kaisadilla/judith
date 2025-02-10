@@ -1,12 +1,21 @@
-func add_four (a, b, c, d: Num = 3) : Num
-	const e = a + b
-	const f = c + d
-	return e + f * 1
+--__p_print 3 + 5
 
-	--func insertedinside ()
-	--	const a = 3
-	--end
-end
+3 + 8 *
+6 - 2
 
-func second_out ()
-end
+--func add_four (a, b, c, d: Num = 3) : Num
+--	const e = a + b
+--	const f = c + d
+--	return e + f * 1
+--
+--	--func insertedinside ()
+--	--	const a = 3
+--	--end
+--end
+--
+--func second_out ()
+--end
+--
+--func an_extra_func ()
+--	const owo = "func"
+--end

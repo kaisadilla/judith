@@ -211,5 +211,25 @@ public class CompilerMessage {
                 line
             );
         }
+
+        public static CompilerMessage InvalidIntegerLiteral (int line) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.Parser,
+                (int)MessageCode.InvalidIntegerLiteral,
+                $"Invalid integer literal.",
+                line
+            );
+        }
+
+        public static CompilerMessage InvalidFloatLiteral (int line) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.Parser,
+                (int)MessageCode.InvalidFloatLiteral,
+                $"Invalid float literal.",
+                line
+            );
+        }
     }
 }

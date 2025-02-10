@@ -21,6 +21,9 @@ public class SingleFieldDeclarationExpression : FieldDeclarationExpression {
     {
         Declarator = declarator;
         Initializer = initializer;
+
+        Children.Add(Declarator);
+        if (Initializer != null) Children.Add(Initializer);
     }
 
     public override void Accept (SyntaxVisitor visitor) {

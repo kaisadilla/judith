@@ -1,9 +1,11 @@
 ﻿using Judith.NET.message;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace Judith.NET;
 
@@ -35,6 +37,7 @@ public class Lexer {
         ["var"] = TokenKind.KwVar,
         ["while"] = TokenKind.KwWhile,
         ["yield"] = TokenKind.KwYield,
+        ["__p_print"] = TokenKind.PkwPrint,
     };
 
     public MessageContainer? Messages { get; private set; }
@@ -72,6 +75,7 @@ public class Lexer {
         Messages = messages;
     }
 
+    [MemberNotNull(nameof(Tokens))]
     public void Tokenize () {
         Tokens = new();
 

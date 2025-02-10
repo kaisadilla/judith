@@ -14,6 +14,8 @@ public class ParameterList : SyntaxNode {
 
     public ParameterList (List<Parameter> parameters) : base (SyntaxKind.ParameterList) {
         Parameters = parameters;
+
+        Children.AddRange(Parameters);
     }
 
     public override void Accept (SyntaxVisitor visitor) {

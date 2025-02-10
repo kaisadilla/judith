@@ -16,6 +16,8 @@ public class BinaryExpression : Expression {
         Operator = op;
         Left = left;
         Right = right;
+
+        Children.Add(Operator, Left, Right);
     }
 
     public override void Accept (SyntaxVisitor visitor) {
