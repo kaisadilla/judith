@@ -9,6 +9,6 @@ enum class ValueType {
 struct Value {
     ValueType type;
     union {
-        double floatNum;
+        f64 floatNum;
     } as;
 };

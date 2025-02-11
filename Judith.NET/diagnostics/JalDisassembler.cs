@@ -28,17 +28,17 @@ public class JalDisassembler {
 
     private int DisassembleInstruction (int index) {
         OpCode opCode = (OpCode)_chunk.Code[index];
-        Dump += $"Line {_chunk.CodeLines[index],-5} | {ByteStr(index)} ";
+        Dump += $"Line {_chunk.CodeLines[index],-5} | {HexByteStr(index)} ";
 
         switch (opCode) {
             case OpCode.NoOp:
                 return SimpleInstruction("NOOP", index);
             case OpCode.Constant:
                 return ConstantInstruction("CONSTANT", index);
-            case OpCode.Return:
-                return SimpleInstruction("RETURN", index);
             case OpCode.ConstantLong:
                 return ConstantLongInstruction("CONSTANT_LONG", index);
+            case OpCode.Return:
+                return SimpleInstruction("RETURN", index);
             case OpCode.Negate:
                 return SimpleInstruction("NEGATE", index);
             case OpCode.Add:
@@ -76,13 +76,13 @@ public class JalDisassembler {
         var constant = _chunk.Constants[constIndex];
 
         Dump += IdStr(name) + " ";
-        Dump += ByteStr(_chunk.Code[index + 1]) + " ";
+        Dump += HexByteStr(_chunk.Code[index + 1]) + " ";
 
         if (constant.Type == JalValueType.Float64 && constant is JalValue<double> c_f64) {
             Dump += $"; {JFloatStr(c_f64.Value)}";
         }
         else {
-            Dump += $"<unknown value type>";
+            Dump += "<unknown value type>";
         }
 
         return index + 2;
@@ -97,7 +97,7 @@ public class JalDisassembler {
         var constant = _chunk.Constants[constIndex];
 
         Dump += IdStr(name) + " ";
-        Dump += I32Str(_chunk.Code[index + 1]) + " ";
+        Dump += HexIntegerStr(_chunk.Code[index + 1]) + " ";
 
         if (constant.Type == JalValueType.Float64 && constant is JalValue<double> c_f64) {
             Dump += $"; {JFloatStr(c_f64.Value)}";
@@ -114,8 +114,8 @@ public class JalDisassembler {
         return index + 1;
     }
 
-    private static string ByteStr (int index) => $"0x{index:X4}";
-    private static string I32Str (int index) => $"0x{index:X8}";
+    private static string HexByteStr (int index) => $"0x{index:X4}";
+    private static string HexIntegerStr (long index) => $"0x{index:X8}";
     private static string JFloatStr (double val) => $"{val}";
     private static string IdStr (string id) => id.PadRight(16, ' ');
 }

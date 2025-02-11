@@ -34,7 +34,7 @@ add_executable(
 	"header/root.hpp" "header/types.hpp"
 	"header/VM.hpp" "header/Chunk.hpp"
 	"src/VM.cpp" "src/Chunk.cpp" "src/Value.cpp"
- "src/ChunkReader.cpp" "src/utils.cpp" "src/utils/Buffer.cpp")
+ "src/ChunkReader.cpp" "src/utils.cpp" "src/utils/Buffer.cpp" "src/debug/chunk.cpp")
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET judith_vm PROPERTY CXX_STANDARD 20)
