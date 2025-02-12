@@ -2,13 +2,8 @@
 
 #include "root.hpp"
 
-enum class ValueType {
-    FLOAT64
-};
-
-struct Value {
-    ValueType type;
-    union {
-        f64 floatNum;
-    } as;
+union Value {
+    f64 asFloat64;
+    i64 asInt64;
+    bool asBool;
 };

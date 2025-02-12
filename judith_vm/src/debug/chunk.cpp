@@ -4,6 +4,7 @@
 #include "debug/chunk.hpp"
 #include "Chunk.hpp"
 #include "jal/opcodes.hpp"
+#include "Value.hpp"
 
 size_t disassembleInstruction (std::ostringstream& str, Chunk& chunk, size_t index);
 
@@ -56,13 +57,7 @@ static size_t constantInstruction (std::ostringstream& str, Chunk& chunk, const 
     Value constant = chunk.constants[constIndex];
 
     str << idStr(name) << " " << hexByteStr(constIndex) << " ";
-
-    if (constant.type == ValueType::FLOAT64) {
-        str << "; " << floatStr(constant.as.floatNum);
-    }
-    else {
-        str << "<unknown value type>";
-    }
+    str << "; " << floatStr(constant.asFloat64);
 
     return index + 2;
 }
@@ -80,13 +75,7 @@ static size_t constantLongInstruction (std::ostringstream& str, Chunk& chunk, co
     Value constant = chunk.constants[constIndex];
 
     str << idStr(name) << " " << hexIntegerStr(constIndex) << " ";
-
-    if (constant.type == ValueType::FLOAT64) {
-        str << "; " << floatStr(constant.as.floatNum);
-    }
-    else {
-        str << "<unknown value type>";
-    }
+    str << "; " << floatStr(constant.asFloat64);
 
     return index + 5;
 }
@@ -115,30 +104,46 @@ static size_t disassembleInstruction (std::ostringstream& str, Chunk& chunk, siz
     switch (opCode) {
     case OpCode::NOOP:
         return simpleInstruction(str, chunk, "NOOP", index);
-    case OpCode::CONSTANT:
-        return constantInstruction(str, chunk, "CONSTANT", index);
-    case OpCode::CONSTANT_LONG:
-        return constantLongInstruction(str, chunk, "CONSTANT_LONG", index);
-    case OpCode::RETURN:
-        return simpleInstruction(str, chunk, "RETURN", index);
-    case OpCode::NEGATE:
-        return simpleInstruction(str, chunk, "NEGATE", index);
-    case OpCode::ADD:
-        return simpleInstruction(str, chunk, "ADD", index);
-    case OpCode::SUBTRACT:
-        return simpleInstruction(str, chunk, "SUBTRACT", index);
-    case OpCode::MULTIPLY:
-        return simpleInstruction(str, chunk, "MULTIPLY", index);
-    case OpCode::DIVIDE:
-        return simpleInstruction(str, chunk, "DIVIDE", index);
-    case OpCode::CHECKED_ADD:
-        return simpleInstruction(str, chunk, "CHECKED_ADD", index);
-    case OpCode::CHECKED_SUBTRACT:
-        return simpleInstruction(str, chunk, "CHECKED_SUBTRACT", index);
-    case OpCode::CHECKED_MULTIPLY:
-        return simpleInstruction(str, chunk, "CHECKED_MULTIPLY", index);
-    case OpCode::CHECKED_DIVIDE:
-        return simpleInstruction(str, chunk, "CHECKED_DIVIDE", index);
+    case OpCode::CONST:
+        return constantInstruction(str, chunk, "CONST", index);
+    case OpCode::CONST_LONG:
+        return constantLongInstruction(str, chunk, "CONST_L", index);
+    case OpCode::CONST_0:
+        return simpleInstruction(str, chunk, "CONST_0", index);
+    case OpCode::I_CONST_1:
+        return simpleInstruction(str, chunk, "I_CONST_1", index);
+    case OpCode::I_CONST_2:
+        return simpleInstruction(str, chunk, "I_CONST_2", index);
+    case OpCode::RET:
+        return simpleInstruction(str, chunk, "RET", index);
+    case OpCode::F_NEG:
+        return simpleInstruction(str, chunk, "F_NEG", index);
+    case OpCode::F_ADD:
+        return simpleInstruction(str, chunk, "F_ADD", index);
+    case OpCode::F_SUB:
+        return simpleInstruction(str, chunk, "F_SUB", index);
+    case OpCode::F_MUL:
+        return simpleInstruction(str, chunk, "F_MUL", index);
+    case OpCode::F_DIV:
+        return simpleInstruction(str, chunk, "F_DIV", index);
+    case OpCode::I_NEG:
+        return simpleInstruction(str, chunk, "I_NEG", index);
+    case OpCode::I_ADD:
+        return simpleInstruction(str, chunk, "I_ADD", index);
+    case OpCode::I_ADD_CHECKED:
+        return simpleInstruction(str, chunk, "I_ADD_CHECKED", index);
+    case OpCode::I_SUB:
+        return simpleInstruction(str, chunk, "I_SUB", index);
+    case OpCode::I_SUB_CHECKED:
+        return simpleInstruction(str, chunk, "I_SUB_CHECKED", index);
+    case OpCode::I_MUL:
+        return simpleInstruction(str, chunk, "I_MUL", index);
+    case OpCode::I_MUL_CHECKED:
+        return simpleInstruction(str, chunk, "I_MUL_CHECKED", index);
+    case OpCode::I_DIV:
+        return simpleInstruction(str, chunk, "I_DIV", index);
+    case OpCode::I_DIV_CHECKED:
+        return simpleInstruction(str, chunk, "I_DIV_CHECKED", index);
     case OpCode::PRINT:
         return simpleInstruction(str, chunk, "PRINT", index);
     default:

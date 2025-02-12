@@ -5,14 +5,19 @@
 #include "debug/chunk.hpp"
 #include <Chunk.hpp>
 #include <ChunkReader.hpp>
+#include <VM.hpp>
 
 int main () {
-    std::unique_ptr<Chunk> chunk = readChunk();
+    Chunk chunk = readChunk();
 
-    std::string dump = disassembleChunk(*chunk);
-
+    std::cout << "\n\n===== DISASSEMBLE =====" << std::endl;
+    std::string dump = disassembleChunk(chunk);
     std::cout << dump << std::endl;
-    //std::cout << "Chunk constants: " << chunk->constantCount << std::endl;
+
+    std::cout << "\n\n===== EXECUTION =====" << std::endl;
+
+    VM vm;
+    vm.interpret(chunk);
 
     getchar();
     return 0;

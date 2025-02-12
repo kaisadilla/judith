@@ -1,7 +1,8 @@
 #pragma once
 
 #include "root.hpp"
-#include "Value.hpp"
+
+union Value;
 
 struct Chunk {
     size_t constantCount;

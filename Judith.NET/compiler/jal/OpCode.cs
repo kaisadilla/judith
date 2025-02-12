@@ -8,30 +8,66 @@ namespace Judith.NET.compiler.jal;
 
 public enum OpCode : byte {
     /// <summary>
-    /// The no operation. Does nothing.
+    /// NOOP | NO_OPERATION | The no operation. Does nothing.
     /// </summary>
     NoOp = 0,
     /// <summary>
-    /// Reads a constant at the address given by the next byte in the chunk. 
+    /// CONST | CONSTANT | Reads a constant at the address given by the next
+    /// byte in the chunk. 
     /// </summary>
-    Constant,
+    Const,
     /// <summary>
-    /// Reads a constant at the address given in the next int32 in the chunk.
+    /// CONST_L | CONSTANT_LONG | Reads a constant at the address given in the next int32 in the chunk.
     /// </summary>
-    ConstantLong,
-    Return,
+    ConstLong,
     /// <summary>
-    /// Negates the current value.
+    /// CONST_0 | CONSTANT_0 | Pushes the value "0".
     /// </summary>
-    Negate,
-    Add,
-    Subtract,
-    Multiply,
-    Divide,
-    CheckedAdd,
-    CheckedSubtract,
-    CheckedMultiply,
-    CheckedDivide,
+    Const0,
+    /// <summary>
+    /// CONST_1 | CONSTANT_1 | Pushes the value "1".
+    /// </summary>
+    IConst1,
+    /// <summary>
+    /// CONST_2 | CONSTANT_2 | Pushes the value "2".
+    /// </summary>
+    IConst2,
+    /// <summary>
+    /// RET | RETURN
+    /// </summary>
+    Ret,
+    /// <summary>
+    /// F_NEG | FLOAT_NEGATE | Negates the value (as f64) at the top of the stack.
+    /// </summary>
+    FNeg,
+    /// <summary>
+    /// F_ADD | FLOAT_ADD | Adds top two values as f64.
+    /// </summary>
+    FAdd,
+    /// <summary>
+    /// F_SUB | FLOAT_SUBTRACT | Substract top from top-1 as f64.
+    /// </summary>
+    FSub,
+    /// <summary>
+    /// F_MUL | FLOAT_MULTIPLY | Multiply top-1 by top as f64.
+    /// </summary>
+    FMul,
+    /// <summary>
+    /// F_DIV | FLOAT_DIVIDE | Divide top-1 by top as f64.
+    /// </summary>
+    FDiv,
+    /// <summary>
+    /// I_NEG | INTEGER_NEGATE | Negates the value (as i64) at the top of the stack.
+    /// </summary>
+    INeg,
+    IAdd,
+    IAddChecked,
+    ISub,
+    ISubChecked,
+    IMul,
+    IMulChecked,
+    IDiv,
+    IDivChecked,
 
     Print,
 }

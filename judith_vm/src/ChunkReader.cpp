@@ -1,6 +1,7 @@
 #include "ChunkReader.hpp"
 #include "utils.hpp"
 #include <utils/Buffer.hpp>
+#include "Value.hpp"
 
 bool isMagicNumberCorrect (byte* magicNumbers) {
     return magicNumbers[0] == 'A'
@@ -17,7 +18,7 @@ bool isMagicNumberCorrect (byte* magicNumbers) {
         && magicNumbers[11] == 'H';
 }
 
-std::unique_ptr<Chunk> readChunk() {
+Chunk readChunk() {
     constexpr size_t MAGIC_NUMBER_COUNT = 12;
 
     auto buffer = readBinaryFile("res/test.jbin");
@@ -36,8 +37,7 @@ std::unique_ptr<Chunk> readChunk() {
     Value* constants = new Value[constantCount]();
 
     for (int i = 0; i < constantCount; i++) {
-        constants[i].type = (ValueType)reader.readUInt8();
-        constants[i].as.floatNum = (f64)reader.readDouble_LE();
+        constants[i].asFloat64 = (f64)reader.readDouble_LE();
     }
 
     i32 size = reader.readInt32_LE();
@@ -57,8 +57,7 @@ std::unique_ptr<Chunk> readChunk() {
         }
     }
 
-
-    return std::make_unique<Chunk>(
+    return Chunk(
         constantCount, constants, size, code, containsLines, lines
     );
 }

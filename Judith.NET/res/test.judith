@@ -1,7 +1,10 @@
 --__p_print 3 + 5
 
+__p_print
 3 + 8 *
 6 - 2
+
+return
 
 --func add_four (a, b, c, d: Num = 3) : Num
 --	const e = a + b

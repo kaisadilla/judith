@@ -151,6 +151,10 @@ public class Parser {
         if (Match(TokenKind.KwFunc)) {
             return FunctionItem();
         }
+        // TODO: Scaffolding - remove.
+        else if (Match(TokenKind.KwReturn)) {
+            return ReturnStatement();
+        }
 
         return Statement();
     }
@@ -369,7 +373,7 @@ public class Parser {
         List<Statement> statements = new();
 
         Token openingToken = PeekPrevious();
-        while (MatchBlockEndingToken() == false && IsAtEnd() == false) {
+        while (Match(TokenKind.KwEnd) == false && IsAtEnd() == false) {
             var stmt = Statement();
             if (stmt is not null) {
                 statements.Add(stmt);
@@ -393,6 +397,11 @@ public class Parser {
 
     public ReturnStatement ReturnStatement () {
         Token returnToken = PeekPrevious();
+        
+        if (Peek().Line != returnToken.Line) {
+            return SF.ReturnStatement(returnToken, null);
+        }
+
         Expression expr = Expression();
 
         return SF.ReturnStatement(returnToken, expr);

@@ -100,10 +100,10 @@ void SaveChunkFile (JalChunk chunk) {
 
     // constantCount (i32)
     writer.Write((int)chunk.Constants.Count);
-    // constants (byte, i64)
+    // constants (f64)
     foreach (var constant in chunk.Constants) {
         if (constant is JalValue<double> c_dbl) {
-            writer.Write((byte)constant.Type);
+            //writer.Write((byte)constant.Type);
             writer.Write((double)c_dbl.Value);
         }
     }

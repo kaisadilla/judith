@@ -48,31 +48,37 @@ public class JalCompiler : SyntaxVisitor {
         }
 
         if (addr < byte.MaxValue + 1) {
-            Chunk.WriteInstruction(OpCode.Constant, node.Line);
+            Chunk.WriteInstruction(OpCode.Const, node.Line);
             Chunk.WriteByte((byte)addr, node.Line);
         }
         else {
-            Chunk.WriteInstruction(OpCode.ConstantLong, node.Line);
+            Chunk.WriteInstruction(OpCode.ConstLong, node.Line);
             Chunk.WriteInt32(addr, node.Line);
         }
     }
 
+    public override void Visit (ReturnStatement node) {
+        // TODO: Compile expression.
+
+        Chunk.WriteInstruction(OpCode.Ret, node.Line);
+    }
+
     public override void Visit (BinaryExpression node) {
-        node.Left.Accept(this);
-        node.Right.Accept(this);
+        Visit(node.Left);
+        Visit(node.Right);
 
         switch (node.Operator.OperatorKind) {
             case OperatorKind.Add:
-                _Instr(OpCode.Add);
+                _Instr(OpCode.FAdd);
                 return;
             case OperatorKind.Subtract:
-                _Instr(OpCode.Subtract);
+                _Instr(OpCode.FSub);
                 return;
             case OperatorKind.Multiply:
-                _Instr(OpCode.Multiply);
+                _Instr(OpCode.FMul);
                 return;
             case OperatorKind.Divide:
-                _Instr(OpCode.Divide);
+                _Instr(OpCode.FDiv);
                 return;
             case OperatorKind.Equals:
                 break;
@@ -100,5 +106,11 @@ public class JalCompiler : SyntaxVisitor {
         void _Instr (OpCode opCode) {
             Chunk.WriteInstruction(opCode, node.Operator.Line);
         }
+    }
+
+    public override void Visit (PrivPrintStmt node) {
+        Visit(node.Expression);
+
+        Chunk.WriteInstruction(OpCode.Print, node.Line);
     }
 }

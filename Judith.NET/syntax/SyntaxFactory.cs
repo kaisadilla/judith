@@ -338,12 +338,12 @@ public static class SyntaxFactory {
     }
 
     public static ReturnStatement ReturnStatement (
-        Token returnToken, Expression expression
+        Token returnToken, Expression? expression
     ) {
         var returnStmt = new ReturnStatement(expression) {
             ReturnToken = returnToken,
         };
-        returnStmt.SetSpan(new(returnToken.Start, expression.Span.End));
+        returnStmt.SetSpan(new(returnToken.Start, expression?.Span.End ?? returnToken.End));
         returnStmt.SetLine(returnToken.Line);
 
         return returnStmt;

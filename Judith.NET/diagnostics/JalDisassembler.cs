@@ -33,29 +33,45 @@ public class JalDisassembler {
         switch (opCode) {
             case OpCode.NoOp:
                 return SimpleInstruction("NOOP", index);
-            case OpCode.Constant:
-                return ConstantInstruction("CONSTANT", index);
-            case OpCode.ConstantLong:
-                return ConstantLongInstruction("CONSTANT_LONG", index);
-            case OpCode.Return:
-                return SimpleInstruction("RETURN", index);
-            case OpCode.Negate:
-                return SimpleInstruction("NEGATE", index);
-            case OpCode.Add:
-                return SimpleInstruction("ADD", index);
-            case OpCode.Subtract:
-                return SimpleInstruction("SUBSTRACT", index);
-            case OpCode.Multiply:
-                return SimpleInstruction("MULTIPLY", index);
-            case OpCode.Divide:
-                return SimpleInstruction("DIVIDE", index);
-            case OpCode.CheckedAdd:
+            case OpCode.Const:
+                return ConstantInstruction("CONST", index);
+            case OpCode.ConstLong:
+                return ConstantLongInstruction("CONST_L", index);
+            case OpCode.Const0:
+                return SimpleInstruction("CONST_0", index);
+            case OpCode.IConst1:
+                return SimpleInstruction("I_CONST_1", index);
+            case OpCode.IConst2:
+                return SimpleInstruction("I_CONST_2", index);
+            case OpCode.Ret:
+                return SimpleInstruction("RET", index);
+            case OpCode.FNeg:
+                return SimpleInstruction("F_NEG", index);
+            case OpCode.FAdd:
+                return SimpleInstruction("F_ADD", index);
+            case OpCode.FSub:
+                return SimpleInstruction("F_SUB", index);
+            case OpCode.FMul:
+                return SimpleInstruction("F_MUL", index);
+            case OpCode.FDiv:
+                return SimpleInstruction("F_DIV", index);
+            case OpCode.INeg:
                 break;
-            case OpCode.CheckedSubtract:
+            case OpCode.IAdd:
                 break;
-            case OpCode.CheckedMultiply:
+            case OpCode.IAddChecked:
                 break;
-            case OpCode.CheckedDivide:
+            case OpCode.ISub:
+                break;
+            case OpCode.ISubChecked:
+                break;
+            case OpCode.IMul:
+                break;
+            case OpCode.IMulChecked:
+                break;
+            case OpCode.IDiv:
+                break;
+            case OpCode.IDivChecked:
                 break;
             case OpCode.Print:
                 return SimpleInstruction("PRINT", index);
