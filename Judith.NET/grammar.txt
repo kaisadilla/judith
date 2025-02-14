@@ -1,108 +1,258 @@
-﻿top_level_stmt      > declaration
-                    | statement
-                    ;
-                    
-declaration         > var_decl_init
-                    ;
+﻿syntax_node             > import_dir
+                        | module_dir
+                        | implementation
+                        | hidable_item
+                        ;
 
-block_or_arrow{i}   > arrow_stmt | block_stmt{i}
-                    ;
+import_dir              > "import" member_access_expr
+                        ;
 
-arrow_stmt          > "=>" statement
-                    ;
-                    
-block_stmt{i}       > ${i} top_level_stmt*
-                    
-statement           > if_stmt
-                    | match_stmt
-					| loop_stmt
-					| while_stmt
-					| foreach_stmt
-					| return_stmt
-					| yield_stmt
-					| control_stmt
-                    | expression_stmt
-                    ;
-                    
-if_stmt             > "if" expression block_or_arrow{"then"} ( "elsif" block_or_arrow{"then"} )* ( "else" block_or_arrow() )? "end"
-                    ;
+module_dir              > "module" IDENTIFIER ( "::" IDENTIFIER )?
+                        ;
 
-match_stmt          > "match" expression "do" ( pattern block_stmt{"do"} )* ( "else" block_stmt{""} )? "end"
-                    ;
+hidable_item            > "hid"? ( enum_dir | symbol_dir | template_def | function_def | type_def )
+                        ;
 
-loop_stmt           > "loop" block_or_arrow{"do"} "end"
-                    ;
+implementation          > "impl" ( ext_method_def | ext_ctor_def | ext_interface_impl )
+                        ;
 
-while_stmt          > "while" expression block_or_arrow{"do"} "end"
-                    ;
+ext_method_def          > "impure"? ( "func" | "generator" ) member_access_expr "(" param_list ")" type_annotation? body_stmt
+                        ;
 
-foreach_stmt        > "foreach" var_decl in expression block_or_arrow{"do"} "end"
-                    ;
+ext_ctor_def            > ( "ctor" ) member_access_expr "(" param_list ")" body_stmt
+                        ;
 
-return_stmt         > "return" expression? ( "when" expression )?
-                    ;
+ext_interface_impl      > member_access_expr "for" member_access_expr ( method_def | method_decl )* "end"
+                        ;
 
-yield_stmt          > "yield" expression? ( "when" expression )?
-                    ;
+enum_dir                > "enumerate" IDENTIFIER? enum_item+ "end"
+                        ;
 
-control_stmt        > ( "break" | "continue" ) ( "when" expression )?
-                    ;
-                    
-expression_stmt     > expression
-                    ;
-                    
-expression          > addition_expr
-                    | unary
-                    | binary
-                    | grouping
-                    ;
-                    
-assignment_expr     > logical_expr "=" logical_expr
-                    | logical_expr
-                    ;
-                    
-logical_expr        > comparison_expr (( "and" | "or" ) comparison_expr)* -- The choice to make "and" and "or" have the same precedence is deliberate.
-                    ;
-                    
-comparison_expr     > addition_expr (( "==" | "!=" | "===" | "!==" | "<" | "<=" | ">" | ">=" ) addition_expr)*
-                    ;
-                    
-addition_expr       > math_expr (( "+" | "-" ) math_expr)*
-                    ;
-                    
-math_expr           > unary_left (( "*" | "/"} unary_left)*
-                    ;
-                    
-unary_left*         > ( "not" | "-" | "~" ) unary_left
-                    | primary
-                    ;
-                    
-primary             > literal_expr
-                    | identifier_expr
-                    | "{" expression "}"
-                    ;
-                    
-identifier_expr     > IDENTIFIER
-                    ;
-                    
-literal_expr        > literal
-                    ;
-                    
-literal             > NUMBER
-                    | STRING
-                    | "true"
-                    | "false"
-                    | "null"
-                    ;
-                    
-var_decl            > ( "const" | "var" ) IDENTIFIER ( ":" IDENTIFIER )?
-                    ;
+symbol_def              > "symbol" IDENTIFIER ( "=" logical_expr )?
+                        ;
 
-var_decl_init       > var_decl ( "=" expression )?
-                    ;
+template_def            > "template" "<" template_param_list ">" trule_def* ( function_def | type_def ) -- TODO: these functions and types can have type parameters when specializing a template.
+                        ;
 
-* -> Right-associative.
+trule_def               > "trule" "<" trule ">"
+                        ;
+
+trule                   > "func" member_access_expr func_signature
+                        | "oper" member_access_expr operator member_access_expr
+
+function_def            > ( "func" | "generator" ) IDENTIFIER "(" param_list ")" type_annotation? body_stmt
+                        ;
+
+type_def                > "typedef" ( union_type_def | set_type_def | struct_type_def | interface_type_def | class_type_def )
+
+union_type_def          > IDENTIFIER "=" member_access_expr ( "|" member_access_expr)+
+                        | alias_type_def
+                        ;
+
+alias_type_def          > IDENTIFIER "=" member_access_expr
+                        ;
+
+set_type_def            > "set" IDENTIFIER logical_expr+ "end"
+                        ;
+
+struct_type_def         > "struct" IDENTIFIER ( member_access_expr | (IDENTIFIER "?"? type_annotation ( "=" logical_expr )? ) )*
+                        ;
+
+interface_type_def      > "interface" IDENTIFIER ( symbol_def | method_def | method_decl )* "end"
+                        ;
+
+class_type_def          > "class" IDENTIFIER class_member* "end"
+                        ;
+
+class_member            > symbol_def
+                        | memb_field_def
+                        | memb_method_def
+                        | memb_ctor_def
+                        | interface_impl
+                        ;
+
+memb_field_def          > ( "pub" | "hid" )? "static"? "mut"? IDENTIFIER type_annotation ( "=" logical_expr )?
+                        ;
+
+memb_method_def         > "hid"? "static"? "impure"? ( "func" | "generator" ) IDENTIFIER "(" param_list ")" type_annotation? body_stmt
+                        ;
+
+memb_ctor_def           > "hid"? "ctor" IDENTIFIER? "(" param_list ")" body_stmt
+                        ;
+
+interface_impl          > member_access_expr ( method_def | method_decl )* "end"
+                        ;
+
+body_stmt{a?}           > block_stmt{a?}
+                        | arrow_stmt
+
+block_stmt              > a? syntax_node* "end"? -- block_stmt is implicitly ended if the next token is "elsif" or "else".
+                        ;
+
+arrow_stmt              > "=>" statement
+                        ;
+
+statement               > local_decl_stmt
+                        | return_stmt
+                        | yield_stmt
+                        | break_stmt
+                        | continue_stmt
+                        | expression_stmt
+                        ;
+
+local_decl_stmt         > ( "const" | "var" ) impl_local_decl ( "," local_decl )* ( "=" expression )?
+                        | ( "const" | "var" ) "[" IDENTIFIER ( "," IDENTIFIER )* "]" "=" expression
+                        | ( "const" | "var" ) "{" IDENTIFIER ( "," IDENTIFIER )* "}" "=" expression
+                        ;
+
+return_stmt             > "return" ( expression )? ( "when" expression )?
+                        ;
+
+yield_stmt              > "yield" ( expression )? ( "when" expression )?
+                        ;
+
+break_stmt              > "break" ( NUMBER )? ( "when" expression )?
+                        ;
+
+continue_stmt           > "continue" ( NUMBER )? ( "when" expression )?
+                        ;
+
+expression_stmt         > expression
+                        ;
+
+expression              > if_expr
+                        | match_expr
+                        | loop_expr
+                        | while_expr
+                        | foreach_expr
+                        | __p_print_expr
+                        | range_expr
+                        ;
+
+if_expr                 > "if" expression body_stmt{"then"} ( "elsif" expression body_stmt{"then"} )* ( "else" body_stmt{"then"} )?
+                        ;
+
+match_expr              > "match" expression "do" ( pattern ( "," pattern )* body_stmt{"then"} )* ( "else" body_stmt )? "end"
+                        ;
+
+loop_expr               > "loop" body_stmt
+                        ;
+
+while_expr              > "while" expression "do" body_stmt
+                        ;
+
+foreach_expr            > "foreach" local_decl ( "," local_decl )? "in" expression "do" body_stmt
+                        ;
+
+range_expr              > assignment_expr ".." assignment_expr -- You cannot concatenate ranges (i.e. 3..5..9) because ".." maps to Range and Range doesn't accept another Range in its constructor.
+                        ;
+
+assignment_expr         > member_access_expr "=" logical_expr
+                        | logical_expr
+                        ;
+
+logical_expr            > boolean_expr ( ( "and" | "or" ) boolean_expr )* -- The choice to give "and" and "or" the same precedence is deliberate.
+                        ;
+
+boolean_expr            > addition_expr ( ( "==" | "!=" | "===" | "!==" | "<" | "<=" | ">" | ">=" ) addition_expr)*
+                        ;
+
+addition_expr           > mult_expr ( ( "+" | "-" ) mult_expr )*
+                        ;
+
+mult_expr               > unary_left ( ( "*" | "/" | perc_operator ) unary_left )*
+                        ;
+
+unary_left              > ( "not" | "-" | "~" ) unary_left
+                        | null_or_expr
+                        ;
+
+null_or_expr            > call_expr ( "??" call_expr )*
+                        ;
+
+call_expr               > member_access_expr ( "(" arg_list? ")" )?
+                        | member_access_expr
+                        ;
+
+member_access_expr      > type_identifier_expr? (( "." | "::" ) type_identifier_expr)*
+                        | primary_expr
+                        ;
+
+type_identifier_expr    > identifier_expr ( "<" template_arg_list ">" )?
+                        ;
+
+primary_expr            > identifier_expr
+                        | literal_expr
+                        ;
+
+identifier_expr         > IDENTIFIER
+                        ;
+
+literal_expr            > literal
+                        ;
+
+literal                 > NUMBER
+                        | STRING
+                        | CHAR
+                        | REGEX
+                        | "true"
+                        | "false"
+                        | "null"
+                        | "undefined"
+                        ;
+
+local_decl              > expl_local_decl
+                        | impl_local_decl
+                        ;
+
+expl_local_decl         > ( "const" | "var" ) IDENTIFIER type_annotation?
+                        ;
+
+impl_local_decl         > IDENTIFIER type_annotation?
+                        ;
+
+type_annotation         > ":" ( member_access_expr | func_signature ) "?"?
+                        ;
+
+func_signature          > "(" ( member_access_expr ( "," member_access_expr )* )+ ")" "=>" member_access_expr
+                        ;
+
+perc_operator           > "%" IDENTIFIER
+                        ;
+
+param_list              > local_decl ( "=" logical_expr )? ( "," local_decl ( "=" logical_expr )? )*
+                        ;
+
+arg_list                > expression ( "," expression* )?
+                        ;
+
+template_param_list     > template_param ( "," template_param* )?
+                        ;
+
+template_param          > IDENTIFIER ( ":" ( "typename" | type_identifier_expr ) )?
+                        ;
+
+template_arg_list       > template_arg ( "," template_arg* )?
+                        ;
+                        
+template_arg            > type_identifier_expr
+                        | logical_expr
+                        ;
+
+enum_item               > IDENTIFIER ( "=" logical_expr )?
+                        ;
+
+pattern                 > ( "<" | "<=" | ">" | ">=" ) logical_expr
+                        | range_expr
+                        | logical_expr
+                        ;
+
+operator                > "+" | "-" | "*" | "/" | perc_operator | "==" | "!=" | "~=" | "===" | "!==" | "<" | "<=" | ">" | ">=" | "and" | "or" | "??"
+                        ;
 
 
-----------------
-__p_print
+
+-- debug, will be removed --
+
+__p_print_expr          > "__p_print" expression
+                        ;

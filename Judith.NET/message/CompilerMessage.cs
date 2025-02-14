@@ -120,12 +120,42 @@ public class CompilerMessage {
             );
         }
 
+        public static CompilerMessage RightCurlyBracketExpected (int line) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.Parser,
+                (int)MessageCode.RightCurlyBracketExpected,
+                "'}' expected.",
+                line
+            );
+        }
+
+        public static CompilerMessage RightSquareBracketExpected (int line) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.Parser,
+                (int)MessageCode.RightSquareBracketExpected,
+                $"']' expected.",
+                line
+            );
+        }
+
         public static CompilerMessage ExpressionExpected (int line) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
                 (int)MessageCode.ExpressionExpected,
                 $"Expression expected.",
+                line
+            );
+        }
+
+        public static CompilerMessage StatementExpected (int line) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.Parser,
+                (int)MessageCode.StatementExpected,
+                $"Statement expected.",
                 line
             );
         }
@@ -152,12 +182,34 @@ public class CompilerMessage {
             );
         }
 
+        public static CompilerMessage BodyExpected (
+            int line
+        ) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.Parser,
+                (int)MessageCode.BodyExpected,
+                $"Function body expected.",
+                line
+            );
+        }
+
         public static CompilerMessage ArrowExpected (int line, Token found) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
                 (int)MessageCode.ArrowExpected,
                 $"'Arrow' expected, but '{found.Lexeme}' found instead.",
+                line
+            );
+        }
+
+        public static CompilerMessage ElsifBodyExpected (int line) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.Parser,
+                (int)MessageCode.ElsifBodyExpected,
+                $"Elsif body expected.",
                 line
             );
         }
@@ -198,6 +250,36 @@ public class CompilerMessage {
                 MessageOrigin.Parser,
                 (int)MessageCode.ParameterExpected,
                 $"Parameter expected.",
+                line
+            );
+        }
+
+        public static CompilerMessage HidableItemExpected (int line) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.Parser,
+                (int)MessageCode.HidableItemExpected,
+                $"Function, generator, typedef, symbol or enumerate expected.",
+                line
+            );
+        }
+
+        public static CompilerMessage LocalDeclaratorExpected (int line) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.Parser,
+                (int)MessageCode.LocalDeclaratorExpected,
+                $"Local declarator expected.",
+                line
+            );
+        }
+
+        public static CompilerMessage LocalDeclaratorListExpected (int line) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.Parser,
+                (int)MessageCode.LocalDeclaratorListExpected,
+                $"Local declarator list expected.",
                 line
             );
         }

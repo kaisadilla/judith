@@ -12,21 +12,31 @@ public enum TokenKind {
     Colon,
     LeftParen,
     RightParen,
+    LeftCurlyBracket,
+    RightCurlyBracket,
+    LeftSquareBracket,
+    RightSquareBracket,
+    LeftAngleBracket,
+    RightAngleBracket,
     Plus,
     Minus,
     Asterisk,
     Slash,
     Equal,
     Bang,
+    Tilde,
+    Dot,
 
     // Two-character tokens.
     EqualEqual,
     BangEqual,
+    TildeEqual,
     Less,
     LessEqual,
     Greater,
     GreaterEqual,
     EqualArrow,
+    DoubleColon,
 
     // Three-character tokens.
     EqualEqualEqual,
@@ -66,6 +76,8 @@ public enum TokenKind {
     KwContinue,
     KwGoto,
     KwFunc,
+    KwGenerator,
+    KwHid,
 
     // Private keywords
     PkwPrint,

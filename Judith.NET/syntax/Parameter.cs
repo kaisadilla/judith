@@ -7,28 +7,16 @@ using System.Threading.Tasks;
 namespace Judith.NET.syntax;
 
 public class Parameter : SyntaxNode {
-    public Identifier Identifier { get; init; }
-    public FieldKind FieldKind { get; init; }
-    public IdentifierExpression? Type { get; init; }
-    public EqualsValueClause? DefaultValue { get; init; }
+    public LocalDeclarator Declarator { get; private init; }
+    public EqualsValueClause? DefaultValue { get; private init; }
 
-    public Token? FieldKindToken { get; init; }
-
-    public Parameter (
-        Identifier identifier,
-        FieldKind fieldKind,
-        IdentifierExpression? type,
-        EqualsValueClause? defaultValue
-    )
+    public Parameter (LocalDeclarator declarator, EqualsValueClause? defaultValue)
         : base(SyntaxKind.Parameter)
     {
-        Identifier = identifier;
-        FieldKind = fieldKind;
-        Type = type;
+        Declarator = declarator;
         DefaultValue = defaultValue;
 
-        Children.Add(Identifier);
-        if (Type != null) Children.Add(Type);
+        Children.Add(declarator);
         if (DefaultValue != null) Children.Add(DefaultValue);
     }
 
@@ -37,16 +25,6 @@ public class Parameter : SyntaxNode {
     }
 
     public override string ToString () {
-        string str = $"[{FieldKind}] {Identifier}";
-
-        if (Type != null) {
-            str += $": {Type}";
-        }
-
-        if (DefaultValue != null) {
-            str += $" = {DefaultValue}";
-        }
-
-        return str;
+        return Declarator.ToString() + (DefaultValue?.ToString() ?? "");
     }
 }

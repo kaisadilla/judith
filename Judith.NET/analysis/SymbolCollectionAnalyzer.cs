@@ -25,7 +25,7 @@ public class SymbolCollectionAnalyzer : SyntaxVisitor {
         }
     }
 
-    public override void Visit (FunctionItem node) {
+    public override void Visit (FunctionDefinition node) {
         ExistingFunctions.Add(node.Identifier.Name);
         base.Visit(node);
     }

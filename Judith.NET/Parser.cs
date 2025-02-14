@@ -1,5 +1,6 @@
 ﻿using Judith.NET.message;
 using Judith.NET.syntax;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -33,10 +34,12 @@ public class Parser {
             try {
                 if (IsAtEnd()) break;
 
-                SyntaxNode? node = TopLevelNode();
-
-                if (node is not null) {
+                if (TryConsumeTopLevelNode(out SyntaxNode? node)) {
                     Nodes.Add(node);
+                }
+                else {
+                    Console.WriteLine("TryConsumeTopLevelNode is false!");
+                    // TODO: Throw compiler error.
                 }
             }
             catch (ParseException ex) {
@@ -66,16 +69,6 @@ public class Parser {
             }
         }
 
-        return false;
-    }
-
-    private bool Match (out Token? token, params TokenKind[] kinds) {
-        if (Match(kinds)) {
-            token = PeekPrevious();
-            return true;
-        }
-
-        token = null;
         return false;
     }
 
@@ -144,184 +137,737 @@ public class Parser {
         token = null;
         return false;
     }
+
+    /// <summary>
+    /// Returns whether the current token matches any of the token kinds given
+    /// and, if it does, outputs it to the 'token' parameter.
+    /// </summary>
+    /// <param name="token">The token matched, if any.</param>
+    /// <param name="kind">The kinds ot token to try to match.</param>
+    /// <returns></returns>
+    private bool TryConsume ([NotNullWhen(true)] out Token? token, params TokenKind[] kinds) {
+        foreach (var kind in kinds) {
+            if (Check(kind)) {
+                token = Advance();
+                return true;
+            }
+        }
+
+        token = null;
+        return false;
+    }
     #endregion
 
     #region Parsing methods
-    private SyntaxNode TopLevelNode () {
-        if (Match(TokenKind.KwFunc)) {
-            return FunctionItem();
-        }
-        // TODO: Scaffolding - remove.
-        else if (Match(TokenKind.KwReturn)) {
-            return ReturnStatement();
+    /// <summary>
+    /// Returns the next node, whatever it is.
+    /// </summary>
+    private bool TryConsumeTopLevelNode ([NotNullWhen(true)] out SyntaxNode? node) {
+        // TODO: ImportDirective
+        // TODO: ModuleDirective
+        // TODO: Implementation
+        if (TryConsumeHidableItem(out node)) {
+            return true;
         }
 
-        return Statement();
+        if (TryConsumeStatement(out Statement? stmt)) {
+            node = stmt;
+            return true;
+        }
+
+        node = null;
+        return false;
     }
 
-    private FunctionItem FunctionItem () {
-        Token funcToken = PeekPrevious();
+    private bool TryConsumeHidableItem ([NotNullWhen(true)] out SyntaxNode? hidable) {
+        TryConsume(TokenKind.KwHid, out Token? hidToken);
 
-        if (TryConsume(TokenKind.Identifier, out Token? identifierToken) == false) {
+        // TODO: EnumerateDirective
+        // TODO: SymbolDirective
+
+        if (TryConsumeFunctionDefinition(hidToken, out FunctionDefinition? funcDef)) {
+            hidable = funcDef;
+            return true;
+        }
+        
+        // TODO: TypeDefinition
+
+        hidable = null;
+        return false;
+    }
+
+    private bool TryConsumeFunctionDefinition (
+        Token? hidToken, [NotNullWhen(true)] out FunctionDefinition? funcDef
+    ) {
+        if (TryConsume(out Token? funcToken, TokenKind.KwFunc, TokenKind.KwGenerator) == false) {
+            funcDef = null;
+            return false;
+        }
+
+        if (TryConsumeIdentifier(out Identifier? identifier) == false) {
             throw Error(CompilerMessage.Parser.IdentifierExpected(Peek().Line));
         }
 
-        ParameterList parameters = ParameterList();
-        IdentifierExpression? returnType = OptionalTypeAnnotation();
-        BodyStatement body = BlockStatement(); // TODO: Decide if we'll allow arrow bodies.
-
-        return SF.FunctionItem(
-            funcToken,
-            SF.Identifier(identifierToken),
-            parameters,
-            returnType,
-            body
-        );
-    }
-
-    private ParameterList ParameterList () {
-        if (TryConsume(TokenKind.LeftParen, out Token? leftParenToken) == false) {
+        if (TryConsumeParameterList(out ParameterList? parameters) == false) {
             throw Error(CompilerMessage.Parser.LeftParenExpected(Peek().Line));
         }
 
-        List<Parameter> parameters = new();
-        if (Check(TokenKind.RightParen) == false) {
-            do {
-                FieldDeclarationExpression decl = ImplicitFieldDeclarationExpression();
-                var paramsInDecl = ExtractParamsFromFieldDeclaration(decl);
-                parameters.AddRange(paramsInDecl);
+        TryConsumeTypeAnnotation(out TypeAnnotation? returnType);
+
+        if (TryConsumeBlockStatement(null, out BlockStatement? body) == false) {
+            throw Error(CompilerMessage.Parser.BodyExpected(Peek().Line));
+        }
+
+        funcDef = SF.FunctionDefinition(
+            hidToken, funcToken, identifier, parameters, returnType, body
+        );
+        return true;
+    }
+
+    private bool TryConsumeStatement ([NotNullWhen(true)] out Statement? statement) {
+        if (TryConsumeLocalDeclarationStatement(out LocalDeclarationStatement? lds)) {
+            statement = lds;
+            return true;
+        }
+        if (TryConsumeReturnStatement(out ReturnStatement? returnStmt)) {
+            statement = returnStmt;
+            return true;
+        }
+        if (TryConsumeYieldStatement(out YieldStatement? yieldStmt)) {
+            statement = yieldStmt;
+            return true;
+        }
+        // TODO: BreakStatament
+        // TODO: ContinueStatament
+        if (TryConsumeExpressionStatement(out ExpressionStatement? expr)) {
+            statement = expr;
+            return true;
+        }
+
+        throw Error(CompilerMessage.Parser.UnexpectedToken(Peek().Line, Advance()));
+    }
+
+    private bool TryConsumeReturnStatement (
+        [NotNullWhen(true)] out ReturnStatement? statement
+    ) {
+        if (TryConsume(TokenKind.KwReturn, out Token? returnToken) == false) {
+            statement = null;
+            return false;
+        }
+
+        TryConsumeExpression(out Expression? expr);
+
+        statement = SF.ReturnStatement(returnToken, expr);
+        return true;
+    }
+
+    private bool TryConsumeYieldStatement (
+        [NotNullWhen(true)] out YieldStatement? statement
+    ) {
+        if (TryConsume(TokenKind.KwYield, out Token? yieldToken) == false) {
+            statement = null;
+            return false;
+        }
+
+        TryConsumeExpression(out Expression? expr);
+
+        statement = SF.YieldStatement(yieldToken, expr);
+        return true;
+    }
+
+    private bool TryConsumeLocalDeclarationStatement (
+        [NotNullWhen(true)] out LocalDeclarationStatement? statement
+    ) {
+        if (TryConsume(out Token? mutToken, TokenKind.KwConst, TokenKind.KwVar) == false) {
+            statement = null;
+            return false;
+        }
+
+        LocalKind localKind = mutToken.Kind switch {
+            TokenKind.KwConst => LocalKind.Constant,
+            TokenKind.KwVar => LocalKind.Variable,
+            _ => throw new Exception("TryConsume returned an impossible value.")
+        };
+
+        if (TryConsumeLocalDeclaratorList(
+            true, localKind, out LocalDeclaratorList? list
+        ) == false) {
+            throw Error(CompilerMessage.Parser.LocalDeclaratorListExpected(Peek().Line));
+        }
+
+        TryConsumeEqualsValueClause(out EqualsValueClause? evc);
+
+        statement = SF.LocalDeclarationStatement(mutToken, list, evc);
+        return true;
+    }
+
+    private bool TryConsumeBodyStatement (
+        TokenKind? openingTokenKind, [NotNullWhen(true)] out BodyStatement? bodyStatement
+    ) {
+        if (TryConsumeBlockStatement(openingTokenKind, out BlockStatement? blockStmt)) {
+            bodyStatement = blockStmt;
+            return true;
+        }
+        if (TryConsumeArrowStatement(out ArrowStatement? arrowStmt)) {
+            bodyStatement = arrowStmt;
+            return true;
+        }
+
+        bodyStatement = null;
+        return false;
+    }
+
+    private bool TryConsumeBlockStatement (
+        TokenKind? openingTokenKind, [NotNullWhen(true)] out BlockStatement? blockStatement
+    ) {
+        Token? openingToken = null;
+        if (
+            openingTokenKind != null
+            && TryConsume(openingTokenKind.Value, out openingToken) == false
+        ) {
+            blockStatement = null;
+            return false;
+        }
+
+        List<SyntaxNode> statements = new();
+        while (MatchBlockEndingToken() == false && IsAtEnd() == false) {
+            if (TryConsumeTopLevelNode(out SyntaxNode? node)) {
+                statements.Add(node);
             }
-            while (Match(TokenKind.Comma) && Peek().Kind != TokenKind.RightParen);
+            else {
+                throw Error(CompilerMessage.Parser.UnexpectedToken(
+                    Peek().Line, Peek()
+                ));
+            }
+        }
+        Token closingToken = PeekPrevious();
+
+        blockStatement = SF.BlockStatement(openingToken, statements, closingToken);
+        return true;
+    }
+
+    private bool TryConsumeArrowStatement (
+        [NotNullWhen(true)] out ArrowStatement? arrowStatement
+    ) {
+        if (TryConsume(TokenKind.EqualArrow, out Token? arrowToken) == false) {
+            arrowStatement = null;
+            return false;
+        }
+        if (TryConsumeStatement(out Statement? stmt) == false) {
+            throw Error(CompilerMessage.Parser.StatementExpected(Peek().Line));
+        }
+
+        arrowStatement = SF.ArrowStatement(arrowToken, stmt);
+        return true;
+    }
+
+    private bool TryConsumeExpressionStatement (
+        [NotNullWhen(true)] out ExpressionStatement? statement
+    ) {
+        if (TryConsumeExpression(out Expression? expr) == false) {
+            statement = null;
+            return false;
+        }
+
+        statement = SF.ExpressionStatement(expr);
+        return true;
+    }
+
+    private bool TryConsumeExpression (
+        [NotNullWhen(true)] out Expression? expression
+    ) {
+        if (TryConsumeIfExpression(false, out IfExpression? ifExpr)) {
+            expression = ifExpr;
+            return true;
+        }
+        if (TryConsumeMatchExpression(out MatchExpression? matchExpr)) {
+            expression = matchExpr;
+            return true;
+        }
+        if (TryConsumeLoopExpression(out LoopExpression? loopExpr)) {
+            expression = loopExpr;
+            return true;
+        }
+        if (TryConsumeWhileExpression(out WhileExpression? whileExpr)) {
+            expression = whileExpr;
+            return true;
+        }
+        if (TryConsumeForeachExpression(out ForeachExpression? foreachExpr)) {
+            expression = foreachExpr;
+            return true;
+        }
+        if (TryConsumeRangeExpression(out Expression? expr)) {
+            expression = expr;
+            return true;
+        }
+
+        expression = null;
+        return false;
+    }
+
+    private bool TryConsumeIfExpression (
+        bool implicitIf, [NotNullWhen(true)] out IfExpression? ifExpression
+    ) {
+        Token? ifToken = null;
+        if (implicitIf == false && TryConsume(TokenKind.KwIf, out ifToken) == false) {
+            ifExpression = null;
+            return false;
+        }
+        if (TryConsumeExpression(out Expression? test) == false) {
+            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+        }
+        if (TryConsumeBodyStatement(
+            TokenKind.KwThen, out BodyStatement? consequent
+        ) == false) {
+            throw Error(CompilerMessage.Parser.BodyExpected(Peek().Line));
+        }
+
+        if (consequent.Kind == SyntaxKind.BlockStatement) {
+            var blockStmt = (BlockStatement)consequent;
+
+            if (blockStmt.ClosingToken == null) throw new Exception(
+                "Block consequent needs an closing token."
+            );
+
+            if (blockStmt.ClosingToken.Kind == TokenKind.KwElsif) {
+                ifExpression = _Elsif();
+                return true;
+            }
+            if (blockStmt.ClosingToken.Kind == TokenKind.KwElse) {
+                ifExpression = _Else();
+                return true;
+            }
+            ifExpression = _If();
+            return true;
+        }
+        else if (consequent.Kind == SyntaxKind.ArrowStatement) {
+            if (TryConsume(TokenKind.KwElsif, out Token? _)) {
+                ifExpression = _Elsif();
+                return true;
+            }
+            if (TryConsume(TokenKind.KwElse, out Token? _)) {
+                ifExpression = _Else();
+                return true;
+            }
+            ifExpression = _If();
+            return true;
+        }
+        else {
+            throw new Exception("TryConsumeBodyStatement returned an impossible value.");
+        }
+
+
+        IfExpression _Elsif () {
+            var elsifToken = PeekPrevious();
+
+            if (TryConsumeIfExpression(true, out IfExpression? alternate) == false) {
+                throw Error(CompilerMessage.Parser.ElsifBodyExpected(Peek().Line));
+            }
+
+            var alternateStmt = SF.ExpressionStatement(alternate);
+
+            return SF.IfExpression(elsifToken, test, consequent, elsifToken, alternateStmt);
+        }
+
+        IfExpression _Else () {
+            var elseToken = PeekPrevious();
+
+            if (TryConsumeBodyStatement(null, out BodyStatement? alternate) == false) {
+                throw Error(CompilerMessage.Parser.BodyExpected(Peek().Line));
+            }
+
+            return SF.IfExpression(elseToken, test, consequent, elseToken, alternate);
+        }
+
+        IfExpression _If () {
+            if (ifToken == null) {
+                throw new Exception("If token not found.");
+            }
+            return SF.IfExpression(ifToken, test, consequent);
+        }
+    }
+
+    private bool TryConsumeMatchExpression (
+        [NotNullWhen(true)] out MatchExpression? matchExpression
+    ) {
+        if (TryConsume(TokenKind.KwMatch, out Token? matchToken) == false) {
+            matchExpression = null;
+            return false;
+        }
+        if (TryConsumeExpression(out Expression? discriminant) == false) {
+            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+        }
+        if (TryConsume(TokenKind.KwDo ,out Token? doToken) == false) {
+            throw Error(CompilerMessage.Parser.DoExpected(Peek().Line));
+        }
+
+        List<MatchCase> cases = new();
+        while (TryConsumeMatchCase(out MatchCase? matchCase)) {
+            cases.Add(matchCase);
+        }
+
+        if (TryConsume(TokenKind.KwEnd, out Token? endToken) == false) {
+            throw Error(CompilerMessage.Parser.EndExpected(Peek().Line));
+        }
+
+        matchExpression = SF.MatchExpression(matchToken, discriminant, doToken, cases, endToken);
+        return true;
+    }
+
+    private bool TryConsumeLoopExpression (
+        [NotNullWhen(true)] out LoopExpression? loopExpression
+    ) {
+        if (TryConsume(TokenKind.KwLoop, out Token? loopToken) == false) {
+            loopExpression = null;
+            return false;
+        }
+        if (TryConsumeBodyStatement(null, out BodyStatement? body) == false) {
+            throw Error(CompilerMessage.Parser.BodyExpected(Peek().Line));
+        }
+
+        loopExpression = SF.LoopExpression(loopToken, body);
+        return true;
+    }
+
+    private bool TryConsumeWhileExpression (
+        [NotNullWhen(true)] out WhileExpression? whileExpression
+    ) {
+        if (TryConsume(TokenKind.KwWhile, out Token? whileToken) == false) {
+            whileExpression = null;
+            return false;
+        }
+        if (TryConsumeExpression(out Expression? test) == false) {
+            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+        }
+        if (TryConsumeBodyStatement(TokenKind.KwDo, out BodyStatement? body) == false) {
+            throw Error(CompilerMessage.Parser.BodyExpected(Peek().Line));
+        }
+
+        whileExpression = SF.WhileExpression(whileToken, test, body);
+        return true;
+    }
+
+    private bool TryConsumeForeachExpression (
+        [NotNullWhen(true)] out ForeachExpression? foreachExpression
+    ) {
+        if (TryConsume(TokenKind.KwFor, out Token? foreachToken) == false) {
+            foreachExpression = null;
+            return false;
+        }
+        List<LocalDeclarator> declarators = new();
+        while (TryConsumeLocalDeclarator(
+            false, LocalKind.Constant, out LocalDeclarator? declarator
+        )) {
+            declarators.Add(declarator);
+        }
+        if (TryConsume(TokenKind.KwIn, out Token? inToken) == false) {
+            throw Error(CompilerMessage.Parser.InExpected(Peek().Line));
+        }
+        if (TryConsumeExpression(out Expression? enumerable) == false) {
+            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+        }
+        if (TryConsumeBodyStatement(TokenKind.KwDo, out BodyStatement? body) == false) {
+            throw Error(CompilerMessage.Parser.BodyExpected(Peek().Line));
+        }
+
+        foreachExpression = SF.ForeachExpression(
+            foreachToken, declarators, inToken, enumerable, body
+        );
+        return true;
+    }
+
+    private bool TryConsumeRangeExpression (
+        [NotNullWhen(true)]  out Expression? expr
+    ) {
+        // TODO: Implement
+        return TryConsumeAssignmentExpression(out expr);
+    }
+
+    // "="
+    private bool TryConsumeAssignmentExpression (
+        [NotNullWhen(true)]  out Expression? expr
+    ) {
+        if (TryConsumeMemberAccessExpression(out Expression? leftExpr) == false) {
+            return TryConsumeLogicalExpression(out expr);
+        }
+
+        if (TryConsumeOperator(out Operator? op, TokenKind.Equal) == false) {
+            expr = leftExpr;
+            return true;
+        }
+
+        if (TryConsumeAssignmentExpression(out Expression? rightExpr) == false) {
+            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+        }
+
+        expr = SF.AssignmentExpression(leftExpr, op, rightExpr);
+        return true;
+    }
+
+    // "and" | "or"
+    private bool TryConsumeLogicalExpression ([NotNullWhen(true)] out Expression? expr) {
+        if (TryConsumeBooleanExpression(out Expression? leftExpr) == false) {
+            expr = null;
+            return false;
+        }
+
+        while (TryConsumeOperator(
+            out Operator? op, TokenKind.KwAnd, TokenKind.KwOr
+        )) {
+            if (TryConsumeBooleanExpression(out Expression? rightExpr) == false) {
+                throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+            }
+
+            leftExpr = SF.BinaryExpression(leftExpr, op, rightExpr);
+        }
+
+        expr = leftExpr;
+        return true;
+    }
+
+    // "==" | "!=" | "~=" | "===" | "!==" | "<" | "<=" | ">" | ">="
+    private bool TryConsumeBooleanExpression ([NotNullWhen(true)] out Expression? expr) {
+        if (TryConsumeAdditionExpression(out Expression? leftExpr) == false) {
+            expr = null;
+            return false;
+        }
+
+        while (TryConsumeOperator(
+            out Operator? op,
+            TokenKind.EqualEqual,
+            TokenKind.BangEqual,
+            TokenKind.TildeEqual,
+            TokenKind.EqualEqualEqual,
+            TokenKind.BangEqualEqual,
+            TokenKind.Less,
+            TokenKind.LessEqual,
+            TokenKind.Greater,
+            TokenKind.GreaterEqual
+        )) {
+            if (TryConsumeAdditionExpression(out Expression? rightExpr) == false) {
+                throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+            }
+
+            leftExpr = SF.BinaryExpression(leftExpr, op, rightExpr);
+        }
+
+        expr = leftExpr;
+        return true;
+    }
+
+    // "+" | "-"
+    private bool TryConsumeAdditionExpression ([NotNullWhen(true)] out Expression? expr) {
+        if (TryConsumeMultiplicationExpression(out Expression? leftExpr) == false) {
+            expr = null;
+            return false;
+        }
+
+        while (TryConsumeOperator(
+            out Operator? op, TokenKind.Plus, TokenKind.Minus
+        )) {
+            if (TryConsumeMultiplicationExpression(out Expression? rightExpr) == false) {
+                throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+            }
+
+            leftExpr = SF.BinaryExpression(leftExpr, op, rightExpr);
+        }
+
+        expr = leftExpr;
+        return true;
+    }
+
+    // "*" | "/"
+    private bool TryConsumeMultiplicationExpression ([NotNullWhen(true)] out Expression? expr) {
+        if (TryConsumeLeftUnaryExpression(out Expression? leftExpr) == false) {
+            expr = null;
+            return false;
+        }
+
+        while (TryConsumeOperator(
+            out Operator? op, TokenKind.Asterisk, TokenKind.Slash
+        )) {
+            if (TryConsumeLeftUnaryExpression(out Expression? rightExpr) == false) {
+                throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+            }
+
+            leftExpr = SF.BinaryExpression(leftExpr, op, rightExpr);
+        }
+
+        expr = leftExpr;
+        return true;
+    }
+
+    // "not" | "-" | "~"
+    private bool TryConsumeLeftUnaryExpression ([NotNullWhen(true)] out Expression? expr) {
+        if (TryConsumeOperator(
+            out Operator? op, TokenKind.KwNot, TokenKind.Minus, TokenKind.Tilde
+        )) {
+            if (TryConsumeLeftUnaryExpression(out expr) == false) {
+                throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+            }
+
+            expr = SF.LeftUnaryExpression(op, expr);
+            return true;
+        }
+
+        return TryConsumeMemberAccessExpression(out expr);
+    }
+
+    private bool TryConsumeMemberAccessExpression ([NotNullWhen(true)] out Expression? expr) {
+        // TODO: Replace with TemplateIdentifierExpression
+        if (TryConsumePrimary(out Expression? leftExpr) == false) {
+            expr = null;
+            return false;
+        }
+
+        while (TryConsumeOperator(
+            out Operator? op, TokenKind.Dot, TokenKind.DoubleColon
+        )) {
+            if (TryConsumeIdentifierExpression(out Expression? rightExpr) == false) {
+                throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+            }
+
+            leftExpr = SF.AccessExpression(leftExpr, op, rightExpr);
+        }
+
+        expr = leftExpr;
+        return true;
+    }
+
+    // This always has the highest precedence, and acts as a primary.
+    private bool TryConsumeGroupExpression ([NotNullWhen(true)] out Expression? expr) {
+        if (TryConsume(TokenKind.LeftParen, out Token? leftParenToken) == false) {
+            expr = null;
+            return false;
+        }
+
+        if (TryConsumeExpression(out expr) == false) {
+            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
         }
 
         if (TryConsume(TokenKind.RightParen, out Token? rightParenToken) == false) {
             throw Error(CompilerMessage.Parser.RightParenExpected(Peek().Line));
         }
 
-        return SF.ParameterList(leftParenToken, parameters, rightParenToken);
+        expr = SF.GroupExpression(leftParenToken, expr, rightParenToken);
+        return true;
     }
 
-    private List<Parameter> ExtractParamsFromFieldDeclaration (
-        FieldDeclarationExpression expr
+    private bool TryConsumePrimary ([NotNullWhen(true)] out Expression? expr) {
+        if (TryConsumeGroupExpression(out expr)) return true;
+        if (TryConsumeLiteralExpression(out expr)) return true;
+        if (TryConsumeIdentifierExpression(out expr)) return true;
+
+        throw Error(CompilerMessage.Parser.UnexpectedToken(Peek().Line, Advance()));
+    }
+
+    private bool TryConsumeIdentifierExpression (
+        [NotNullWhen(true)] out Expression? expr
     ) {
-        List<Parameter> parameters = new();
-        if (expr.Kind == SyntaxKind.SingleFieldDeclarationExpression) {
-            var decl = (SingleFieldDeclarationExpression)expr;
-            parameters.Add(SF.Parameter(
-                decl.Declarator.FieldKindToken,
-                decl.Declarator.Identifier,
-                decl.Declarator.FieldKind,
-                decl.Declarator.Type,
-                decl.Initializer
-            ));
-        }
-        else if (expr.Kind == SyntaxKind.MultipleFieldDeclarationExpression) {
-            var decl = (MultipleFieldDeclarationExpression)expr;
-
-            EqualsValueClause? initializer = null;
-            for (int i = 0; i < decl.Declarators.Count; i++) {
-                // If this expression has an initializer, in parameter declaration
-                // syntax that initializer becomes the default value of the last
-                // parameter declared.
-                if (i == decl.Declarators.Count - 1) initializer = decl.Initializer;
-
-                parameters.Add(SF.Parameter(
-                    decl.Declarators[i].FieldKindToken,
-                    decl.Declarators[i].Identifier,
-                    decl.Declarators[i].FieldKind,
-                    decl.Declarators[i].Type,
-                    initializer
-                ));
-            }
-        }
-        else {
-            throw new Exception(
-                "FieldDeclarationExpection doesn't have correct kind."
-            );
+        if (TryConsumeIdentifier(out Identifier? id) == false) {
+            expr = null;
+            return false;
         }
 
-        return parameters;
+        expr = SF.IdentifierExpression(id);
+        return true;
     }
 
-    private LocalDeclarationStatement LocalDeclarationStatement (
-        FieldKind fieldKind
-    ) {
-        FieldDeclarationExpression fieldDecl = FieldDeclarationExpression(fieldKind);
-        
-        return SF.LocalDeclarationStatement(fieldDecl);
+    private bool TryConsumeLiteralExpression ([NotNullWhen(true)] out Expression? expr) {
+        if (TryConsumeLiteral(out Literal? literal) == false) {
+            expr = null;
+            return false;
+        }
+
+        expr = SF.LiteralExpression(literal);
+        return true;
     }
 
-    private Statement Statement () {
-        if (Match(TokenKind.KwConst)) {
-            return LocalDeclarationStatement(FieldKind.Constant);
+    private bool TryConsumeIdentifier ([NotNullWhen(true)] out Identifier? identifier) {
+        if (TryConsume(TokenKind.Identifier, out Token? idToken) == false) {
+            identifier = null;
+            return false;
         }
-        else if (Match(TokenKind.KwVar)) {
-            return LocalDeclarationStatement(FieldKind.Variable);
+
+        identifier = SF.Identifier(idToken);
+        return true;
+    }
+
+    private bool TryConsumeLiteral (out Literal? literal) {
+        if (TryConsume(TokenKind.KwTrue, out Token? token)) {
+            literal = MakeBooleanLiteral(token);
+            return true;
         }
-        if (Match(TokenKind.KwReturn)) {
-            return ReturnStatement();
+        if (TryConsume(TokenKind.KwFalse, out token)) {
+            literal = MakeBooleanLiteral(token);
+            return true;
         }
-        else if (Match(TokenKind.KwYield)) {
-            return YieldStatement();
+        if (TryConsume(TokenKind.Number, out token)) {
+            literal = MakeNumberLiteral(token);
+            return true;
         }
-        else if (Match(TokenKind.PkwPrint)) {
-            return PrivPrintStmt();
+        if (TryConsume(TokenKind.String, out token)) {
+            literal = SF.Literal(token);
+            return true;
         }
-        else {
-            return ExpressionStatement();
-        }
+
+        literal = null;
+        return false;
     }
 
     /// <summary>
-    /// Parses a field declaration that may be implicit (i.e. not qualified with
-    /// either "const" or "var"). Unlike <see cref="FieldDeclarationExpression(FieldKind)"/>,
-    /// this method assumes that the mutability keyword, if it exists, has not
-    /// been consumed yet.
+    /// If the cursor is at a local declarator list, consumes it.
     /// </summary>
-    /// <returns></returns>
-    private FieldDeclarationExpression ImplicitFieldDeclarationExpression () {
-        Token? mutabilityToken = Peek();
-        if (mutabilityToken.Kind == TokenKind.Identifier) {
-            return FieldDeclarationExpression(FieldKind.Constant);
-        }
-        if (mutabilityToken.Kind == TokenKind.KwConst) {
-            Advance();
-            return FieldDeclarationExpression(FieldKind.Constant);
-        }
-        if (mutabilityToken.Kind == TokenKind.KwVar) {
-            Advance();
-            return FieldDeclarationExpression(FieldKind.Variable);
-        }
-
-        throw Error(CompilerMessage.Parser.FieldDeclarationExpected(mutabilityToken.Line));
-    }
-
-    private FieldDeclarationExpression FieldDeclarationExpression (
-        FieldKind fieldKind
+    /// <param name="isFirstImplicit">If true, the first declarator in the list
+    /// CANNOT contain "const" or "var".</param>
+    /// <param name="impliedLocalKind">The local kind that is implied for the
+    /// first declarator in the list.</param>
+    /// <param name="list">The list consumed.</param>
+    private bool TryConsumeLocalDeclaratorList (
+        bool isFirstImplicit,
+        LocalKind impliedLocalKind,
+        [NotNullWhen(true)] out LocalDeclaratorList? list
     ) {
-        Token? fieldKindToken = PeekPrevious();
-        // If the last keyword is not const or var, then this is an implicit
-        // "const" and there's no token for it.
-        if (fieldKindToken.Kind != TokenKind.KwConst && fieldKindToken.Kind != TokenKind.KwVar) {
-            fieldKindToken = null;
+        LocalDeclaratorKind declaratorKind = LocalDeclaratorKind.Regular;
+        if (TryConsume(TokenKind.LeftSquareBracket, out Token? openBracket)) {
+            declaratorKind = LocalDeclaratorKind.ArrayPattern;
+        }
+        else if (TryConsume(TokenKind.LeftCurlyBracket, out openBracket)) {
+            declaratorKind |= LocalDeclaratorKind.ObjectPattern;
         }
 
-        // This is the beginning of the declaration, so the next token must be
-        // an identifier. We just check it's there, FieldDeclarator() will be
-        // the one consuming it.
-        if (Peek().Kind != TokenKind.Identifier) {
-            throw Error(CompilerMessage.Parser.IdentifierExpected(Peek().Line));
+        if (TryConsumeLocalDeclarator(
+            isFirstImplicit, impliedLocalKind, out LocalDeclarator? declarator
+        ) == false) {
+            list = null;
+            return false;
         }
 
-        List<FieldDeclarator> declarators = new();
+        List<LocalDeclarator> declarators = [declarator];
 
-        do {
-            var declarator = FieldDeclarator(fieldKind, fieldKindToken);
+        while (Match(TokenKind.Comma)) {
+            if (TryConsumeLocalDeclarator(
+                false, declarator.LocalKind, out declarator
+            ) == false) {
+                // TODO: This will never happen because TryConsumeLocalDeclarator
+                // always fails if it's not parsing a local declarator.
+                throw Error(CompilerMessage.Parser.IdentifierExpected(Peek().Line));
+            }
+
             declarators.Add(declarator);
-            fieldKind = declarator.FieldKind;
-            fieldKindToken = null;
         }
-        while (Match(TokenKind.Comma));
+
+        Token? closeBracket = null;
+        if (declaratorKind == LocalDeclaratorKind.ArrayPattern) {
+            if (TryConsume(TokenKind.RightSquareBracket, out closeBracket) == false) {
+                throw Error(CompilerMessage.Parser.RightSquareBracketExpected(Peek().Line));
+            }
+        }
+        else if (declaratorKind == LocalDeclaratorKind.ObjectPattern) {
+            if (TryConsume(TokenKind.RightCurlyBracket, out closeBracket) == false) {
+                throw Error(CompilerMessage.Parser.RightCurlyBracketExpected(Peek().Line));
+            }
+        }
 
         // Because types work right to left, we can't start assigning types to
         // declarators without types until we have parsed all of them.
@@ -334,186 +880,156 @@ public class Parser {
             }
         }
 
-        EqualsValueClause? initializer = null;
+        list = SF.LocalDeclaratorList(openBracket, declaratorKind, declarators, closeBracket);
+        return true;
+    }
 
-        if (Match(TokenKind.Equal)) {
-            Token equalsToken = PeekPrevious();
-            Expression expr = Expression();
-
-            if (expr is null) {
-                throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+    /// <summary>
+    /// If the cursor is at a local declarator, consumes it.
+    /// </summary>
+    /// <param name="isImplicit">If true, this declarator CANNOT contain "const"
+    /// or "var".</param>
+    /// <param name="impliedLocalKind">The local kind that is implied if it's not
+    /// explicitly defined.</param>
+    /// <param name="declarator">The declarator consumed.</param>
+    /// <returns></returns>
+    private bool TryConsumeLocalDeclarator (
+        bool isImplicit,
+        LocalKind impliedLocalKind,
+        [NotNullWhen(true)] out LocalDeclarator? declarator
+    ) {
+        if (TryConsume(out Token? mutToken, TokenKind.KwConst, TokenKind.KwVar)) {
+            if (isImplicit) {
+                throw Error(CompilerMessage.Parser.IdentifierExpected(mutToken.Line));
             }
 
-            initializer = SF.EqualsValueClause(expr, equalsToken);
+            impliedLocalKind = mutToken.Kind switch {
+                TokenKind.KwConst => LocalKind.Constant,
+                TokenKind.KwVar => LocalKind.Variable,
+                _ => throw new Exception("TryConsume returned an impossible value.")
+            };
         }
 
-        if (declarators.Count == 1) {
-            return SF.SingleFieldDeclarationExpression(declarators[0], initializer);
+        // should this return false and null?
+        if (TryConsumeIdentifier(out Identifier? identifier) == false) {
+            throw Error(CompilerMessage.Parser.IdentifierExpected(Peek().Line));
         }
-        else {
-            return SF.MultipleFieldDeclarationExpression(declarators, initializer);
-        }
+
+        TryConsumeTypeAnnotation(out TypeAnnotation? type);
+
+        declarator = SF.LocalDeclarator(mutToken, identifier, impliedLocalKind, type);
+        return true;
     }
 
-    private BodyStatement BlockOrArrowStatement (TokenKind? openingToken) {
-        if (Match(TokenKind.EqualArrow)) {
-            return ArrowStatement();
+    private bool TryConsumeEqualsValueClause (
+        [NotNullWhen(true)] out EqualsValueClause? clause
+    ) {
+        if (TryConsume(TokenKind.Equal, out Token? equalToken) == false) {
+            clause = null;
+            return false;
         }
-        else if (openingToken == null || Match(openingToken.Value)) {
-            return BlockStatement();
+
+        if (TryConsumeExpression(out Expression? expr) == false) {
+            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
         }
-        else {
-            throw Error(CompilerMessage.Parser.BlockOpeningKeywordExpected(
-                Peek().Line, Token.GetTokenName(openingToken.Value), Peek()
-            ));
-        }
+
+        clause = SF.EqualsValueClause(equalToken, expr);
+        return true;
     }
 
-    private BlockStatement BlockStatement () {
-        List<Statement> statements = new();
+    private bool TryConsumeTypeAnnotation (
+        [NotNullWhen(true)] out TypeAnnotation? typeAnnotation
+    ) {
+        if (TryConsume(TokenKind.Colon, out Token? colonToken) == false) {
+            typeAnnotation = null;
+            return false;
+        }
 
-        Token openingToken = PeekPrevious();
-        while (Match(TokenKind.KwEnd) == false && IsAtEnd() == false) {
-            var stmt = Statement();
-            if (stmt is not null) {
-                statements.Add(stmt);
+        if (TryConsumeIdentifier(out Identifier? identifier) == false) {
+            throw Error(CompilerMessage.Parser.IdentifierExpected(Peek().Line));
+        }
+
+        typeAnnotation = SF.TypeAnnotation(colonToken, identifier);
+        return false;
+    }
+
+    private bool TryConsumeOperator (
+        [NotNullWhen(true)] out Operator? op, params TokenKind[] kinds
+    ) {
+        if (TryConsume(out Token? opToken, kinds) == false) {
+            op = null;
+            return false;
+        }
+
+        OperatorKind opKind = opToken.Kind switch {
+            TokenKind.Plus => OperatorKind.Add,
+            TokenKind.Minus => OperatorKind.Subtract,
+            TokenKind.Asterisk => OperatorKind.Multiply,
+            TokenKind.Slash => OperatorKind.Divide,
+            TokenKind.Tilde => OperatorKind.BitwiseNot,
+            TokenKind.EqualEqual => OperatorKind.Equals,
+            TokenKind.BangEqual => OperatorKind.NotEquals,
+            TokenKind.TildeEqual => OperatorKind.Like,
+            TokenKind.EqualEqualEqual => OperatorKind.ReferenceEquals,
+            TokenKind.BangEqualEqual => OperatorKind.ReferenceNotEquals,
+            TokenKind.Less => OperatorKind.LessThan,
+            TokenKind.LessEqual => OperatorKind.LessThanOrEqualTo,
+            TokenKind.Greater => OperatorKind.GreaterThan,
+            TokenKind.GreaterEqual => OperatorKind.GreaterThanOrEqualTo,
+            TokenKind.KwAnd => OperatorKind.LogicalAnd,
+            TokenKind.KwOr => OperatorKind.LogicalOr,
+            TokenKind.Dot => OperatorKind.MemberAccess,
+            TokenKind.DoubleColon => OperatorKind.ScopeResolution,
+            _ => throw new Exception($"Unknown operator: '{opToken.Kind}'.")
+        };
+
+        op = SF.Operator(opToken, opKind);
+        return true;
+    }
+
+    private bool TryConsumeParameterList (
+        [NotNullWhen(true)] out ParameterList? parameterList
+    ) {
+        if (TryConsume(TokenKind.LeftParen, out Token? leftParenToken) == false) {
+            parameterList = null;
+            return false;
+        }
+
+        List<Parameter> parameters = new();
+        if (Check(TokenKind.RightParen) == false) {
+            LocalKind impliedKind = LocalKind.Constant;
+
+            do {
+                if (TryConsumeLocalDeclarator(
+                    false, impliedKind, out LocalDeclarator? declarator
+                ) == false) {
+                    throw Error(CompilerMessage.Parser.LocalDeclaratorExpected(Peek().Line));
+                }
+
+                TryConsumeEqualsValueClause(out EqualsValueClause? defaultValue);
+
+                parameters.Add(SF.Parameter(declarator, defaultValue));
             }
+            while (Match(TokenKind.Comma) && Peek().Kind != TokenKind.RightParen);
         }
-        Token closingToken = PeekPrevious();
 
-        return SF.BlockStatement(openingToken, statements, closingToken);
+        if (TryConsume(TokenKind.RightParen, out Token? rightParenToken) == false) {
+            throw Error(CompilerMessage.Parser.RightParenExpected(Peek().Line));
+        }
+
+        parameterList = SF.ParameterList(leftParenToken, parameters, rightParenToken);
+        return true;
     }
 
-    private ArrowStatement ArrowStatement () {
-        Token arrowToken = PeekPrevious();
-        if (arrowToken.Kind != TokenKind.EqualArrow) throw Error(
-            CompilerMessage.Parser.ArrowExpected(arrowToken.Line, arrowToken)
-        );
-
-        Statement stmt = Statement();
-
-        return SF.ArrowStatement(arrowToken, stmt);
-    }
-
-    public ReturnStatement ReturnStatement () {
-        Token returnToken = PeekPrevious();
-        
-        if (Peek().Line != returnToken.Line) {
-            return SF.ReturnStatement(returnToken, null);
-        }
-
-        Expression expr = Expression();
-
-        return SF.ReturnStatement(returnToken, expr);
-    }
-
-    public YieldStatement YieldStatement () {
-        Token yieldToken = PeekPrevious();
-        Expression expr = Expression();
-
-        return SF.YieldStatement(yieldToken, expr);
-    }
-
-    private ExpressionStatement ExpressionStatement () {
-        var expr = Expression();
-
-        return SF.ExpressionStatement(expr);
-    }
-
-    private Expression Expression () {
-        if (Match(TokenKind.KwIf)) {
-            return IfExpression();
-        }
-        else if (Match(TokenKind.KwMatch)) {
-            return MatchExpression();
-        }
-        else if (Match(TokenKind.KwLoop)) {
-            return LoopExpression();
-        }
-        else if (Match(TokenKind.KwWhile)) {
-            return WhileExpression();
-        }
-        else if (Match(TokenKind.KwFor)) {
-            return ForeachExpression();
-        }
-        return AssignmentExpression();
-    }
-
-    private IfExpression IfExpression () {
-        Token ifToken = PeekPrevious();
-        Expression test = Expression();
-
-        BodyStatement consequent = BlockOrArrowStatement(TokenKind.KwThen);
-
-        if (consequent.Kind == SyntaxKind.BlockStatement) {
-            BlockStatement block = (BlockStatement)consequent;
-            if (block.ClosingToken == null) {
-                throw new Exception(
-                    "Block consequent in IfStatement() needs an closing token."
-                );
-            }
-
-            if (block.ClosingToken.Kind == TokenKind.KwElsif) return _Elsif();
-            if (block.ClosingToken.Kind == TokenKind.KwElse) return _Else();
-            return _If();
-        }
-        else if (consequent.Kind == SyntaxKind.ArrowStatement) {
-            if (Match(TokenKind.KwElsif)) return _Elsif();
-            if (Match(TokenKind.KwElse)) return _Else();
-            return _If();
-        }
-        else {
-            throw new Exception($"Invalid consequent kind: {consequent.Kind}");
-        }
-
-        IfExpression _Elsif () {
-            var elsifToken = PeekPrevious();
-            var alternate = IfExpression();
-            var alternateStmt = SF.ExpressionStatement(alternate);
-            return SF.IfExpression(ifToken, test, consequent, elsifToken, alternateStmt);
-        }
-
-        IfExpression _Else () {
-            var elseToken = PeekPrevious();
-            var alternate = BlockOrArrowStatement(null);
-            return SF.IfExpression(ifToken, test, consequent, elseToken, alternate);
-        }
-
-        IfExpression _If () {
-            return SF.IfExpression(ifToken, test, consequent);
-        }
-    }
-
-    public MatchExpression MatchExpression () {
-        var matchToken = PeekPrevious();
-        var discriminant = Expression();
-
-        if (TryConsume(TokenKind.KwDo, out Token? doToken) == false) {
-            throw Error(CompilerMessage.Parser.DoExpected(Peek().Line));
-        }
-
-        List<MatchCase> cases = new();
-        while (CheckLiteral() || Check(TokenKind.KwElse)) {
-            cases.Add(MatchCase());
-        }
-
-        if (TryConsume(TokenKind.KwEnd, out Token? endToken) == false) {
-            throw Error(CompilerMessage.Parser.EndExpected(Peek().Line));
-        }
-
-        return SF.MatchExpression(matchToken, discriminant, doToken, cases, endToken);
-    }
-
-    public MatchCase MatchCase () {
+    private bool TryConsumeMatchCase ([NotNullWhen(true)] out MatchCase? matchCase) {
         List<Expression> tests = new();
 
         // If "else" is matched, this is the default case and we don't need to
         // try to get patterns. If it doesn't, then one or more patterns
         // (separated by commas) must appear next.
         if (TryConsume(TokenKind.KwElse, out Token? elseToken) == false) {
-            while (CheckLiteral()) {
-                LiteralExpression? literal = LiteralExpression();
-                if (literal is not null) tests.Add(literal);
+            while (TryConsumeLiteralExpression(out Expression? expr)) {
+                tests.Add(expr);
 
                 // After each literal, there must be a comma for a subsequent
                 // literal to be a valid token.
@@ -523,204 +1039,19 @@ public class Parser {
             }
         }
 
-        var consequent = BlockOrArrowStatement(elseToken == null ? TokenKind.KwDo : null);
+        TokenKind? then = elseToken == null ? TokenKind.KwThen : null;
+        if (TryConsumeBodyStatement(then, out BodyStatement? consequent) == false) {
+            throw Error(CompilerMessage.Parser.BodyExpected(Peek().Line));
+        }
 
-        return SF.MatchCase(elseToken, tests, consequent);
+        matchCase = SF.MatchCase(elseToken, tests, consequent);
+        return true;
     }
 
-    public LoopExpression LoopExpression () {
-        Token loopToken = PeekPrevious();
+    #endregion
 
-        BodyStatement body = BlockOrArrowStatement(null);
-
-        return SF.LoopExpression(loopToken, body);
-    }
-
-    public WhileExpression WhileExpression () {
-        Token whileToken = PeekPrevious();
-        Expression test = Expression();
-
-        BodyStatement body = BlockOrArrowStatement(TokenKind.KwDo);
-
-        return SF.WhileExpression(whileToken, test, body);
-    }
-
-    public ForeachExpression ForeachExpression () {
-        Token foreachToken = PeekPrevious();
-        FieldDeclarationExpression initializer = ImplicitFieldDeclarationExpression();
-
-        if (TryConsume(TokenKind.KwIn, out Token? inToken) == false) {
-            throw Error(CompilerMessage.Parser.InExpected(Peek().Line));
-        }
-
-        Expression enumerable = Expression();
-        BodyStatement body = BlockOrArrowStatement(TokenKind.KwDo);
-
-        return SF.ForeachExpression(foreachToken, initializer, inToken, enumerable, body);
-    }
-
-    // "="
-    private Expression AssignmentExpression () {
-        Expression expr = LogicalBinaryExpression();
-
-        if (Match(TokenKind.Equal)) {
-            Token equalToken = PeekPrevious();
-            var right = AssignmentExpression();
-
-            return SF.AssignmentExpression(expr, equalToken, right);
-        }
-
-        return expr;
-    }
-
-    // "and" | "or"
-    private Expression LogicalBinaryExpression () {
-        Expression expr = ComparisonBinaryExpression();
-
-        while (MatchLogicalToken()) {
-            Operator op = Operator();
-            Expression right = ComparisonBinaryExpression();
-
-            expr = SF.BinaryExpression(expr, op, right);
-        }
-
-        return expr;
-    }
-
-    // "==" | "!=" | "<" | "<=" | ">" | ">="
-    private Expression ComparisonBinaryExpression () {
-        Expression expr = AdditionBinaryExpression();
-
-        while (MatchComparisonToken()) {
-            Operator op = Operator();
-            Expression right = AdditionBinaryExpression();
-
-            expr = SF.BinaryExpression(expr, op, right);
-        }
-
-        return expr;
-    }
-
-    // "+" | "-"
-    private Expression AdditionBinaryExpression () {
-        Expression expr = MathBinaryExpression();
-
-        while (MatchAdditionToken()) {
-            Operator op = Operator();
-            Expression right = MathBinaryExpression();
-
-            expr = SF.BinaryExpression(expr, op, right);
-        }
-
-        return expr;
-    }
-
-    // "*" | "/"
-    private Expression MathBinaryExpression () {
-        Expression expr = LeftUnaryExpression();
-
-        while (MatchMathToken()) {
-            Operator op = Operator();
-            Expression right = LeftUnaryExpression();
-
-            expr = SF.BinaryExpression(expr, op, right);
-        }
-
-        return expr;
-    }
-
-    // "not"
-    private Expression LeftUnaryExpression () {
-        if (MatchLeftUnaryToken()) {
-            Operator op = Operator();
-            var right = LeftUnaryExpression();
-            return SF.LeftUnaryExpression(op, right);
-        }
-
-        return Primary();
-    }
-
-    private Expression Primary () {
-        LiteralExpression? literal = LiteralExpression();
-
-        if (literal is not null) {
-            return literal;
-        }
-        else if (Match(TokenKind.LeftParen)) {
-            Token leftParen = PeekPrevious();
-            Expression expr = Expression();
-
-            if (TryConsume(TokenKind.RightParen, out Token? rightParen) == false) {
-                throw Error(CompilerMessage.Parser.RightParenExpected(Peek().Line));
-            }
-            
-            return SF.GroupExpression(expr, leftParen, rightParen);
-        }
-
-        IdentifierExpression? identifier = IdentifierExpression();
-        if (identifier is not null) {
-            return identifier;
-        }
-
-        throw Error(CompilerMessage.Parser.UnexpectedToken(Peek().Line, Advance()));
-    }
-
-    private IdentifierExpression? IdentifierExpression () {
-        if (Match(TokenKind.Identifier)) {
-            Token identifierToken = PeekPrevious();
-            var id = SF.Identifier(identifierToken);
-            return SF.IdentifierExpression(id);
-        }
-        
-        return null;
-    }
-
-    /// <summary>
-    /// Returns an identifier expression used as a type annotation if there's
-    /// one, or null if there isn't.
-    /// </summary>
-    private IdentifierExpression? OptionalTypeAnnotation () {
-        if (Match(TokenKind.Colon) == false) return null;
-
-        IdentifierExpression? type = IdentifierExpression();
-
-        if (type == null) throw Error(
-            CompilerMessage.Parser.TypeExpected(Peek().Line)
-        );
-
-        return type;
-    }
-
-    private LiteralExpression? LiteralExpression () {
-        Literal? literal = Literal();
-
-        if (literal is not null) {
-            return SF.LiteralExpression(literal);
-        }
-
-        return null;
-    }
-
-    private Literal? Literal () {
-        var token = Peek();
-
-        if (Match(TokenKind.KwTrue)) {
-            return BooleanLiteral(token);
-        }
-        if (Match(TokenKind.KwFalse)) {
-            return BooleanLiteral(token);
-        }
-        if (Match(TokenKind.Number)) {
-            return NumberLiteral(token);
-        }
-        if (Match(TokenKind.String)) {
-            return SF.Literal(token);
-        }
-
-        return null;
-    }
-
-    private Literal NumberLiteral (Token token) {
+    #region Node builders
+    private Literal MakeNumberLiteral (Token token) {
         // The part of the lexeme that represents the number, removing
         // underscores as they don't have any meaning.
         string numberString = token.Lexeme.Replace("_", "");
@@ -746,7 +1077,7 @@ public class Parser {
         }
     }
 
-    private Literal BooleanLiteral (Token token) {
+    private Literal MakeBooleanLiteral (Token token) {
         if (token.Kind == TokenKind.KwTrue) {
             return SF.BooleanLiteral(token, true);
         }
@@ -755,62 +1086,6 @@ public class Parser {
         }
 
         throw new Exception("Trying to parse an invalid token as a boolean.");
-    }
-
-    private FieldDeclarator FieldDeclarator (FieldKind fieldKind, Token? fieldKindToken) {
-        // If we find a "const" or "var", that's the new mutability.
-        if (Match(TokenKind.KwConst)) {
-            fieldKindToken = PeekPrevious();
-            fieldKind = FieldKind.Constant;
-        }
-        else if (Match(TokenKind.KwVar)) {
-            fieldKindToken = PeekPrevious();
-            fieldKind = FieldKind.Variable;
-        }
-
-        if (TryConsume(TokenKind.Identifier, out Token? identifierToken) == false) {
-            throw Error(CompilerMessage.Parser.IdentifierExpected(Peek().Line));
-        }
-
-        IdentifierExpression? type = OptionalTypeAnnotation();
-
-        return SF.FieldDeclarator(
-            fieldKindToken,
-            SF.Identifier(identifierToken),
-            fieldKind,
-            type
-        );
-    }
-
-    private Operator Operator () {
-        Token token = PeekPrevious();
-        return token.Kind switch {
-            TokenKind.Plus => _Op(OperatorKind.Add),
-            TokenKind.Minus => _Op(OperatorKind.Subtract),
-            TokenKind.Asterisk => _Op(OperatorKind.Multiply),
-            TokenKind.Slash => _Op(OperatorKind.Divide),
-            TokenKind.EqualEqual => _Op(OperatorKind.Equals),
-            TokenKind.BangEqual => _Op(OperatorKind.NotEquals),
-            TokenKind.Less => _Op(OperatorKind.LessThan),
-            TokenKind.LessEqual => _Op(OperatorKind.LessThanOrEqualTo),
-            TokenKind.Greater => _Op(OperatorKind.GreaterThan),
-            TokenKind.GreaterEqual => _Op(OperatorKind.GreaterThanOrEqualTo),
-            TokenKind.KwAnd => _Op(OperatorKind.LogicalAnd),
-            TokenKind.KwOr => _Op(OperatorKind.LogicalOr),
-            _ => throw new Exception(
-                $"Cannot parse {token.Kind} as an Operator."
-            ),
-        };
-        Operator _Op (OperatorKind opKind) {
-            return SF.Operator(token, opKind);
-        }
-    }
-
-    private PrivPrintStmt PrivPrintStmt () {
-        Token p_printToken = PeekPrevious();
-        Expression expr = Expression();
-
-        return SF.PrivPrintStmt(p_printToken, expr);
     }
     #endregion
 

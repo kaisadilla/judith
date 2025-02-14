@@ -5,6 +5,8 @@
 #include "Value.hpp"
 
 #define STACK_MAX 1024
+#define LOCALS_MAX 256 
+#define LOCALS_EXT_MAX (USHRT_MAX + 1)
 
 enum class InterpretResult {
     OK,
@@ -22,7 +24,14 @@ private:
     /// </summary>
     Value* stackTop = stack;
 
+    /// <summary>
+    /// The VM's local variable array.
+    /// </summary>
+    Value locals[LOCALS_MAX];
+
 public:
+    ~VM();
+
     InterpretResult interpret (const Chunk& chunk);
 
     inline void resetStack () {
@@ -44,6 +53,22 @@ public:
     inline Value& popValue () {
         stackTop--;
         return *stackTop;
+    }
+
+    /// <summary>
+    /// Pops the value at the top of the stack and stores it in the local given.
+    /// </summary>
+    /// <param name="index"></param>
+    inline void storeLocal (size_t index) {
+        locals[index] = popValue();
+    }
+
+    /// <summary>
+    /// Pushes the value at the local given to the stack.
+    /// </summary>
+    /// <param name="index"></param>
+    inline void loadLocal (size_t index) {
+        pushValue(locals[index]);
     }
     
     inline void printValue (const Value& value) {

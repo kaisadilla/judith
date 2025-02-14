@@ -5,18 +5,21 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace Judith.NET.syntax;
-public class FieldDeclarator : SyntaxNode {
+
+public class LocalDeclarator : SyntaxNode {
     public Identifier Identifier { get; init; }
-    public FieldKind FieldKind { get; init; }
-    public IdentifierExpression? Type { get; private set; }
-    
+    public LocalKind LocalKind { get; init; }
+    public TypeAnnotation? Type { get; private set; }
+
     public Token? FieldKindToken { get; init; }
 
-    public FieldDeclarator (Identifier identifier, FieldKind fieldKind, IdentifierExpression? type)
-        : base(SyntaxKind.FieldDeclarator)
+    public LocalDeclarator (
+        Identifier identifier, LocalKind localKind, TypeAnnotation? type
+    )
+        : base(SyntaxKind.LocalDeclarator)
     {
         Identifier = identifier;
-        FieldKind = fieldKind;
+        LocalKind = localKind;
         Type = type;
 
         Children.Add(Identifier);
@@ -28,7 +31,7 @@ public class FieldDeclarator : SyntaxNode {
     }
 
     public override string ToString () {
-        string str = $"[{FieldKind}] {Identifier}";
+        string str = $"[{LocalKind}] {Identifier}";
 
         if (Type != null) {
             str += $": {Type}";
@@ -37,7 +40,7 @@ public class FieldDeclarator : SyntaxNode {
         return str;
     }
 
-    public void SetType (IdentifierExpression? type) {
+    public void SetType (TypeAnnotation? type) {
         Type = type;
     }
 }

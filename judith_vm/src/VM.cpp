@@ -2,6 +2,7 @@
 #include "jal/opcodes.hpp"
 
 #define READ_BYTE() (*(ip++))
+#define READ_U16() (*(ip++) | (*(ip++) << 8)) // TODO: Check that unsigned usage is implemented properly.
 #define READ_I32() (*(ip++) | (*(ip++) << 8) | (*(ip++) << 16) | (*(ip++) << 24))
 
 #define BINARY_OP(op) \
@@ -11,6 +12,10 @@
         pushValue({ .asFloat64 = (a op b) }); \
     } while (false)
 
+VM::~VM() {
+
+}
+
 InterpretResult VM::interpret (const Chunk& chunk) {
     byte* ip = chunk.code;
 
@@ -18,7 +23,7 @@ InterpretResult VM::interpret (const Chunk& chunk) {
 #ifdef DEBUG_DUMP_STACK
         std::cout << "stack: [";
         for (Value* slot = stack; slot < stackTop; slot++) {
-            std::cout << slot->as.float64 << ", ";
+            std::cout << slot->asFloat64 << ", ";
         }
         std::cout << "]" << std::endl;
 #endif
@@ -91,6 +96,64 @@ InterpretResult VM::interpret (const Chunk& chunk) {
             break;
 
         case OpCode::I_DIV:
+            break;
+
+        case OpCode::STORE_0:
+            storeLocal(0);
+            break;
+
+        case OpCode::STORE_1:
+            storeLocal(1);
+            break;
+
+        case OpCode::STORE_2:
+            storeLocal(2);
+            break;
+
+        case OpCode::STORE_3:
+            storeLocal(3);
+            break;
+
+        case OpCode::STORE_4:
+            storeLocal(4);
+            break;
+
+        case OpCode::STORE:
+            storeLocal(READ_BYTE());
+            break;
+
+        case OpCode::STORE_L:
+            throw "Extended local variable array not implemented.";
+            //storeLocal(READ_U16());
+            break;
+
+        case OpCode::LOAD_0:
+            loadLocal(0);
+            break;
+
+        case OpCode::LOAD_1:
+            loadLocal(1);
+            break;
+
+        case OpCode::LOAD_2:
+            loadLocal(2);
+            break;
+
+        case OpCode::LOAD_3:
+            loadLocal(3);
+            break;
+
+        case OpCode::LOAD_4:
+            loadLocal(4);
+            break;
+
+        case OpCode::LOAD:
+            loadLocal(READ_BYTE());
+            break;
+
+        case OpCode::LOAD_L:
+            throw "Extended local variable array not implemented.";
+            //loadLocal(READ_U16());
             break;
 
         case OpCode::PRINT:

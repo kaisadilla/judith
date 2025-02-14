@@ -16,6 +16,11 @@ public class JalChunk {
         CodeLines.Add(line);
     }
 
+    public void WriteUint16 (ushort u16, int line) {
+        WriteByte((byte)((u16 >> 0) & 0xff), line);
+        WriteByte((byte)((u16 >> 8) & 0xff), line);
+    }
+
     public void WriteInt32 (int i32, int line) {
         WriteByte((byte)((i32 >> 0) & 0xff), line);
         WriteByte((byte)((i32 >> 8) & 0xff), line);

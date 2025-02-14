@@ -47,10 +47,37 @@ static size_t simpleInstruction (std::ostringstream& str, Chunk& chunk, const ch
     return index + 1;
 }
 
+static size_t byteInstruction (std::ostringstream& str, Chunk& chunk, const char* name, size_t index) {
+    if (index + 1 >= chunk.size) {
+        std::cerr << "Constant instruction at index " << index << " overflows the code array.";
+        return index + 2;
+    }
+
+    byte val = chunk.code[index + 1];
+
+    str << idStr(name) << " " << hexByteStr(val) << " ";
+
+    return index + 2;
+}
+
+static size_t u16Instruction (std::ostringstream& str, Chunk& chunk, const char* name, size_t index) {
+    if (index + 2 >= chunk.size) {
+        std::cerr << "Constant long instruction at index " << index << " overflows the code array.";
+        return index + 3;
+    }
+
+    i32 val = chunk.code[index + 1]
+        + (chunk.code[index + 2] << 8);
+
+    str << idStr(name) << " " << hexIntegerStr(val) << " ";
+
+    return index + 3;
+}
+
 static size_t constantInstruction (std::ostringstream& str, Chunk& chunk, const char* name, size_t index) {
     if (index + 1 >= chunk.size) {
         std::cerr << "Constant instruction at index " << index << " overflows the code array.";
-        return index + 1;
+        return index + 2;
     }
 
     byte constIndex = chunk.code[index + 1];
@@ -104,6 +131,7 @@ static size_t disassembleInstruction (std::ostringstream& str, Chunk& chunk, siz
     switch (opCode) {
     case OpCode::NOOP:
         return simpleInstruction(str, chunk, "NOOP", index);
+
     case OpCode::CONST:
         return constantInstruction(str, chunk, "CONST", index);
     case OpCode::CONST_LONG:
@@ -114,6 +142,7 @@ static size_t disassembleInstruction (std::ostringstream& str, Chunk& chunk, siz
         return simpleInstruction(str, chunk, "I_CONST_1", index);
     case OpCode::I_CONST_2:
         return simpleInstruction(str, chunk, "I_CONST_2", index);
+
     case OpCode::RET:
         return simpleInstruction(str, chunk, "RET", index);
     case OpCode::F_NEG:
@@ -128,6 +157,7 @@ static size_t disassembleInstruction (std::ostringstream& str, Chunk& chunk, siz
         return simpleInstruction(str, chunk, "F_DIV", index);
     case OpCode::I_NEG:
         return simpleInstruction(str, chunk, "I_NEG", index);
+
     case OpCode::I_ADD:
         return simpleInstruction(str, chunk, "I_ADD", index);
     case OpCode::I_ADD_CHECKED:
@@ -144,6 +174,49 @@ static size_t disassembleInstruction (std::ostringstream& str, Chunk& chunk, siz
         return simpleInstruction(str, chunk, "I_DIV", index);
     case OpCode::I_DIV_CHECKED:
         return simpleInstruction(str, chunk, "I_DIV_CHECKED", index);
+
+    case OpCode::STORE_0:
+        return simpleInstruction(str, chunk, "STORE_0", index);
+
+    case OpCode::STORE_1:
+        return simpleInstruction(str, chunk, "STORE_1", index);
+
+    case OpCode::STORE_2:
+        return simpleInstruction(str, chunk, "STORE_2", index);
+
+    case OpCode::STORE_3:
+        return simpleInstruction(str, chunk, "STORE_3", index);
+
+    case OpCode::STORE_4:
+        return simpleInstruction(str, chunk, "STORE_4", index);
+
+    case OpCode::STORE:
+        return byteInstruction(str, chunk, "STORE", index);
+
+    case OpCode::STORE_L:
+        return u16Instruction(str, chunk, "STORE_L", index);
+
+    case OpCode::LOAD_0:
+        return simpleInstruction(str, chunk, "LOAD_0", index);
+
+    case OpCode::LOAD_1:
+        return simpleInstruction(str, chunk, "LOAD_1", index);
+
+    case OpCode::LOAD_2:
+        return simpleInstruction(str, chunk, "LOAD_2", index);
+
+    case OpCode::LOAD_3:
+        return simpleInstruction(str, chunk, "LOAD_3", index);
+
+    case OpCode::LOAD_4:
+        return simpleInstruction(str, chunk, "LOAD_4", index);
+
+    case OpCode::LOAD:
+        return byteInstruction(str, chunk, "LOAD", index);
+
+    case OpCode::LOAD_L:
+        return u16Instruction(str, chunk, "LOAD_L", index);
+
     case OpCode::PRINT:
         return simpleInstruction(str, chunk, "PRINT", index);
     default:

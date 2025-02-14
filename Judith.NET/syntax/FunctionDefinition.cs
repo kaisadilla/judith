@@ -6,23 +6,27 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.syntax;
 
-public class FunctionItem : Item {
-    public Identifier Identifier { get; init; }
-    public ParameterList Parameters { get; init; }
-    public IdentifierExpression? ReturnType { get; init; }
-    public Statement Body { get; init; }
+public class FunctionDefinition : Item {
+    public bool IsHidden { get; private init; }
+    public Identifier Identifier { get; private init; }
+    public ParameterList Parameters { get; private init; }
+    public TypeAnnotation? ReturnType { get; private init; }
+    public Statement Body { get; private init; }
 
+    public Token? HidToken { get; init; }
     public Token? FuncToken { get; init; }
     public Token? ColonToken { get; init; }
 
-    public FunctionItem (
+    public FunctionDefinition (
+        bool isHidden,
         Identifier name,
         ParameterList parameters,
-        IdentifierExpression? returnType,
+        TypeAnnotation? returnType,
         Statement body
     )
-        : base(SyntaxKind.FunctionItem)
+        : base(SyntaxKind.FunctionDefinition)
     {
+        IsHidden = isHidden;
         Identifier = name;
         Parameters = parameters;
         ReturnType = returnType;

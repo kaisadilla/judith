@@ -10,8 +10,30 @@ namespace Judith.NET.syntax;
 
 [JsonConverter(typeof(StringEnumConverter))]
 public enum SyntaxKind {
-    FunctionItem,
+    CompilerUnit,
 
+    // Top level directives
+    ImportDirective,
+    ModuleDirective,
+    EnumerateDirective,
+
+    // Definitions
+    FunctionDefinition,
+    UserTypeDefinition,
+    AliasTypeDefinition,
+    UnionTypeDefinition,
+    SetTypeDefinition,
+    StructTypeDefinition,
+    InterfaceTypeDefinition,
+    ClassTypeDefinition,
+
+    // Implementations
+    Implementation,
+    ExtensionFunctionImplementation,
+    ConstructorImplementation,
+    InterfaceImplementation,
+
+    // Statements
     LocalDeclarationStatement,
     BlockStatement,
     ArrowStatement,
@@ -27,15 +49,19 @@ public enum SyntaxKind {
     SingleFieldDeclarationExpression,
     MultipleFieldDeclarationExpression,
 
+    // Control structure expressions
     IfExpression,
     MatchExpression,
     LoopExpression,
     WhileExpression,
     ForeachExpression,
+    
+    WhenExpression,
 
     AssignmentExpression,
     BinaryExpression,
     LeftUnaryExpression,
+    AccessExpression,
     IdentifierExpression,
     LiteralExpression,
 
@@ -43,19 +69,28 @@ public enum SyntaxKind {
     Literal,
     Operator,
 
-    FieldDeclarator,
     EqualsValueClause,
     MatchCase,
     Parameter,
     ParameterList,
+    TypeAnnotation,
+    LocalDeclaratorList,
+    LocalDeclarator,
 
     P_PrintStatement,
 }
 
 [JsonConverter(typeof(StringEnumConverter))]
-public enum FieldKind {
+public enum LocalKind {
     Constant, // const
     Variable, // var
+}
+
+[JsonConverter(typeof(StringEnumConverter))]
+public enum LocalDeclaratorKind {
+    Regular, // const a, b = c
+    ArrayPattern, // const [a, b] = ...c
+    ObjectPattern, // const { a, b } = ...c
 }
 
 [JsonConverter(typeof(StringEnumConverter))]
@@ -90,13 +125,24 @@ public enum OperatorKind {
     Subtract, // -
     Multiply, // *
     Divide, // /
+    BitwiseNot, // ~
     Equals, // ==
     NotEquals, // !=
+    Like, // ~=
+    ReferenceEquals, // ===
+    ReferenceNotEquals, // !==
     LessThan, // <
     LessThanOrEqualTo, // <=
     GreaterThan, // >
     GreaterThanOrEqualTo, // >=
     LogicalAnd, // and
     LogicalOr, // or
+    MemberAccess, // .
+    ScopeResolution, // ::
     //UserDefined, // % followed by identifier.
+}
+
+public enum AccessKind {
+    Scope,
+    Member,
 }

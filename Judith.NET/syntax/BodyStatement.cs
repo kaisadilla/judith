@@ -12,16 +12,16 @@ public abstract class BodyStatement : Statement {
 }
 
 public class BlockStatement : BodyStatement {
-    public List<Statement> Statements { get; init; }
+    public List<SyntaxNode> Nodes { get; init; }
     public Token? OpeningToken { get; init; }
     public Token? ClosingToken { get; init; }
 
-    public BlockStatement (List<Statement> statements)
+    public BlockStatement (List<SyntaxNode> nodes)
         : base(SyntaxKind.BlockStatement)
     {
-        Statements = statements;
+        Nodes = nodes;
 
-        Children.AddRange(Statements);
+        Children.AddRange(Nodes);
     }
 
     public override void Accept (SyntaxVisitor visitor) {
@@ -30,7 +30,7 @@ public class BlockStatement : BodyStatement {
 
     public override string ToString () {
         return "|block> " + Stringify(new {
-            Statements = Statements.Select(stmt => stmt.ToString()),
+            Statements = Nodes.Select(stmt => stmt.ToString()),
         }) + " <|";
     }
 }

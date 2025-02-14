@@ -1,10 +1,18 @@
---__p_print 3 + 5
-
-__p_print
-3 + 8 *
-6 - 2
+const val1 = 11
+const val2 = 7 * 3
+const val3 = 5 / 3 + 2
+const val4 = (4 + 1) + 1 * 16
+const val5 = val2
+const val6 = val5 + val3
+__p_print val1
+__p_print val2 + val3
+__p_print val6 + val5 + val4
 
 return
+
+
+
+
 
 --func add_four (a, b, c, d: Num = 3) : Num
 --	const e = a + b

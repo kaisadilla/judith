@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Judith.NET.syntax;
 
 public class ForeachExpression : Expression {
-    public FieldDeclarationExpression Initializer { get; init; }
+    public List<LocalDeclarator> Declarators { get; init; }
     public Expression Enumerable { get; init; }
     public Statement Body { get; init; }
 
@@ -15,17 +15,18 @@ public class ForeachExpression : Expression {
     public Token? InToken { get; init; }
 
     public ForeachExpression (
-        FieldDeclarationExpression initializer,
+        List<LocalDeclarator> declarators,
         Expression enumerable,
         Statement body
     )
         : base(SyntaxKind.ForeachExpression)
     {
-        Initializer = initializer;
+        Declarators = declarators;
         Enumerable = enumerable;
         Body = body;
 
-        Children.Add(Initializer, Enumerable, Body);
+        Children.AddRange(Declarators);
+        Children.Add(Enumerable, Body);
     }
 
     public override void Accept (SyntaxVisitor visitor) {
@@ -34,7 +35,7 @@ public class ForeachExpression : Expression {
 
     public override string ToString () {
         return "|foreach> " + Stringify(new {
-            Initializer = Initializer.ToString(),
+            Declarators = Declarators.Select(d => d.ToString()),
             Enumerable = Enumerable.ToString(),
             Body = Body.ToString(),
         }) + " <|";

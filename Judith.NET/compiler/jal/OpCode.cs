@@ -11,6 +11,7 @@ public enum OpCode : byte {
     /// NOOP | NO_OPERATION | The no operation. Does nothing.
     /// </summary>
     NoOp = 0,
+
     /// <summary>
     /// CONST | CONSTANT | Reads a constant at the address given by the next
     /// byte in the chunk. 
@@ -32,10 +33,12 @@ public enum OpCode : byte {
     /// CONST_2 | CONSTANT_2 | Pushes the value "2".
     /// </summary>
     IConst2,
+
     /// <summary>
     /// RET | RETURN
     /// </summary>
     Ret,
+
     /// <summary>
     /// F_NEG | FLOAT_NEGATE | Negates the value (as f64) at the top of the stack.
     /// </summary>
@@ -59,6 +62,7 @@ public enum OpCode : byte {
     /// <summary>
     /// I_NEG | INTEGER_NEGATE | Negates the value (as i64) at the top of the stack.
     /// </summary>
+    /// 
     INeg,
     IAdd,
     IAddChecked,
@@ -68,6 +72,22 @@ public enum OpCode : byte {
     IMulChecked,
     IDiv,
     IDivChecked,
+
+    Store0,
+    Store1,
+    Store2,
+    Store3,
+    Store4,
+    Store,
+    StoreLong,
+
+    Load0,
+    Load1,
+    Load2,
+    Load3,
+    Load4,
+    Load,
+    LoadLong,
 
     Print,
 }

@@ -22,7 +22,9 @@ public class Lexer {
         ["false"] = TokenKind.KwFalse,
         ["for"] = TokenKind.KwFor,
         ["func"] = TokenKind.KwFunc,
+        ["generator"] = TokenKind.KwGenerator,
         ["goto"] = TokenKind.KwGoto,
+        ["hid"] = TokenKind.KwHid,
         ["if"] = TokenKind.KwIf,
         ["in"] = TokenKind.KwIn,
         ["loop"] = TokenKind.KwLoop,
@@ -99,11 +101,23 @@ public class Lexer {
             case ',':
                 return MakeToken(TokenKind.Comma);
             case ':':
+                if (Match(':')) {
+                    return MakeToken(TokenKind.DoubleColon);
+                }
+
                 return MakeToken(TokenKind.Colon);
             case '(':
                 return MakeToken(TokenKind.LeftParen);
             case ')':
                 return MakeToken(TokenKind.RightParen);
+            case '{':
+                return MakeToken(TokenKind.LeftCurlyBracket);
+            case '}':
+                return MakeToken(TokenKind.RightCurlyBracket);
+            case '[':
+                return MakeToken(TokenKind.LeftSquareBracket);
+            case ']':
+                return MakeToken(TokenKind.RightSquareBracket);
             case '+':
                 return MakeToken(TokenKind.Plus);
             case '-':
@@ -144,6 +158,14 @@ public class Lexer {
                 }
 
                 return MakeToken(TokenKind.Bang);
+            case '~':
+                if (Match('=')) {
+                    return MakeToken(TokenKind.TildeEqual);
+                }
+
+                return MakeToken(TokenKind.Tilde);
+            case '.':
+                return MakeToken(TokenKind.Dot);
             case '<':
                 if (Match('=')) {
                     return MakeToken(TokenKind.LessEqual);

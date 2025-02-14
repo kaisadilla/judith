@@ -39,34 +39,44 @@ public abstract class SyntaxVisitor {
     //public virtual void Visit (Expression node) => DefaultVisit(node);
     //public virtual void Visit (Statement node) => DefaultVisit(node);
     //public virtual void Visit (Item node) => DefaultVisit(node);
-    public virtual void Visit (Literal node) => VisitChildren(node);
-    public virtual void Visit (Identifier node) => VisitChildren(node);
-    public virtual void Visit (EqualsValueClause node) => VisitChildren(node);
-    public virtual void Visit (Operator node) => VisitChildren(node);
-    public virtual void Visit (MatchCase node) => VisitChildren(node);
-    public virtual void Visit (Parameter node) => VisitChildren(node);
-    public virtual void Visit (ParameterList node) => VisitChildren(node);
-    public virtual void Visit (FieldDeclarator node) => VisitChildren(node);
-    public virtual void Visit (LiteralExpression node) => VisitChildren(node);
-    public virtual void Visit (IdentifierExpression node) => VisitChildren(node);
+
+    public virtual void Visit (CompilerUnit node) => VisitChildren(node);
+    public virtual void Visit (FunctionDefinition node) => VisitChildren(node);
+
+    public virtual void Visit (BlockStatement node) => VisitChildren(node);
+    public virtual void Visit (ArrowStatement node) => VisitChildren(node);
+    public virtual void Visit (LocalDeclarationStatement node) => VisitChildren(node);
     public virtual void Visit (ReturnStatement node) => VisitChildren(node);
     public virtual void Visit (YieldStatement node) => VisitChildren(node);
-    public virtual void Visit (GroupExpression node) => VisitChildren(node);
-    public virtual void Visit (UnaryExpression node) => VisitChildren(node);
-    public virtual void Visit (BinaryExpression node) => VisitChildren(node);
-    public virtual void Visit (AssignmentExpression node) => VisitChildren(node);
-    public virtual void Visit (SingleFieldDeclarationExpression node) => VisitChildren(node);
-    public virtual void Visit (MultipleFieldDeclarationExpression node) => VisitChildren(node);
+    public virtual void Visit (ExpressionStatement node) => VisitChildren(node);
+
     public virtual void Visit (IfExpression node) => VisitChildren(node);
     public virtual void Visit (MatchExpression node) => VisitChildren(node);
     public virtual void Visit (LoopExpression node) => VisitChildren(node);
     public virtual void Visit (WhileExpression node) => VisitChildren(node);
     public virtual void Visit (ForeachExpression node) => VisitChildren(node);
-    public virtual void Visit (ExpressionStatement node) => VisitChildren(node);
-    public virtual void Visit (LocalDeclarationStatement node) => VisitChildren(node);
-    public virtual void Visit (BlockStatement node) => VisitChildren(node);
-    public virtual void Visit (ArrowStatement node) => VisitChildren(node);
-    public virtual void Visit (FunctionItem node) => VisitChildren(node);
+
+    public virtual void Visit (WhenExpression node) => VisitChildren(node);
+
+    public virtual void Visit (AssignmentExpression node) => VisitChildren(node);
+    public virtual void Visit (BinaryExpression node) => VisitChildren(node);
+    public virtual void Visit (UnaryExpression node) => VisitChildren(node);
+    public virtual void Visit (AccessExpression node) => VisitChildren(node);
+    public virtual void Visit (GroupExpression node) => VisitChildren(node);
+    public virtual void Visit (IdentifierExpression node) => VisitChildren(node);
+    public virtual void Visit (LiteralExpression node) => VisitChildren(node);
+
+    public virtual void Visit (Identifier node) => VisitChildren(node);
+    public virtual void Visit (Literal node) => VisitChildren(node);
+    public virtual void Visit (LocalDeclaratorList node) => VisitChildren(node);
+    public virtual void Visit (LocalDeclarator node) => VisitChildren(node);
+    public virtual void Visit (EqualsValueClause node) => VisitChildren(node);
+    public virtual void Visit (TypeAnnotation node) => VisitChildren(node);
+    public virtual void Visit (Operator node) => VisitChildren(node);
+    public virtual void Visit (ParameterList node) => VisitChildren(node);
+    public virtual void Visit (Parameter node) => VisitChildren(node);
+    public virtual void Visit (MatchCase node) => VisitChildren(node);
+
 
     public virtual void Visit (PrivPrintStmt node) => VisitChildren(node);
 }

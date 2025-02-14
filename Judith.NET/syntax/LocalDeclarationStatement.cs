@@ -7,14 +7,21 @@ using System.Threading.Tasks;
 namespace Judith.NET.syntax;
 
 public class LocalDeclarationStatement : Statement {
-    public FieldDeclarationExpression Declaration { get; init; }
+    public LocalDeclaratorList DeclaratorList { get; private init; }
+    public EqualsValueClause? Initializer { get; private init; }
 
-    public LocalDeclarationStatement (FieldDeclarationExpression declaration)
+    /// <summary>
+    /// The "const" or "var" token that starts this local declaration statement.
+    /// </summary>
+    public Token? DeclaratorToken { get; init; }
+
+    public LocalDeclarationStatement (
+        LocalDeclaratorList declaratorList, EqualsValueClause? initializer
+    )
         : base(SyntaxKind.LocalDeclarationStatement)
     {
-        Declaration = declaration;
-
-        Children.Add(Declaration);
+        DeclaratorList = declaratorList;
+        Initializer = initializer;
     }
 
     public override void Accept (SyntaxVisitor visitor) {
@@ -22,6 +29,10 @@ public class LocalDeclarationStatement : Statement {
     }
 
     public override string ToString () {
-        return $"|local_decl> {Declaration} <|";
+        return $"|local_decl_stmt > " + Stringify(new {
+            DeclaratorList = DeclaratorList.ToString(),
+            Initializer = Initializer?.ToString(),
+        }) + " <|";
     }
 }
+

@@ -55,22 +55,35 @@ public class Token {
             TokenKind.Colon => "Colon",
             TokenKind.LeftParen => "Opening parenthesis",
             TokenKind.RightParen => "Closing parenthesis",
+            TokenKind.LeftCurlyBracket => "Opening curly bracket",
+            TokenKind.RightCurlyBracket => "Closing curly bracket",
+            TokenKind.LeftSquareBracket => "Opening square bracket",
+            TokenKind.RightSquareBracket => "Closing square bracket",
+            TokenKind.LeftAngleBracket => "Opening angle bracket",
+            TokenKind.RightAngleBracket => "Closing angle bracket",
             TokenKind.Plus => "Plus sign",
             TokenKind.Minus => "Minus sign",
             TokenKind.Asterisk => "Asterisk",
             TokenKind.Slash => "Slash",
             TokenKind.Equal => "Equal sign",
             TokenKind.Bang => "Exclamation mark",
+            TokenKind.Tilde => "Tilde",
+            TokenKind.Dot => "Dot",
 
             // Two-character tokens.
-            TokenKind.EqualEqual => "Double equal sign",
-            TokenKind.BangEqual => "Not equal sign",
+            TokenKind.EqualEqual => "Equal equal sign",
+            TokenKind.BangEqual => "Exclamation mark equal sign",
+            TokenKind.TildeEqual => "Tilde equal sign",
             TokenKind.Less => "Less sign",
             TokenKind.LessEqual => "Less or equal sign",
             TokenKind.Greater => "Greater sign",
             TokenKind.GreaterEqual => "Greater or equal sign",
+            TokenKind.EqualArrow => "Equal arrow",
+            TokenKind.DoubleColon => "Double colon",
 
             // Three-character tokens.
+            TokenKind.EqualEqualEqual => "Triple equal sign",
+            TokenKind.BangEqualEqual => "Not triple equal sign",
 
             // % operators
 
@@ -106,6 +119,8 @@ public class Token {
             TokenKind.KwContinue => "continue",
             TokenKind.KwGoto => "goto",
             TokenKind.KwFunc => "func",
+            TokenKind.KwGenerator => "generator",
+            TokenKind.KwHid => "hid",
 
             // Private keywords
             TokenKind.PkwPrint => "__p_print",

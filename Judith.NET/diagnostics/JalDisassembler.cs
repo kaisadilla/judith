@@ -73,6 +73,37 @@ public class JalDisassembler {
                 break;
             case OpCode.IDivChecked:
                 break;
+
+            case OpCode.Store0:
+                return SimpleInstruction("STORE_0", index);
+            case OpCode.Store1:
+                return SimpleInstruction("STORE_1", index);
+            case OpCode.Store2:
+                return SimpleInstruction("STORE_2", index);
+            case OpCode.Store3:
+                return SimpleInstruction("STORE_3", index);
+            case OpCode.Store4:
+                return SimpleInstruction("STORE_4", index);
+            case OpCode.Store:
+                return ByteInstruction("STORE", index);
+            case OpCode.StoreLong:
+                return U16Instruction("STORE_L", index);
+
+            case OpCode.Load0:
+                return SimpleInstruction("LOAD_0", index);
+            case OpCode.Load1:
+                return SimpleInstruction("LOAD_1", index);
+            case OpCode.Load2:
+                return SimpleInstruction("LOAD_2", index);
+            case OpCode.Load3:
+                return SimpleInstruction("LOAD_3", index);
+            case OpCode.Load4:
+                return SimpleInstruction("LOAD_4", index);
+            case OpCode.Load:
+                return ByteInstruction("LOAD", index);
+            case OpCode.LoadLong:
+                return U16Instruction("LOAD_L", index);
+
             case OpCode.Print:
                 return SimpleInstruction("PRINT", index);
             default:
@@ -104,11 +135,30 @@ public class JalDisassembler {
         return index + 2;
     }
 
+    private int ByteInstruction (string name, int index) {
+        var val = _chunk.Code[index + 1];
+
+        Dump += IdStr(name) + " ";
+        Dump += HexByteStr(val) + " ";
+
+        return index + 2;
+    }
+
+    private int U16Instruction (string name, int index) {
+        var val = _chunk.Code[index + 1]
+            | (_chunk.Code[index + 2] << 8);
+
+        Dump += IdStr(name) + " ";
+        Dump += HexIntegerStr(val) + " ";
+
+        return index + 3;
+    }
+
     private int ConstantLongInstruction (string name, int index) {
         var constIndex = _chunk.Code[index + 1]
-            + (_chunk.Code[index + 2] << 8)
-            + (_chunk.Code[index + 3] << 16)
-            + (_chunk.Code[index + 4] << 24);
+            | (_chunk.Code[index + 2] << 8)
+            | (_chunk.Code[index + 3] << 16)
+            | (_chunk.Code[index + 4] << 24);
 
         var constant = _chunk.Constants[constIndex];
 
