@@ -2,7 +2,7 @@
 using Judith.NET;
 using Judith.NET.analysis;
 using Judith.NET.compiler;
-using Judith.NET.compiler.jal;
+using Judith.NET.compiler.jub;
 using Judith.NET.diagnostics;
 using Judith.NET.message;
 using Newtonsoft.Json;
@@ -63,11 +63,11 @@ foreach (var function in symbolAnalyzer.ExistingFunctions) {
 //chunk.WriteByte((byte)addr, 7);
 //chunk.WriteInstruction(OpCode.Return, 8);
 
-JalCompiler compiler = new(parser.Nodes);
+JubCompiler compiler = new(parser.Nodes);
 compiler.Compile();
-JalChunk chunk = compiler.Chunk;
+Chunk chunk = compiler.Chunk;
 
-JalDisassembler disassembler = new(chunk);
+JasmDisassembler disassembler = new(chunk);
 disassembler.Disassemble();
 
 Console.WriteLine();
@@ -84,7 +84,7 @@ void PrintErrors () {
     }
 }
 
-void SaveChunkFile (JalChunk chunk) {
+void SaveChunkFile (Chunk chunk) {
     string path = AppContext.BaseDirectory + "/res/test.jbin";
 
     using var stream = File.Open(path, FileMode.Create);
@@ -104,13 +104,10 @@ void SaveChunkFile (JalChunk chunk) {
     writer.Write((byte)'H');
 
     // constantCount (i32)
-    writer.Write((int)chunk.Constants.Count);
-    // constants (f64)
-    foreach (var constant in chunk.Constants) {
-        if (constant is JalValue<double> c_dbl) {
-            //writer.Write((byte)constant.Type);
-            writer.Write((double)c_dbl.Value);
-        }
+    writer.Write((int)chunk.ConstantTable.Size);
+    // constantTable (byte[constantCount])
+    foreach (var ui8 in chunk.ConstantTable.Bytes) {
+        writer.Write((byte)ui8);
     }
 
     // size (i32)

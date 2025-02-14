@@ -1,4 +1,4 @@
-﻿using Judith.NET.compiler.jal;
+﻿using Judith.NET.compiler.jub;
 using Judith.NET.syntax;
 using System;
 using System.Collections.Generic;
@@ -15,7 +15,7 @@ record Local (string Name, int depth) {
     public bool Initialized = false;
 }
 
-public class JalCompiler : SyntaxVisitor {
+public class JubCompiler : SyntaxVisitor {
     const int MAX_LOCALS = ushort.MaxValue + 1;
 
     private List<SyntaxNode> _ast;
@@ -23,9 +23,9 @@ public class JalCompiler : SyntaxVisitor {
     private int _scopeDepth = 0;
     private List<Local> _locals = new();
 
-    public JalChunk Chunk { get; private init; } = new();
+    public Chunk Chunk { get; private init; } = new();
 
-    public JalCompiler (List<SyntaxNode> ast) {
+    public JubCompiler (List<SyntaxNode> ast) {
         _ast = ast;
     }
 
@@ -73,12 +73,10 @@ public class JalCompiler : SyntaxVisitor {
     }
 
     public override void Visit (LiteralExpression node) {
-        int addr;
+        int index;
         if (node.Literal.LiteralKind == LiteralKind.Float64) {
             if (node.Literal.Value is FloatValue fval) {
-                addr = Chunk.WriteConstant(
-                    new JalValue<double>(JalValueType.Float64, fval.Value)
-                );
+                index = Chunk.ConstantTable.WriteFloat64(fval.Value);
             }
             else {
                 throw new Exception("Literal node (F64) has invalid value.");
@@ -86,9 +84,7 @@ public class JalCompiler : SyntaxVisitor {
         }
         else if (node.Literal.LiteralKind == LiteralKind.Int64) {
             if (node.Literal.Value is IntegerValue ival) {
-                addr = Chunk.WriteConstant(
-                    new JalValue<double>(JalValueType.Float64, ival.Value)
-                );
+                index = Chunk.ConstantTable.WriteInt64(ival.Value);
             }
             else {
                 throw new Exception("Literal node (I64) has invalid value.");
@@ -98,13 +94,13 @@ public class JalCompiler : SyntaxVisitor {
             throw new NotImplementedException("Literals of this type cannot yet be added to the constant stack.");
         }
 
-        if (addr < byte.MaxValue + 1) {
+        if (index < byte.MaxValue + 1) {
             Chunk.WriteInstruction(OpCode.Const, node.Line);
-            Chunk.WriteByte((byte)addr, node.Line);
+            Chunk.WriteByte((byte)index, node.Line);
         }
         else {
             Chunk.WriteInstruction(OpCode.ConstLong, node.Line);
-            Chunk.WriteInt32(addr, node.Line);
+            Chunk.WriteInt32(index, node.Line);
         }
     }
 

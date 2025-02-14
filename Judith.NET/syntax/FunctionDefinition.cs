@@ -7,6 +7,10 @@ using System.Threading.Tasks;
 namespace Judith.NET.syntax;
 
 public class FunctionDefinition : Item {
+    /// <summary>
+    /// True when this function is built implicitly from top-level statements.
+    /// </summary>
+    public bool IsImplicit { get; private init; }
     public bool IsHidden { get; private init; }
     public Identifier Identifier { get; private init; }
     public ParameterList Parameters { get; private init; }
@@ -18,6 +22,7 @@ public class FunctionDefinition : Item {
     public Token? ColonToken { get; init; }
 
     public FunctionDefinition (
+        bool isImplicit,
         bool isHidden,
         Identifier name,
         ParameterList parameters,
@@ -26,6 +31,7 @@ public class FunctionDefinition : Item {
     )
         : base(SyntaxKind.FunctionDefinition)
     {
+        IsImplicit = isImplicit;
         IsHidden = isHidden;
         Identifier = name;
         Parameters = parameters;

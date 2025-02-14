@@ -4,12 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Judith.NET.compiler.jal;
+namespace Judith.NET.compiler.jub;
 
-public class JalChunk {
+public class Chunk {
     public List<byte> Code { get; private set; } = new();
     public List<int> CodeLines { get; private set; } = new();
-    public List<JalValue> Constants { get; private set; } = new();
+    public ConstantTable ConstantTable { get; private set; } = new();
 
     public void WriteByte (byte i8, int line) {
         Code.Add(i8);
@@ -31,15 +31,5 @@ public class JalChunk {
     public void WriteInstruction (OpCode opCode, int line) {
         Code.Add((byte)opCode);
         CodeLines.Add(line);
-    }
-
-    /// <summary>
-    /// Adds a constant to the constant block in this chunk and returns its
-    /// address.
-    /// </summary>
-    /// <param name="constant">The constant to add.</param>
-    public int WriteConstant (JalValue constant) {
-        Constants.Add(constant);
-        return Constants.Count - 1;
     }
 }

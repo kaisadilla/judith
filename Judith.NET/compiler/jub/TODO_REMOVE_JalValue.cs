@@ -4,20 +4,20 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Judith.NET.compiler.jal;
+namespace Judith.NET.compiler.jub;
 
 public enum JalValueType : byte {
     Float64
 }
 
-public class JalValue {
+public class TODO_REMOVE_JalValue {
     public JalValueType Type { get; set; }
 }
 
-public class JalValue<T> : JalValue {
+public class TODO_REMOVE_JalValue<T> : TODO_REMOVE_JalValue {
     public T Value { get; set; }
 
-    public JalValue (JalValueType type, T value) {
+    public TODO_REMOVE_JalValue (JalValueType type, T value) {
         Type = type;
         Value = value;
     }

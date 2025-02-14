@@ -69,3 +69,14 @@ public class IntegerValue : LiteralValue {
         Value = value;
     }
 }
+
+public class StringValue : LiteralValue {
+    public string Value { get; init; }
+    public StringValue (string value) {
+        Value = value;
+    }
+}
+
+public class InterpolatedStringValue : LiteralValue {
+    // TODO.
+}

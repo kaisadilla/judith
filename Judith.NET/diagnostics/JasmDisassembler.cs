@@ -1,4 +1,4 @@
-﻿using Judith.NET.compiler.jal;
+﻿using Judith.NET.compiler.jub;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,12 +7,12 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.diagnostics;
 
-public class JalDisassembler {
-    private JalChunk _chunk;
+public class JasmDisassembler {
+    private Chunk _chunk;
 
     public string Dump { get; private set; } = string.Empty;
 
-    public JalDisassembler (JalChunk chunk) {
+    public JasmDisassembler (Chunk chunk) {
         _chunk = chunk;
     }
 
@@ -120,17 +120,9 @@ public class JalDisassembler {
 
     private int ConstantInstruction (string name, int index) {
         var constIndex = _chunk.Code[index + 1];
-        var constant = _chunk.Constants[constIndex];
 
         Dump += IdStr(name) + " ";
-        Dump += HexByteStr(_chunk.Code[index + 1]) + " ";
-
-        if (constant.Type == JalValueType.Float64 && constant is JalValue<double> c_f64) {
-            Dump += $"; {JFloatStr(c_f64.Value)}";
-        }
-        else {
-            Dump += "<unknown value type>";
-        }
+        Dump += HexByteStr(_chunk.Code[index + 1]) + "; " + Constant(constIndex);
 
         return index + 2;
     }
@@ -160,17 +152,8 @@ public class JalDisassembler {
             | (_chunk.Code[index + 3] << 16)
             | (_chunk.Code[index + 4] << 24);
 
-        var constant = _chunk.Constants[constIndex];
-
         Dump += IdStr(name) + " ";
-        Dump += HexIntegerStr(_chunk.Code[index + 1]) + " ";
-
-        if (constant.Type == JalValueType.Float64 && constant is JalValue<double> c_f64) {
-            Dump += $"; {JFloatStr(c_f64.Value)}";
-        }
-        else {
-            Dump += $"<unknown value type>";
-        }
+        Dump += HexIntegerStr(_chunk.Code[index + 1]) + "; " + Constant(constIndex);
 
         return index + 5;
     }
@@ -178,6 +161,26 @@ public class JalDisassembler {
     private int UnknownInstruction (int index) {
         Dump += $"0x{index:X4} <Unknown>";
         return index + 1;
+    }
+
+    private string Constant (int constIndex) {
+        int offset = _chunk.ConstantTable.Offsets[constIndex];
+        ConstantType ctype = (ConstantType)_chunk.ConstantTable.Bytes[offset++];
+
+        switch (ctype) {
+            case ConstantType.Error:
+                return "<error-type>";
+            case ConstantType.Int64:
+                return _chunk.ConstantTable.ReadInt64(offset).ToString();
+            case ConstantType.Float64:
+                return _chunk.ConstantTable.ReadFloat64(offset).ToString();
+            case ConstantType.UnsignedInt64:
+                return _chunk.ConstantTable.ReadUnsignedInt64(offset).ToString();
+            case ConstantType.StringASCII:
+                return _chunk.ConstantTable.ReadStringASCII(offset).ToString();
+            default:
+                return "<unknown-type>";
+        }
     }
 
     private static string HexByteStr (int index) => $"0x{index:X4}";

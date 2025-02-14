@@ -15,7 +15,7 @@ public static class SyntaxFactory {
         Statement body
     ) {
         var funcItem = new FunctionDefinition(
-            hidToken != null, name, parameters, returnType, body
+            false, hidToken != null, name, parameters, returnType, body
         ) {
             HidToken = hidToken,
             FuncToken = funcToken,

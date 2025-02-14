@@ -1,4 +1,4 @@
-const val1 = 11
+const val1: Num = 11
 const val2 = 7 * 3
 const val3 = 5 / 3 + 2
 const val4 = (4 + 1) + 1 * 16
