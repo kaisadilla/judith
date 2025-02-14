@@ -126,6 +126,7 @@ public enum OperatorKind {
     Multiply, // *
     Divide, // /
     BitwiseNot, // ~
+    Assignment, // =
     Equals, // ==
     NotEquals, // !=
     Like, // ~=

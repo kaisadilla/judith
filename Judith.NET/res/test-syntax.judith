@@ -1,0 +1,88 @@
+﻿const k = 7
+const los = 5 ~= 3
+
+const multi, locals: String
+
+if k === l then
+    k = los
+else
+    k = 12
+end
+
+match k do
+    3, 4, 8, 11 then
+        __p_print 1
+    end
+    7 then
+        __p_print 500
+    end
+    else
+        los = 888
+    end
+end
+
+ loop
+     los = "My string" + ` another string`
+ end
+ 
+ while los <= 5_000 do
+     k = true or false
+ end
+
+ for el, i, var o, u: String in player.items do
+     Console::log = "This would be a call."
+ end
+
+if i == 3 => this::is::a::very::Long.access = 9
+elsif i === 8 => k = false
+else => k = true
+
+match k do
+    3, 5 => k = 9
+    6 => k = 2
+    else => k = -8
+end
+
+loop => ~k
+
+while k == true => __p_print k
+
+for el in self => self = "now"
+
+yield expr
+-- break 8  -- not yet implemented
+-- continue -- not yet implemented
+
+
+const val1 = 11
+const val2 = 7 * 3
+const val3 = 5 / 3 + 2
+const val4 = (4 + 1) + 1 * 16
+const val5 = val2
+const val6 = val5 + val3
+__p_print val1
+__p_print val2 + val3
+__p_print val6 + val5 + val4
+
+return
+
+
+
+
+
+func add_four (a, b, c, d: Num = 3) : Num
+	const e = a + b
+	const f = c + d
+	return e + f * 1
+
+	--func insertedinside ()
+	--	const a = 3
+	--end
+end
+
+func second_out ()
+end
+
+func an_extra_func ()
+	const owo = "func"
+end

@@ -160,16 +160,6 @@ public class CompilerMessage {
             );
         }
 
-        public static CompilerMessage FieldDeclarationExpected (int line) {
-            return new(
-                MessageKind.Error,
-                MessageOrigin.Parser,
-                (int)MessageCode.FieldDeclarationExpected,
-                $"Field declaration expected.",
-                line
-            );
-        }
-
         public static CompilerMessage BlockOpeningKeywordExpected (
             int line, string keyword, Token found
         ) {
@@ -189,7 +179,7 @@ public class CompilerMessage {
                 MessageKind.Error,
                 MessageOrigin.Parser,
                 (int)MessageCode.BodyExpected,
-                $"Function body expected.",
+                $"Body expected.",
                 line
             );
         }

@@ -4,25 +4,25 @@
                         | hidable_item
                         ;
 
-import_dir              > "import" member_access_expr
+import_dir              > "import" access_expr
                         ;
 
 module_dir              > "module" IDENTIFIER ( "::" IDENTIFIER )?
                         ;
 
-hidable_item            > "hid"? ( enum_dir | symbol_dir | template_def | function_def | type_def )
-                        ;
-
 implementation          > "impl" ( ext_method_def | ext_ctor_def | ext_interface_impl )
                         ;
 
-ext_method_def          > "impure"? ( "func" | "generator" ) member_access_expr "(" param_list ")" type_annotation? body_stmt
+ext_method_def          > "impure"? ( "func" | "generator" ) access_expr "(" param_list ")" type_annotation? body_stmt
                         ;
 
-ext_ctor_def            > ( "ctor" ) member_access_expr "(" param_list ")" body_stmt
+ext_ctor_def            > ( "ctor" ) access_expr "(" param_list ")" body_stmt
                         ;
 
-ext_interface_impl      > member_access_expr "for" member_access_expr ( method_def | method_decl )* "end"
+ext_interface_impl      > access_expr "for" access_expr ( method_def | method_decl )* "end"
+                        ;
+
+hidable_item            > "hid"? ( enum_dir | symbol_dir | template_def | function_def | type_def ) -- TODO: template_def goes before "hid".
                         ;
 
 enum_dir                > "enumerate" IDENTIFIER? enum_item+ "end"
@@ -37,25 +37,25 @@ template_def            > "template" "<" template_param_list ">" trule_def* ( fu
 trule_def               > "trule" "<" trule ">"
                         ;
 
-trule                   > "func" member_access_expr func_signature
-                        | "oper" member_access_expr operator member_access_expr
+trule                   > "func" access_expr func_signature
+                        | "oper" access_expr operator access_expr
 
 function_def            > ( "func" | "generator" ) IDENTIFIER "(" param_list ")" type_annotation? body_stmt
                         ;
 
 type_def                > "typedef" ( union_type_def | set_type_def | struct_type_def | interface_type_def | class_type_def )
 
-union_type_def          > IDENTIFIER "=" member_access_expr ( "|" member_access_expr)+
+union_type_def          > IDENTIFIER "=" access_expr ( "|" access_expr)+
                         | alias_type_def
                         ;
 
-alias_type_def          > IDENTIFIER "=" member_access_expr
+alias_type_def          > IDENTIFIER "=" access_expr
                         ;
 
 set_type_def            > "set" IDENTIFIER logical_expr+ "end"
                         ;
 
-struct_type_def         > "struct" IDENTIFIER ( member_access_expr | (IDENTIFIER "?"? type_annotation ( "=" logical_expr )? ) )*
+struct_type_def         > "struct" IDENTIFIER ( access_expr | (IDENTIFIER "?"? type_annotation ( "=" logical_expr )? ) )*
                         ;
 
 interface_type_def      > "interface" IDENTIFIER ( symbol_def | method_def | method_decl )* "end"
@@ -80,7 +80,7 @@ memb_method_def         > "hid"? "static"? "impure"? ( "func" | "generator" ) ID
 memb_ctor_def           > "hid"? "ctor" IDENTIFIER? "(" param_list ")" body_stmt
                         ;
 
-interface_impl          > member_access_expr ( method_def | method_decl )* "end"
+interface_impl          > access_expr ( method_def | method_decl )* "end"
                         ;
 
 body_stmt{a?}           > block_stmt{a?}
@@ -100,21 +100,21 @@ statement               > local_decl_stmt
                         | expression_stmt
                         ;
 
-local_decl_stmt         > ( "const" | "var" ) impl_local_decl ( "," local_decl )* ( "=" expression )?
+local_decl_stmt         > ( "const" | "var" ) impl_local_declarator ( "," local_declarator )* ( "=" expression )?
                         | ( "const" | "var" ) "[" IDENTIFIER ( "," IDENTIFIER )* "]" "=" expression
                         | ( "const" | "var" ) "{" IDENTIFIER ( "," IDENTIFIER )* "}" "=" expression
                         ;
 
-return_stmt             > "return" ( expression )? ( "when" expression )?
+return_stmt             > "return" ( expression )?
                         ;
 
-yield_stmt              > "yield" ( expression )? ( "when" expression )?
+yield_stmt              > "yield" ( expression )?
                         ;
 
-break_stmt              > "break" ( NUMBER )? ( "when" expression )?
+break_stmt              > "break" ( NUMBER )?
                         ;
 
-continue_stmt           > "continue" ( NUMBER )? ( "when" expression )?
+continue_stmt           > "continue" ( NUMBER )?
                         ;
 
 expression_stmt         > expression
@@ -125,6 +125,7 @@ expression              > if_expr
                         | loop_expr
                         | while_expr
                         | foreach_expr
+                        | when_expr
                         | __p_print_expr
                         | range_expr
                         ;
@@ -141,13 +142,16 @@ loop_expr               > "loop" body_stmt
 while_expr              > "while" expression "do" body_stmt
                         ;
 
-foreach_expr            > "foreach" local_decl ( "," local_decl )? "in" expression "do" body_stmt
+foreach_expr            > "foreach" local_declarator ( "," local_declarator )? "in" expression "do" body_stmt
+                        ;
+
+when_expr               > statement "when" expression
                         ;
 
 range_expr              > assignment_expr ".." assignment_expr -- You cannot concatenate ranges (i.e. 3..5..9) because ".." maps to Range and Range doesn't accept another Range in its constructor.
                         ;
 
-assignment_expr         > member_access_expr "=" logical_expr
+assignment_expr         > access_expr "=" logical_expr
                         | logical_expr
                         ;
 
@@ -170,15 +174,15 @@ unary_left              > ( "not" | "-" | "~" ) unary_left
 null_or_expr            > call_expr ( "??" call_expr )*
                         ;
 
-call_expr               > member_access_expr ( "(" arg_list? ")" )?
-                        | member_access_expr
+call_expr               > access_expr ( "(" arg_list? ")" )?
+                        | access_expr
                         ;
 
-member_access_expr      > type_identifier_expr? (( "." | "::" ) type_identifier_expr)*
+access_expr             > template_identifier_expr? (( "." | "::" ) template_identifier_expr)*
                         | primary_expr
                         ;
 
-type_identifier_expr    > identifier_expr ( "<" template_arg_list ">" )?
+template_identifier_expr> identifier_expr ( "<" template_arg_list ">" )?
                         ;
 
 primary_expr            > identifier_expr
@@ -201,26 +205,26 @@ literal                 > NUMBER
                         | "undefined"
                         ;
 
-local_decl              > expl_local_decl
-                        | impl_local_decl
+local_declarator        > expl_local_declarator
+                        | impl_local_declarator
                         ;
 
-expl_local_decl         > ( "const" | "var" ) IDENTIFIER type_annotation?
+expl_local_declarator   > ( "const" | "var" ) IDENTIFIER type_annotation?
                         ;
 
-impl_local_decl         > IDENTIFIER type_annotation?
+impl_local_declarator   > IDENTIFIER type_annotation?
                         ;
 
-type_annotation         > ":" ( member_access_expr | func_signature ) "?"?
+type_annotation         > ":" ( access_expr | func_signature ) "?"?
                         ;
 
-func_signature          > "(" ( member_access_expr ( "," member_access_expr )* )+ ")" "=>" member_access_expr
+func_signature          > "(" ( access_expr ( "," access_expr )* )+ ")" "=>" access_expr
                         ;
 
 perc_operator           > "%" IDENTIFIER
                         ;
 
-param_list              > local_decl ( "=" logical_expr )? ( "," local_decl ( "=" logical_expr )? )*
+param_list              > local_declarator ( "=" logical_expr )? ( "," local_declarator ( "=" logical_expr )? )*
                         ;
 
 arg_list                > expression ( "," expression* )?
@@ -229,13 +233,13 @@ arg_list                > expression ( "," expression* )?
 template_param_list     > template_param ( "," template_param* )?
                         ;
 
-template_param          > IDENTIFIER ( ":" ( "typename" | type_identifier_expr ) )?
+template_param          > IDENTIFIER ( ":" ( "typename" | template_identifier_expr ) )?
                         ;
 
 template_arg_list       > template_arg ( "," template_arg* )?
                         ;
                         
-template_arg            > type_identifier_expr
+template_arg            > template_identifier_expr
                         | logical_expr
                         ;
 

@@ -205,7 +205,7 @@ public class JalCompiler : SyntaxVisitor {
         WriteStore(addr.Value, node.Line);
     }
 
-    public override void Visit (PrivPrintStmt node) {
+    public override void Visit (P_PrintStatement node) {
         Visit(node.Expression);
 
         Chunk.WriteInstruction(OpCode.Print, node.Line);

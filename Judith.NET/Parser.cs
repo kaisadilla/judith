@@ -237,6 +237,10 @@ public class Parser {
             statement = yieldStmt;
             return true;
         }
+        if (TryConsumeP_PrintStatement(out P_PrintStatement? p_printStmt)) {
+            statement = p_printStmt;
+            return true;
+        }
         // TODO: BreakStatament
         // TODO: ContinueStatament
         if (TryConsumeExpressionStatement(out ExpressionStatement? expr)) {
@@ -304,12 +308,14 @@ public class Parser {
     private bool TryConsumeBodyStatement (
         TokenKind? openingTokenKind, [NotNullWhen(true)] out BodyStatement? bodyStatement
     ) {
-        if (TryConsumeBlockStatement(openingTokenKind, out BlockStatement? blockStmt)) {
-            bodyStatement = blockStmt;
-            return true;
-        }
+        // Arrow must be tried first, since block statement may not have an
+        // opening token (and thus would report an error trying to read an arrow).
         if (TryConsumeArrowStatement(out ArrowStatement? arrowStmt)) {
             bodyStatement = arrowStmt;
+            return true;
+        }
+        if (TryConsumeBlockStatement(openingTokenKind, out BlockStatement? blockStmt)) {
+            bodyStatement = blockStmt;
             return true;
         }
 
@@ -554,12 +560,20 @@ public class Parser {
             foreachExpression = null;
             return false;
         }
+
         List<LocalDeclarator> declarators = new();
-        while (TryConsumeLocalDeclarator(
-            false, LocalKind.Constant, out LocalDeclarator? declarator
-        )) {
+        LocalKind implicitKind = LocalKind.Constant;
+        do {
+            if (TryConsumeLocalDeclarator(
+                false, implicitKind, out LocalDeclarator? declarator
+            ) == false) {
+                throw Error(CompilerMessage.Parser.LocalDeclaratorExpected(Peek().Line));
+            }
+
             declarators.Add(declarator);
-        }
+            implicitKind = declarator.LocalKind;
+        } while (Match(TokenKind.Comma));
+
         if (TryConsume(TokenKind.KwIn, out Token? inToken) == false) {
             throw Error(CompilerMessage.Parser.InExpected(Peek().Line));
         }
@@ -587,7 +601,7 @@ public class Parser {
     private bool TryConsumeAssignmentExpression (
         [NotNullWhen(true)]  out Expression? expr
     ) {
-        if (TryConsumeMemberAccessExpression(out Expression? leftExpr) == false) {
+        if (TryConsumeLogicalExpression(out Expression? leftExpr) == false) {
             return TryConsumeLogicalExpression(out expr);
         }
 
@@ -758,7 +772,8 @@ public class Parser {
         if (TryConsumeLiteralExpression(out expr)) return true;
         if (TryConsumeIdentifierExpression(out expr)) return true;
 
-        throw Error(CompilerMessage.Parser.UnexpectedToken(Peek().Line, Advance()));
+        expr = null;
+        return false;
     }
 
     private bool TryConsumeIdentifierExpression (
@@ -967,6 +982,7 @@ public class Parser {
             TokenKind.Asterisk => OperatorKind.Multiply,
             TokenKind.Slash => OperatorKind.Divide,
             TokenKind.Tilde => OperatorKind.BitwiseNot,
+            TokenKind.Equal => OperatorKind.Assignment,
             TokenKind.EqualEqual => OperatorKind.Equals,
             TokenKind.BangEqual => OperatorKind.NotEquals,
             TokenKind.TildeEqual => OperatorKind.Like,
@@ -1039,6 +1055,11 @@ public class Parser {
             }
         }
 
+        if (elseToken == null && tests.Count == 0) {
+            matchCase = null;
+            return false;
+        }
+
         TokenKind? then = elseToken == null ? TokenKind.KwThen : null;
         if (TryConsumeBodyStatement(then, out BodyStatement? consequent) == false) {
             throw Error(CompilerMessage.Parser.BodyExpected(Peek().Line));
@@ -1048,6 +1069,23 @@ public class Parser {
         return true;
     }
 
+    #endregion
+
+    #region Parsing debug statements
+    private bool TryConsumeP_PrintStatement (
+        [NotNullWhen(true)] out P_PrintStatement? statement
+    ) {
+        if (TryConsume(TokenKind.PkwPrint, out Token? p_printToken) == false) {
+            statement = null;
+            return false;
+        }
+        if (TryConsumeExpression(out Expression? expr) == false) {
+            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+        }
+
+        statement = SF.PrivPrintStmt(p_printToken, expr);
+        return true;
+    }
     #endregion
 
     #region Node builders

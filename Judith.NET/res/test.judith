@@ -9,24 +9,3 @@ __p_print val2 + val3
 __p_print val6 + val5 + val4
 
 return
-
-
-
-
-
---func add_four (a, b, c, d: Num = 3) : Num
---	const e = a + b
---	const f = c + d
---	return e + f * 1
---
---	--func insertedinside ()
---	--	const a = 3
---	--end
---end
---
---func second_out ()
---end
---
---func an_extra_func ()
---	const owo = "func"
---end

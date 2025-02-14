@@ -431,19 +431,10 @@ public static class SyntaxFactory {
 
         return matchCase;
     }
-    #region Old functions
-
-
-
-
-
-
-
-
-
-
-    public static PrivPrintStmt PrivPrintStmt (Token p_printToken, Expression expr) {
-        var p_printStmt = new PrivPrintStmt(expr) {
+    
+    #region Debug statements
+    public static P_PrintStatement PrivPrintStmt (Token p_printToken, Expression expr) {
+        var p_printStmt = new P_PrintStatement(expr) {
             P_PrintToken = p_printToken,
         };
         p_printStmt.SetSpan(new(p_printToken.Start, expr.Span.End));

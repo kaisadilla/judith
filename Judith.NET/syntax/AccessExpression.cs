@@ -24,8 +24,8 @@ public class AccessExpression : Expression {
     }
 
     public override string ToString () {
-        return LeftExpr.ToString()
+        return "(" + LeftExpr.ToString()
             + (Operator.OperatorKind == OperatorKind.ScopeResolution ? "::" : ".")
-            + RightExpr.ToString();
+            + RightExpr.ToString() + ")";
     }
 }

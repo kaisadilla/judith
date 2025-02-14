@@ -40,6 +40,11 @@ File.WriteAllText(AppContext.BaseDirectory + "/res/test.ast.json", astJson);
 Console.WriteLine();
 PrintErrors();
 
+if (messages.Errors.Count > 0) {
+    Console.WriteLine("Compilation aborted.");
+    return;
+}
+
 SymbolCollectionAnalyzer symbolAnalyzer = new();
 symbolAnalyzer.Analyze(parser.Nodes);
 

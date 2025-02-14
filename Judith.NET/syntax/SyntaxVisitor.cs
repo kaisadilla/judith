@@ -78,5 +78,5 @@ public abstract class SyntaxVisitor {
     public virtual void Visit (MatchCase node) => VisitChildren(node);
 
 
-    public virtual void Visit (PrivPrintStmt node) => VisitChildren(node);
+    public virtual void Visit (P_PrintStatement node) => VisitChildren(node);
 }

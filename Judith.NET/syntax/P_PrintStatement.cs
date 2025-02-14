@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.syntax;
 
-public class PrivPrintStmt : Statement {
+public class P_PrintStatement : Statement {
     public Expression Expression { get; init; }
 
     public Token? P_PrintToken { get; init; }
 
-    public PrivPrintStmt (Expression expression) : base(SyntaxKind.P_PrintStatement) {
+    public P_PrintStatement (Expression expression) : base(SyntaxKind.P_PrintStatement) {
         Expression = expression;
 
         Children.Add(Expression);

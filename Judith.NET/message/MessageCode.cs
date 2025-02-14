@@ -21,7 +21,6 @@ public enum MessageCode {
     RightSquareBracketExpected,
     ExpressionExpected,
     StatementExpected,
-    FieldDeclarationExpected,
     BlockOpeningKeywordExpected,
     BodyExpected,
     ArrowExpected,
