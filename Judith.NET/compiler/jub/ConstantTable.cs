@@ -25,7 +25,14 @@ public class ConstantTable {
     /// </summary>
     public List<int> Offsets { get; private init; } = new();
 
+    /// <summary>
+    /// The size, in bytes, of the table.
+    /// </summary>
     public int Size => Bytes.Count;
+    /// <summary>
+    /// The amount of constants in the table.
+    /// </summary>
+    public int Count => Offsets.Count;
 
     /// <summary>
     /// Adds an Int64 to the chunk and returns its index in the table.

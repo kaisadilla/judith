@@ -74,6 +74,12 @@ public class JubCompiler : SyntaxVisitor {
 
     public override void Visit (LiteralExpression node) {
         int index;
+        // TODO and WARNING: LiteralKind is the type of literal the user wrote,
+        // not the actual type of the value it represents. I.e. any number the
+        // user writes (without an suffix) is considered an Int64 if it doesn't
+        // have a decimal point or a Float64 if it does. in "const a: Float = 3",
+        // that 3 is parsed as an Int64 number. In the future, the type resolution
+        // pass will identify the type each number should have.
         if (node.Literal.LiteralKind == LiteralKind.Float64) {
             if (node.Literal.Value is FloatValue fval) {
                 index = Chunk.ConstantTable.WriteFloat64(fval.Value);
@@ -84,7 +90,7 @@ public class JubCompiler : SyntaxVisitor {
         }
         else if (node.Literal.LiteralKind == LiteralKind.Int64) {
             if (node.Literal.Value is IntegerValue ival) {
-                index = Chunk.ConstantTable.WriteInt64(ival.Value);
+                index = Chunk.ConstantTable.WriteFloat64((double)ival.Value);
             }
             else {
                 throw new Exception("Literal node (I64) has invalid value.");

@@ -32,6 +32,12 @@ static std::string idStr (const char* id) {
     str << std::setw(16) << std::left << std::setfill(' ') << id;
     return str.str();
 }
+
+static std::string constant (Chunk& chunk, size_t constIndex) {
+    f64 defaultVal = *(f64*)chunk.constants[constIndex];
+    return floatStr(defaultVal);
+}
+
 #pragma endregion
 
 #pragma region Disassembly functions
@@ -81,10 +87,8 @@ static size_t constantInstruction (std::ostringstream& str, Chunk& chunk, const 
     }
 
     byte constIndex = chunk.code[index + 1];
-    Value constant = chunk.constants[constIndex];
 
-    str << idStr(name) << " " << hexByteStr(constIndex) << " ";
-    str << "; " << floatStr(constant.asFloat64);
+    str << idStr(name) << " " << hexByteStr(constIndex) << "; " << constant(chunk, constIndex);
 
     return index + 2;
 }
@@ -99,10 +103,8 @@ static size_t constantLongInstruction (std::ostringstream& str, Chunk& chunk, co
         + (chunk.code[index + 2] << 8)
         + (chunk.code[index + 2] << 16)
         + (chunk.code[index + 2] << 24);
-    Value constant = chunk.constants[constIndex];
 
-    str << idStr(name) << " " << hexIntegerStr(constIndex) << " ";
-    str << "; " << floatStr(constant.asFloat64);
+    str << idStr(name) << " " << hexIntegerStr(constIndex) << "; " << constant(chunk, constIndex);
 
     return index + 5;
 }

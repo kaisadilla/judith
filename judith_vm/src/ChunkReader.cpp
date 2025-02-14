@@ -1,11 +1,12 @@
 #include "ChunkReader.hpp"
 #include "utils.hpp"
 #include <utils/Buffer.hpp>
-#include "Value.hpp"
 
 #define CHECK_SIZE(n) \
     do { \
-        if ((offset + (n)) >= bufferSize) throw "Constant overflows the file!"; \
+        if ((offset + (n)) >= bufferSize) { \
+            throw std::runtime_error("Constant overflows the file!"); \
+        } \
     } while(false)
 
 bool isMagicNumberCorrect (byte* magicNumbers) {
@@ -58,7 +59,7 @@ Chunk readChunk() {
         // buffer returns 0 in this case, but we still check here.
         switch (type) {
         case ConstantType::ERROR:
-            throw "ERROR type found in the constant table!";
+            throw std::runtime_error("ERROR type found in the constant table!");
 
         case ConstantType::INT_64:
         case ConstantType::FLOAT_64:
@@ -71,13 +72,13 @@ Chunk readChunk() {
             }
 
             break;
-        case ConstantType::STRING_ASCII:
+        case ConstantType::STRING_ASCII: {
             // Read the size, in bytes, of the string.
-            size_t stringSize = reader.readUInt8();
+            size_t stringSize = reader.readUInt64_LE();
             CHECK_SIZE(stringSize + 1); // +1 because offset hasn't been updated.
 
             // Push all the bytes in the string.
-            for (int i = 0; i < stringSize < 8; i++) {
+            for (int i = 0; i < stringSize + 8; i++) {
                 alignedConstantVector.push_back(reader.readUInt8());
             }
 
@@ -87,8 +88,9 @@ Chunk readChunk() {
             }
 
             break;
+        }
         default:
-            throw "Unknown type found in the constant table.";
+            throw std::runtime_error("Unknown type found in the constant table.");
         }
     }
 
@@ -104,7 +106,7 @@ Chunk readChunk() {
         // The element #i in the file's constant table is at constantTable[index].
         size_t index = indices[i];
         // the address of constantTable[index] becomes the pointer to the value.
-        constants[i] = (&constantTable[index]);
+        constants[i] = (void*)(&constantTable[index]);
     }
 
     i32 size = reader.readInt32_LE();
@@ -126,6 +128,6 @@ Chunk readChunk() {
     }
 
     return Chunk(
-        constantCount, constants, size, code, containsLines, lines
+        constantTable, constantCount, constants, size, code, containsLines, lines
     );
 }

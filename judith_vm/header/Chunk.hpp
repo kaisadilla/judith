@@ -2,8 +2,6 @@
 
 #include "root.hpp"
 
-union Value;
-
 struct Chunk {
     //size_t constantCount;
     //Value* constants;

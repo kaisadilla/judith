@@ -103,8 +103,8 @@ void SaveChunkFile (Chunk chunk) {
     writer.Write((byte)'T');
     writer.Write((byte)'H');
 
-    // constantCount (i32)
-    writer.Write((int)chunk.ConstantTable.Size);
+    // constantCount (i32) ; the amount of constants in the table, not its size in bytes.
+    writer.Write((int)chunk.ConstantTable.Count);
     // constantTable (byte[constantCount])
     foreach (var ui8 in chunk.ConstantTable.Bytes) {
         writer.Write((byte)ui8);
