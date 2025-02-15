@@ -33,6 +33,10 @@ public class Literal : SyntaxNode {
         Value = new BooleanValue(value);
     }
 
+    public void SetValue (string value) {
+        Value = new StringValue(value);
+    }
+
     public override void Accept (SyntaxVisitor visitor) {
         visitor.Visit(this);
     }

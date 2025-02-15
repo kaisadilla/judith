@@ -1,5 +1,6 @@
 #include <sstream>
 #include <iomanip>
+#include <format>
 
 #include "debug/chunk.hpp"
 #include "Chunk.hpp"
@@ -34,8 +35,31 @@ static std::string idStr (const char* id) {
 }
 
 static std::string constant (Chunk& chunk, size_t constIndex) {
-    f64 defaultVal = *(f64*)chunk.constants[constIndex];
-    return floatStr(defaultVal);
+    byte type = chunk.constantTypes[constIndex];
+
+    switch (type) {
+        case ConstantType::ERROR:
+            return "<error-type>";
+        case ConstantType::INT_64: {
+            i64 ival = *(i64*)chunk.constants[constIndex];
+            return std::format("{}", ival);
+        }
+        case ConstantType::FLOAT_64: {
+            f64 fval = *(f64*)chunk.constants[constIndex];
+            return std::format("{}", fval);
+        }
+        case ConstantType::UNSIGNED_INT_64: {
+            ui64 uval = *(ui64*)chunk.constants[constIndex];
+            return std::format("{}", uval);
+        }
+        case ConstantType::STRING_ASCII: {
+            byte* strvalue = (byte*)chunk.constants[constIndex];
+            ui64 strlen = *(ui64*)strvalue;
+            byte* strStart = strvalue + sizeof(ui64);
+            return '"' + std::string((char*)strStart, strlen) + '"';
+        }
+    }
+
 }
 
 #pragma endregion

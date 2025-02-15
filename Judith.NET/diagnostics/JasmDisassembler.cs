@@ -177,7 +177,7 @@ public class JasmDisassembler {
             case ConstantType.UnsignedInt64:
                 return _chunk.ConstantTable.ReadUnsignedInt64(offset).ToString();
             case ConstantType.StringASCII:
-                return _chunk.ConstantTable.ReadStringASCII(offset).ToString();
+                return '"' + _chunk.ConstantTable.ReadStringASCII(offset) + '"';
             default:
                 return "<unknown-type>";
         }

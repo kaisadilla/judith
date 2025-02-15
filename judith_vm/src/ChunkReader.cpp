@@ -43,7 +43,8 @@ Chunk readChunk() {
     i32 constantCount = reader.readInt32_LE();
 
     std::vector<byte> alignedConstantVector;
-    std::vector<size_t> indices;
+    std::vector<size_t> cIndices;
+    std::vector<byte> cTypes;
 
     for (int i = 0; i < constantCount; i++) {
         // Read the type of the next constant in the file's table.
@@ -51,7 +52,8 @@ Chunk readChunk() {
         // Get the byte offset we are in the file (after reading the type byte).
         size_t offset = reader.getReadOffset();
         // This constant's index in alignedConstantVector is its current size.
-        indices.push_back(alignedConstantVector.size());
+        cIndices.push_back(alignedConstantVector.size());
+        cTypes.push_back(type);
 
         // We'll always check that the file is big enough to contain the bytes
         // we will read next with CHECK_SIZE(n). This prevents corrupt or malicious
@@ -75,10 +77,17 @@ Chunk readChunk() {
         case ConstantType::STRING_ASCII: {
             // Read the size, in bytes, of the string.
             size_t stringSize = reader.readUInt64_LE();
-            CHECK_SIZE(stringSize + 1); // +1 because offset hasn't been updated.
+            offset = reader.getReadOffset();
+            CHECK_SIZE(stringSize);
+
+            // Push string size:
+            byte* sizePtr = (byte*)&stringSize;
+            alignedConstantVector.insert(
+                alignedConstantVector.end(), sizePtr, sizePtr + sizeof(size_t)
+            );
 
             // Push all the bytes in the string.
-            for (int i = 0; i < stringSize + 8; i++) {
+            for (int i = 0; i < stringSize; i++) {
                 alignedConstantVector.push_back(reader.readUInt8());
             }
 
@@ -94,17 +103,22 @@ Chunk readChunk() {
         }
     }
 
-    // Create a persistent array.
+    // Create a persistent array for the table.
     byte* constantTable = new byte[alignedConstantVector.size()];
     // Copy the constant table there.
     std::copy(alignedConstantVector.begin(), alignedConstantVector.end(), constantTable);
+
+    // Create a persistent array for the types.
+    byte* constantTypes = new byte[cTypes.size()];
+    std::copy(cTypes.begin(), cTypes.end(), constantTypes);
+
     // This array will map each index in the file's constant table to an address
     // within constantTable, so values can be looked up directly.
-    void** constants = new void* [indices.size()];
+    void** constants = new void* [cIndices.size()];
 
-    for (size_t i = 0; i < indices.size(); i++) {
+    for (size_t i = 0; i < cIndices.size(); i++) {
         // The element #i in the file's constant table is at constantTable[index].
-        size_t index = indices[i];
+        size_t index = cIndices[i];
         // the address of constantTable[index] becomes the pointer to the value.
         constants[i] = (void*)(&constantTable[index]);
     }
@@ -112,7 +126,6 @@ Chunk readChunk() {
     i32 size = reader.readInt32_LE();
     byte* code = new byte[size];
     
-
     for (int i = 0; i < size; i++) {
         code[i] = reader.readUInt8();
     }
@@ -128,6 +141,13 @@ Chunk readChunk() {
     }
 
     return Chunk(
-        constantTable, constantCount, constants, size, code, containsLines, lines
+        constantTable,
+        constantCount,
+        constants,
+        constantTypes,
+        size,
+        code,
+        containsLines,
+        lines
     );
 }

@@ -35,7 +35,7 @@ public class ConstantTable {
     public int Count => Offsets.Count;
 
     /// <summary>
-    /// Adds an Int64 to the chunk and returns its index in the table.
+    /// Adds an Int64 to the table and returns its index in the table.
     /// </summary>
     public int WriteInt64 (long i64) {
         Offsets.Add(Bytes.Count);
@@ -52,7 +52,7 @@ public class ConstantTable {
     }
 
     /// <summary>
-    /// Adds a Float64 to the chunk and returns its index in the table.
+    /// Adds a Float64 to the table and returns its index in the table.
     /// </summary>
     public int WriteFloat64 (double f64) {
         Offsets.Add(Bytes.Count);
@@ -69,31 +69,26 @@ public class ConstantTable {
     }
 
     /// <summary>
-    /// Adds a UnsignedInt64 to the chunk and returns its index in the table.
+    /// Adds a UnsignedInt64 to the table and returns its index in the table.
     /// </summary>
     public int WriteUnsignedInt64 (ulong ui64) {
         Offsets.Add(Bytes.Count);
         Bytes.Add((byte)ConstantType.UnsignedInt64);
 
-        byte[] bytes = BitConverter.GetBytes(ui64);
-        if (BitConverter.IsLittleEndian == false) {
-            Array.Reverse(bytes);
-        }
-
-        Bytes.AddRange(bytes);
+        PutUnsignedInt64(ui64);
 
         return Offsets.Count - 1;
     }
 
     /// <summary>
-    /// Adds a String to the chunk and returns its index in the table.
+    /// Adds a String to the table and returns its index in the table.
     /// </summary>
     public int WriteStringASCII (string str) {
         Offsets.Add(Bytes.Count);
         Bytes.Add((byte)ConstantType.StringASCII);
 
         byte[] bytes = Encoding.ASCII.GetBytes(str);
-        WriteUnsignedInt64((ulong)bytes.Length + 1); // +1 for null-terminator.
+        PutUnsignedInt64((ulong)bytes.Length + 1); // +1 for null-terminator.
 
         Bytes.AddRange(bytes);
         Bytes.Add((byte)'\0'); // Null-terminator.
@@ -116,7 +111,21 @@ public class ConstantTable {
     public string ReadStringASCII (int offset) {
         ulong size = ReadUnsignedInt64(offset);
         return Encoding.ASCII.GetString(
-            Bytes.GetRange(offset + 1, (int)size).ToArray()
+            Bytes.GetRange(offset + sizeof(ulong), (int)size).ToArray()
         );
+    }
+
+    /// <summary>
+    /// Puts the bytes for an UnsignedInt64 into the table (without creating
+    /// a new value).
+    /// </summary>
+    /// <param name="ui64"></param>
+    private void PutUnsignedInt64 (ulong ui64) {
+        byte[] bytes = BitConverter.GetBytes(ui64);
+        if (BitConverter.IsLittleEndian == false) {
+            Array.Reverse(bytes);
+        }
+
+        Bytes.AddRange(bytes);
     }
 }

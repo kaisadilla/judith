@@ -8,4 +8,7 @@ __p_print val1
 __p_print val2 + val3
 __p_print val6 + val5 + val4
 
+const my_str = "Dbl quotes"
+const my_str2 = `Backticks`
+
 return

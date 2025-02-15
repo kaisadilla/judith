@@ -19,6 +19,11 @@ struct Chunk {
     /// in the table.
     /// </summary>
     void** constants;
+    /// <summary>
+    /// An array where each element is a byte representing the constant type
+    /// at that index in the table.
+    /// </summary>
+    byte* constantTypes;
 
     size_t size;
     byte* code;
@@ -26,7 +31,16 @@ struct Chunk {
     bool containsLines;
     i32* lines;
 
-    Chunk(byte* constantTable, size_t constantCount, void** constants, size_t size, byte* code, bool containsLines, i32* lines);
+    Chunk(
+        byte* constantTable,
+        size_t constantCount,
+        void** constants,
+        byte* constantTypes,
+        size_t size,
+        byte* code,
+        bool containsLines,
+        i32* lines
+    );
     ~Chunk();
 };
 

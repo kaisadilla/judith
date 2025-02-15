@@ -822,7 +822,7 @@ public class Parser {
             return true;
         }
         if (TryConsume(TokenKind.String, out token)) {
-            literal = SF.Literal(token);
+            literal = MakeStringLiteral(token);
             return true;
         }
 
@@ -1124,6 +1124,18 @@ public class Parser {
         }
 
         throw new Exception("Trying to parse an invalid token as a boolean.");
+    }
+
+    private Literal MakeStringLiteral (Token token) {
+        // TODO: Right now we can only parse strings without flags that start
+        // and end with a single delimiter (" or `).
+        var delimiter = token.Lexeme[0];
+        var str = token.Lexeme[1..^1]
+            .Replace("\\\\", "\\")
+            .Replace("\\n", "\n")
+            .Replace("\\r", "\r");
+
+        return SF.StringLiteral(token, str);
     }
     #endregion
 

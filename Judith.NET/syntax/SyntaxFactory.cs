@@ -317,6 +317,17 @@ public static class SyntaxFactory {
         return lit;
     }
 
+    public static Literal StringLiteral (Token rawToken, string value) {
+        var lit = new Literal(LiteralKind.String) {
+            RawToken = rawToken,
+        };
+        lit.SetSpan(new(rawToken.Start, rawToken.End));
+        lit.SetLine(lit.RawToken.Line);
+        lit.SetValue(value);
+
+        return lit;
+    }
+
     public static LocalDeclaratorList LocalDeclaratorList (
         Token? declaratorKindOpeningToken,
         LocalDeclaratorKind declaratorKind,

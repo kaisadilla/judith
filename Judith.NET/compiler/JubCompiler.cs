@@ -96,6 +96,14 @@ public class JubCompiler : SyntaxVisitor {
                 throw new Exception("Literal node (I64) has invalid value.");
             }
         }
+        else if (node.Literal.LiteralKind == LiteralKind.String) {
+            if (node.Literal.Value is StringValue sval) {
+                index = Chunk.ConstantTable.WriteStringASCII(sval.Value);
+            }
+            else {
+                throw new Exception("Literal node (String) has invalid value.");
+            }
+        }
         else {
             throw new NotImplementedException("Literals of this type cannot yet be added to the constant stack.");
         }
