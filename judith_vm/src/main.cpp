@@ -19,6 +19,6 @@ int main () {
     VM vm;
     vm.interpret(chunk);
 
-    getchar();
+    //getchar();
     return 0;
 }

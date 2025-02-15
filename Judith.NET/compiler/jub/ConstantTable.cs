@@ -34,10 +34,20 @@ public class ConstantTable {
     /// </summary>
     public int Count => Offsets.Count;
 
+    private Dictionary<long, int> _existingInt64s = new();
+    private Dictionary<double, int> _existingFloat64s = new();
+    private Dictionary<ulong, int> _existingUnsignedInt64s = new();
+    private Dictionary<string, int> _existingStrings = new();
+
     /// <summary>
-    /// Adds an Int64 to the table and returns its index in the table.
+    /// Searches the given Int64 in the table and returns its index. If the
+    /// value is not yet on the table, it's added to it.
     /// </summary>
     public int WriteInt64 (long i64) {
+        if (_existingInt64s.TryGetValue(i64, out int index)) {
+            return index;
+        }
+
         Offsets.Add(Bytes.Count);
         Bytes.Add((byte)ConstantType.Int64);
 
@@ -48,13 +58,19 @@ public class ConstantTable {
 
         Bytes.AddRange(bytes);
 
+        _existingInt64s[i64] = Offsets.Count - 1;
         return Offsets.Count - 1;
     }
 
     /// <summary>
-    /// Adds a Float64 to the table and returns its index in the table.
+    /// Searches the given Float64 in the table and returns its index. If the
+    /// value is not yet on the table, it's added to it.
     /// </summary>
     public int WriteFloat64 (double f64) {
+        if (_existingFloat64s.TryGetValue(f64, out int index)) {
+            return index;
+        }
+
         Offsets.Add(Bytes.Count);
         Bytes.Add((byte)ConstantType.Float64);
 
@@ -65,25 +81,35 @@ public class ConstantTable {
 
         Bytes.AddRange(bytes);
 
+        _existingFloat64s[f64] = Offsets.Count - 1;
         return Offsets.Count - 1;
     }
 
     /// <summary>
-    /// Adds a UnsignedInt64 to the table and returns its index in the table.
+    /// Searches the given UnsignedInt64 in the table and returns its index. If
+    /// the value is not yet on the table, it's added to it.
     /// </summary>
     public int WriteUnsignedInt64 (ulong ui64) {
+        if (_existingUnsignedInt64s.TryGetValue(ui64, out int index)) {
+            return index;
+        }
+
         Offsets.Add(Bytes.Count);
         Bytes.Add((byte)ConstantType.UnsignedInt64);
 
         PutUnsignedInt64(ui64);
 
+        _existingUnsignedInt64s[ui64] = Offsets.Count - 1;
         return Offsets.Count - 1;
     }
 
-    /// <summary>
-    /// Adds a String to the table and returns its index in the table.
-    /// </summary>
+    /// Searches the given String in the table and returns its index. If the
+    /// value is not yet on the table, it's added to it.
     public int WriteStringASCII (string str) {
+        if (_existingStrings.TryGetValue(str, out int index)) {
+            return index;
+        }
+
         Offsets.Add(Bytes.Count);
         Bytes.Add((byte)ConstantType.StringASCII);
 
@@ -93,6 +119,7 @@ public class ConstantTable {
         Bytes.AddRange(bytes);
         Bytes.Add((byte)'\0'); // Null-terminator.
 
+        _existingStrings[str] = Offsets.Count - 1;
         return Offsets.Count - 1;
     }
 

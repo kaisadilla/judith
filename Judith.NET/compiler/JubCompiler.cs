@@ -2,6 +2,7 @@
 using Judith.NET.syntax;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -9,63 +10,63 @@ using System.Xml.Linq;
 
 namespace Judith.NET.compiler;
 
-record Local (string Name, int depth) {
-    public readonly string Name = Name;
-    public readonly int Depth = depth;
-    public bool Initialized = false;
-}
-
 public class JubCompiler : SyntaxVisitor {
     const int MAX_LOCALS = ushort.MaxValue + 1;
 
     private List<SyntaxNode> _ast;
+    private BinaryFunction? _currentFunction = null;
+    private LocalManager? _localManager = null;
 
-    private int _scopeDepth = 0;
-    private List<Local> _locals = new();
-
-    public Chunk Chunk { get; private init; } = new();
+    public BinaryFile Bin { get; private init; } = new();
 
     public JubCompiler (List<SyntaxNode> ast) {
         _ast = ast;
     }
 
     public void Compile () {
+        _currentFunction = new();
+        _localManager = new(MAX_LOCALS);
+
         Visit(_ast);
+
+        Bin.Functions.Add(_currentFunction);
+        Bin.EntryPoint = Bin.Functions.Count - 1;
+        _currentFunction = null;
+        _localManager = null;
     }
     
     private void BeginScope () {
-        _scopeDepth++;
+        RequireFunction();
+
+        _localManager.ScopeDepth++;
     }
 
     private void EndScope () {
-        _scopeDepth--;
+        RequireFunction();
+
+        _localManager.ScopeDepth--;
     }
 
     public override void Visit (LocalDeclarationStatement node) {
+        RequireFunction();
+
         if (node.DeclaratorList.Declarators.Count != 1) {
             throw new NotImplementedException("Multiple local declaration not yet implemented.");
         }
 
-        if (_locals.Count >= MAX_LOCALS) {
-            throw new Exception("Too many locals."); // TODO: Compile error.
+        string localName = node.DeclaratorList.Declarators[0].Identifier.Name;
+        // Check if a local with this name is already declared.
+        if (_localManager.IsLocalDeclared(localName)) {
+            throw new NotImplementedException("Local shadowing not yet implemented.");
         }
 
-        // Check existing locals.
-        foreach (var otherLocal in _locals) {
-            if (otherLocal.Name == node.DeclaratorList.Declarators[0].Identifier.Name) {
-                throw new NotImplementedException("Local shadowing not yet implemented.");
-            }
-        }
-
-        Local local = new(node.DeclaratorList.Declarators[0].Identifier.Name, _scopeDepth);
-        _locals.Add(local);
-        int addr = _locals.Count - 1;
+        int addr = _localManager.AddLocal(localName);
 
         if (node.Initializer == null) return;
 
         Visit(node.Initializer);
         WriteStore(addr, node.Initializer.Line);
-        local.Initialized = true;
+        _localManager.MarkInitialized(addr);
     }
 
     public override void Visit (EqualsValueClause node) {
@@ -73,6 +74,8 @@ public class JubCompiler : SyntaxVisitor {
     }
 
     public override void Visit (LiteralExpression node) {
+        RequireFunction();
+
         int index;
         // TODO and WARNING: LiteralKind is the type of literal the user wrote,
         // not the actual type of the value it represents. I.e. any number the
@@ -82,7 +85,7 @@ public class JubCompiler : SyntaxVisitor {
         // pass will identify the type each number should have.
         if (node.Literal.LiteralKind == LiteralKind.Float64) {
             if (node.Literal.Value is FloatValue fval) {
-                index = Chunk.ConstantTable.WriteFloat64(fval.Value);
+                index = Bin.ConstantTable.WriteFloat64(fval.Value);
             }
             else {
                 throw new Exception("Literal node (F64) has invalid value.");
@@ -90,7 +93,7 @@ public class JubCompiler : SyntaxVisitor {
         }
         else if (node.Literal.LiteralKind == LiteralKind.Int64) {
             if (node.Literal.Value is IntegerValue ival) {
-                index = Chunk.ConstantTable.WriteFloat64((double)ival.Value);
+                index = Bin.ConstantTable.WriteFloat64((double)ival.Value);
             }
             else {
                 throw new Exception("Literal node (I64) has invalid value.");
@@ -98,7 +101,7 @@ public class JubCompiler : SyntaxVisitor {
         }
         else if (node.Literal.LiteralKind == LiteralKind.String) {
             if (node.Literal.Value is StringValue sval) {
-                index = Chunk.ConstantTable.WriteStringASCII(sval.Value);
+                index = Bin.ConstantTable.WriteStringASCII(sval.Value);
             }
             else {
                 throw new Exception("Literal node (String) has invalid value.");
@@ -108,43 +111,48 @@ public class JubCompiler : SyntaxVisitor {
             throw new NotImplementedException("Literals of this type cannot yet be added to the constant stack.");
         }
 
-        if (index < byte.MaxValue + 1) {
-            Chunk.WriteInstruction(OpCode.Const, node.Line);
-            Chunk.WriteByte((byte)index, node.Line);
+        if (node.Literal.LiteralKind == LiteralKind.String) {
+            if (index < byte.MaxValue + 1) {
+                _currentFunction.Chunk.WriteInstruction(OpCode.ConstStr, node.Line);
+                _currentFunction.Chunk.WriteByte((byte)index, node.Line);
+            }
+            else {
+                _currentFunction.Chunk.WriteInstruction(OpCode.ConstStrLong, node.Line);
+                _currentFunction.Chunk.WriteInt32(index, node.Line);
+            }
         }
         else {
-            Chunk.WriteInstruction(OpCode.ConstLong, node.Line);
-            Chunk.WriteInt32(index, node.Line);
+            if (index < byte.MaxValue + 1) {
+                _currentFunction.Chunk.WriteInstruction(OpCode.Const, node.Line);
+                _currentFunction.Chunk.WriteByte((byte)index, node.Line);
+            }
+            else {
+                _currentFunction.Chunk.WriteInstruction(OpCode.ConstLong, node.Line);
+                _currentFunction.Chunk.WriteInt32(index, node.Line);
+            }
         }
     }
 
     public override void Visit (IdentifierExpression node) {
-        int? addr = null;
+        RequireFunction();
 
-        for (int i = 0; i < _locals.Count; i++) {
-            if (_locals[i].Name == node.Identifier.Name) {
-                if (_locals[i].Initialized == false) {
-                    throw new Exception("Local not initialized."); // TODO: Compile error.
-                }
-                addr = i;
-                break;
-            }
+        if (_localManager.TryGetLocalAddr(node.Identifier.Name, out int addr) == false) {
+            throw new Exception("Local not found");
         }
 
-        if (addr == null) {
-            throw new Exception("Local not found."); // TODO: Compile error.
-        }
-
-        WriteLoad(addr.Value, node.Line);
+        WriteLoad(addr, node.Line);
     }
 
     public override void Visit (ReturnStatement node) {
+        RequireFunction();
         // TODO: Compile expression.
 
-        Chunk.WriteInstruction(OpCode.Ret, node.Line);
+        _currentFunction.Chunk.WriteInstruction(OpCode.Ret, node.Line);
     }
 
     public override void Visit (BinaryExpression node) {
+        RequireFunction();
+
         Visit(node.Left);
         Visit(node.Right);
 
@@ -185,11 +193,13 @@ public class JubCompiler : SyntaxVisitor {
         );
 
         void _Instr (OpCode opCode) {
-            Chunk.WriteInstruction(opCode, node.Operator.Line);
+            _currentFunction.Chunk.WriteInstruction(opCode, node.Operator.Line);
         }
     }
 
     public override void Visit (AssignmentExpression node) {
+        RequireFunction();
+
         if (node.Left.Kind != SyntaxKind.IdentifierExpression) {
             throw new Exception("Can't assign to that."); // TODO: Compile error.
         }
@@ -199,26 +209,19 @@ public class JubCompiler : SyntaxVisitor {
 
         Visit(node.Right);
 
-        int? addr = null;
-
-        for (int i = 0; i < _locals.Count; i++) {
-            if (_locals[i].Name == idExpr.Identifier.Name) {
-                addr = i;
-                break;
-            }
+        if (_localManager.TryGetLocalAddr(idExpr.Identifier.Name, out int addr) == false) {
+            throw new Exception("Local not found");
         }
 
-        if (addr == null) {
-            throw new Exception("Local not found."); // TODO: Compile error.
-        }
-
-        WriteStore(addr.Value, node.Line);
+        WriteStore(addr, node.Line);
     }
 
     public override void Visit (P_PrintStatement node) {
+        RequireFunction();
+
         Visit(node.Expression);
 
-        Chunk.WriteInstruction(OpCode.Print, node.Line);
+        _currentFunction.Chunk.WriteInstruction(OpCode.Print, node.Line);
     }
 
     /// <summary>
@@ -227,24 +230,26 @@ public class JubCompiler : SyntaxVisitor {
     /// <param name="addr">The address of the variable in the local variable array.</param>
     /// <param name="line">The line of code that produced this.</param>
     private void WriteStore (int addr, int line) {
+        RequireFunction();
+
         if (addr == 0) {
-            Chunk.WriteInstruction(OpCode.Store0, line);
+            _currentFunction.Chunk.WriteInstruction(OpCode.Store0, line);
         }
         else if (addr == 1) {
-            Chunk.WriteInstruction(OpCode.Store1, line);
+            _currentFunction.Chunk.WriteInstruction(OpCode.Store1, line);
         }
         else if (addr == 2) {
-            Chunk.WriteInstruction(OpCode.Store2, line);
+            _currentFunction.Chunk.WriteInstruction(OpCode.Store2, line);
         }
         else if (addr == 3) {
-            Chunk.WriteInstruction(OpCode.Store3, line);
+            _currentFunction.Chunk.WriteInstruction(OpCode.Store3, line);
         }
         else if (addr == 4) {
-            Chunk.WriteInstruction(OpCode.Store4, line);
+            _currentFunction.Chunk.WriteInstruction(OpCode.Store4, line);
         }
         else if (addr <= byte.MaxValue) {
-            Chunk.WriteInstruction(OpCode.Store, line);
-            Chunk.WriteByte((byte)addr, line);
+            _currentFunction.Chunk.WriteInstruction(OpCode.Store, line);
+            _currentFunction.Chunk.WriteByte((byte)addr, line);
         }
         else {
             throw new NotImplementedException("VM does not yet support locals beyond 255");
@@ -259,24 +264,26 @@ public class JubCompiler : SyntaxVisitor {
     /// <param name="addr">The address of the variable in the local variable array.</param>
     /// <param name="line">The line of code that produced this.</param>
     private void WriteLoad (int addr, int line) {
+        RequireFunction();
+
         if (addr == 0) {
-            Chunk.WriteInstruction(OpCode.Load0, line);
+            _currentFunction.Chunk.WriteInstruction(OpCode.Load0, line);
         }
         else if (addr == 1) {
-            Chunk.WriteInstruction(OpCode.Load1, line);
+            _currentFunction.Chunk.WriteInstruction(OpCode.Load1, line);
         }
         else if (addr == 2) {
-            Chunk.WriteInstruction(OpCode.Load2, line);
+            _currentFunction.Chunk.WriteInstruction(OpCode.Load2, line);
         }
         else if (addr == 3) {
-            Chunk.WriteInstruction(OpCode.Load3, line);
+            _currentFunction.Chunk.WriteInstruction(OpCode.Load3, line);
         }
         else if (addr == 4) {
-            Chunk.WriteInstruction(OpCode.Load4, line);
+            _currentFunction.Chunk.WriteInstruction(OpCode.Load4, line);
         }
         else if (addr <= byte.MaxValue) {
-            Chunk.WriteInstruction(OpCode.Load, line);
-            Chunk.WriteByte((byte)addr, line);
+            _currentFunction.Chunk.WriteInstruction(OpCode.Load, line);
+            _currentFunction.Chunk.WriteByte((byte)addr, line);
         }
         else {
             throw new NotImplementedException("VM does not yet support locals beyond 255");
@@ -284,4 +291,21 @@ public class JubCompiler : SyntaxVisitor {
             //Chunk.WriteUint16((ushort)addr, line);
         }
     }
+
+    #region Requires
+    /// <summary>
+    /// Checks that the current context is that of a function, asserting that
+    /// _currentFunction and _localManager exist.
+    /// </summary>
+    /// <exception cref="Exception"></exception>
+    [MemberNotNull(nameof(_currentFunction))]
+    [MemberNotNull(nameof(_localManager))]
+    private void RequireFunction () {
+        if (_currentFunction == null || _localManager == null) {
+            throw new Exception(
+                "This node can only be compiled in the context of a function."
+            );
+        }
+    }
+    #endregion
 }

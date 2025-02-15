@@ -9,7 +9,6 @@ namespace Judith.NET.compiler.jub;
 public class Chunk {
     public List<byte> Code { get; private set; } = new();
     public List<int> CodeLines { get; private set; } = new();
-    public ConstantTable ConstantTable { get; private set; } = new();
 
     public void WriteByte (byte i8, int line) {
         Code.Add(i8);

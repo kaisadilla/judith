@@ -21,9 +21,13 @@ Chunk::Chunk(
 {}
 
 Chunk::~Chunk () {
+    delete[] constantTable;
     delete[] constants;
+    delete[] constantTypes;
     delete[] code;
-    delete[] lines;
+    if (containsLines) {
+        delete[] lines;
+    }
 }
 /*
     size_t constantCount;

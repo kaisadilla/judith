@@ -18,7 +18,8 @@ public enum OpCode : byte {
     /// </summary>
     Const,
     /// <summary>
-    /// CONST_L | CONSTANT_LONG | Reads a constant at the address given in the next int32 in the chunk.
+    /// CONST_L | CONSTANT_LONG | Reads a constant at the address given in the
+    /// next int32 in the chunk.
     /// </summary>
     ConstLong,
     /// <summary>
@@ -33,6 +34,16 @@ public enum OpCode : byte {
     /// CONST_2 | CONSTANT_2 | Pushes the value "2".
     /// </summary>
     IConst2,
+    /// <summary>
+    /// CONST_STR | CONSTANT_STRING | Pushes the value at $a index from the
+    /// constant table as a string.
+    /// </summary>
+    ConstStr,
+    /// <summary>
+    /// CONST_STR_L | CONSTANT_STRING_LONG | Pushes the value at $a index from
+    /// the constant table as a string.
+    /// </summary>
+    ConstStrLong,
 
     /// <summary>
     /// RET | RETURN

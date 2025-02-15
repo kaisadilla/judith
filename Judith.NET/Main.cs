@@ -1,6 +1,7 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using Judith.NET;
 using Judith.NET.analysis;
+using Judith.NET.builder;
 using Judith.NET.compiler;
 using Judith.NET.compiler.jub;
 using Judith.NET.diagnostics;
@@ -65,62 +66,26 @@ foreach (var function in symbolAnalyzer.ExistingFunctions) {
 
 JubCompiler compiler = new(parser.Nodes);
 compiler.Compile();
-Chunk chunk = compiler.Chunk;
 
-JasmDisassembler disassembler = new(chunk);
-disassembler.Disassemble();
-
+Console.WriteLine("=== BIN DISASSEMBLY ===");
 Console.WriteLine();
-Console.WriteLine("=== CHUNK DISASSEMBLY ===");
-Console.WriteLine();
-Console.WriteLine(disassembler.Dump);
+Console.WriteLine($"Functions ({compiler.Bin.Functions.Count}):");
+for (int i = 0; i < compiler.Bin.Functions.Count; i++) {
+    Console.WriteLine($"=== # {i:X4}");
 
-SaveChunkFile(chunk);
+    JasmDisassembler disassembler = new(compiler.Bin, compiler.Bin.Functions[i].Chunk);
+    disassembler.Disassemble();
+
+    Console.WriteLine(disassembler.Dump);
+    Console.WriteLine("");
+}
+
+JuxBuilder builder = new(AppContext.BaseDirectory + "/res/");
+builder.BuildBinary("test.jbin", compiler.Bin);
 
 void PrintErrors () {
     Console.WriteLine($"Errors: {messages.Errors.Count} ---");
     foreach (var error in messages.Errors) {
         Console.WriteLine(error);
-    }
-}
-
-void SaveChunkFile (Chunk chunk) {
-    string path = AppContext.BaseDirectory + "/res/test.jbin";
-
-    using var stream = File.Open(path, FileMode.Create);
-    using var writer = new BinaryWriter(stream, Encoding.UTF8, false);
-
-    writer.Write((byte)'A');
-    writer.Write((byte)'Z');
-    writer.Write((byte)'A');
-    writer.Write((byte)'R');
-    writer.Write((byte)'I');
-    writer.Write((byte)'A');
-    writer.Write((byte)'J');
-    writer.Write((byte)'U');
-    writer.Write((byte)'D');
-    writer.Write((byte)'I');
-    writer.Write((byte)'T');
-    writer.Write((byte)'H');
-
-    // constantCount (i32) ; the amount of constants in the table, not its size in bytes.
-    writer.Write((int)chunk.ConstantTable.Count);
-    // constantTable (byte[constantCount])
-    foreach (var ui8 in chunk.ConstantTable.Bytes) {
-        writer.Write((byte)ui8);
-    }
-
-    // size (i32)
-    writer.Write((int)chunk.Code.Count);
-    // code (ui8[])
-    foreach (var code in chunk.Code) {
-        writer.Write((byte)code);
-    }
-
-    // containsLines
-    writer.Write(true);
-    // lines (i32[])
-    foreach (var line in chunk.CodeLines) {
-        writer.Write((int)line);
     }
 }

@@ -11,6 +11,8 @@ namespace OpCode {
         CONST_0,
         I_CONST_1,
         I_CONST_2,
+        CONST_STR,
+        CONST_STR_LONG,
 
         RET,
 

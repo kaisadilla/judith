@@ -53,11 +53,13 @@ static std::string constant (Chunk& chunk, size_t constIndex) {
             return std::format("{}", uval);
         }
         case ConstantType::STRING_ASCII: {
-            byte* strvalue = (byte*)chunk.constants[constIndex];
-            ui64 strlen = *(ui64*)strvalue;
-            byte* strStart = strvalue + sizeof(ui64);
+            byte* strval = (byte*)chunk.constants[constIndex];
+            ui64 strlen = *(ui64*)strval;
+            byte* strStart = strval + sizeof(ui64);
             return '"' + std::string((char*)strStart, strlen) + '"';
         }
+        default:
+            return "<unknown-type>";
     }
 
 }
@@ -112,7 +114,7 @@ static size_t constantInstruction (std::ostringstream& str, Chunk& chunk, const 
 
     byte constIndex = chunk.code[index + 1];
 
-    str << idStr(name) << " " << hexByteStr(constIndex) << "; " << constant(chunk, constIndex);
+    str << idStr(name) << " " << hexByteStr(constIndex) << " ; " << constant(chunk, constIndex);
 
     return index + 2;
 }
@@ -128,7 +130,7 @@ static size_t constantLongInstruction (std::ostringstream& str, Chunk& chunk, co
         + (chunk.code[index + 2] << 16)
         + (chunk.code[index + 2] << 24);
 
-    str << idStr(name) << " " << hexIntegerStr(constIndex) << "; " << constant(chunk, constIndex);
+    str << idStr(name) << " " << hexIntegerStr(constIndex) << " ; " << constant(chunk, constIndex);
 
     return index + 5;
 }
@@ -150,7 +152,7 @@ static size_t disassembleInstruction (std::ostringstream& str, Chunk& chunk, siz
     int opCode = chunk.code[index];
 
     if (chunk.containsLines) {
-        str << "Line " << chunk.lines[index] << " | ";
+        str << "Line " << std::setw(5) << std::left << chunk.lines[index] << std::setw(0) << " | ";
     }
     str << hexByteStr(index) << " ";
 
@@ -168,6 +170,10 @@ static size_t disassembleInstruction (std::ostringstream& str, Chunk& chunk, siz
         return simpleInstruction(str, chunk, "I_CONST_1", index);
     case OpCode::I_CONST_2:
         return simpleInstruction(str, chunk, "I_CONST_2", index);
+    case OpCode::CONST_STR:
+        return constantInstruction(str, chunk, "CONST_STR", index);
+    case OpCode::CONST_STR_LONG:
+        return constantLongInstruction(str, chunk, "CONST_STR_L", index);
 
     case OpCode::RET:
         return simpleInstruction(str, chunk, "RET", index);

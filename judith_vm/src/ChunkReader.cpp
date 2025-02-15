@@ -37,10 +37,14 @@ Chunk readChunk() {
     }
 
     if (isMagicNumberCorrect(magicNumbers) == false) {
-        std::cout << "Expected magic number not found." << std::endl;
+        throw std::runtime_error("Constant overflows the file!");
     }
 
-    i32 constantCount = reader.readInt32_LE();
+    reader.readUInt8(); // discard endianness
+    reader.readUInt8(); // discard major_version
+    reader.readUInt8(); // discard minor_version
+
+    ui32 constantCount = reader.readUInt32_LE(); // constant_count
 
     std::vector<byte> alignedConstantVector;
     std::vector<size_t> cIndices;
@@ -123,7 +127,9 @@ Chunk readChunk() {
         constants[i] = (void*)(&constantTable[index]);
     }
 
-    i32 size = reader.readInt32_LE();
+    reader.readUInt32_LE(); // Discard function_count, right now we only accept one function.
+
+    ui32 size = reader.readUInt32_LE();
     byte* code = new byte[size];
     
     for (int i = 0; i < size; i++) {
@@ -139,6 +145,8 @@ Chunk readChunk() {
             lines[i] = reader.readInt32_LE();
         }
     }
+
+    reader.readInt32_LE(); // discard entry_point - we assume the only function is.
 
     return Chunk(
         constantTable,

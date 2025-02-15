@@ -58,6 +58,16 @@ InterpretResult VM::interpret (const Chunk& chunk) {
 
             break;
 
+        case OpCode::CONST_STR:
+            pushValue({ .asInt64 = *(i64*)chunk.constants[READ_BYTE()] });
+
+            break;
+
+        case OpCode::CONST_STR_LONG:
+            pushValue({ .asInt64 = *(i64*)chunk.constants[READ_I32()] });
+
+            break;
+
         case OpCode::RET:
             return InterpretResult::OK;
 

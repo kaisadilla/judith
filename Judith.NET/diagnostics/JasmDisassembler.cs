@@ -8,11 +8,13 @@ using System.Threading.Tasks;
 namespace Judith.NET.diagnostics;
 
 public class JasmDisassembler {
+    private BinaryFile _file;
     private Chunk _chunk;
 
     public string Dump { get; private set; } = string.Empty;
 
-    public JasmDisassembler (Chunk chunk) {
+    public JasmDisassembler (BinaryFile file, Chunk chunk) {
+        _file = file;
         _chunk = chunk;
     }
 
@@ -43,8 +45,14 @@ public class JasmDisassembler {
                 return SimpleInstruction("I_CONST_1", index);
             case OpCode.IConst2:
                 return SimpleInstruction("I_CONST_2", index);
+            case OpCode.ConstStr:
+                return ConstantInstruction("CONST_STR", index);
+            case OpCode.ConstStrLong:
+                return ConstantLongInstruction("CONST_STR_L", index);
+
             case OpCode.Ret:
                 return SimpleInstruction("RET", index);
+
             case OpCode.FNeg:
                 return SimpleInstruction("F_NEG", index);
             case OpCode.FAdd:
@@ -118,15 +126,6 @@ public class JasmDisassembler {
         return index + 1;
     }
 
-    private int ConstantInstruction (string name, int index) {
-        var constIndex = _chunk.Code[index + 1];
-
-        Dump += IdStr(name) + " ";
-        Dump += HexByteStr(_chunk.Code[index + 1]) + "; " + Constant(constIndex);
-
-        return index + 2;
-    }
-
     private int ByteInstruction (string name, int index) {
         var val = _chunk.Code[index + 1];
 
@@ -146,6 +145,15 @@ public class JasmDisassembler {
         return index + 3;
     }
 
+    private int ConstantInstruction (string name, int index) {
+        var constIndex = _chunk.Code[index + 1];
+
+        Dump += IdStr(name) + " ";
+        Dump += HexByteStr(_chunk.Code[index + 1]) + " ; " + Constant(constIndex);
+
+        return index + 2;
+    }
+
     private int ConstantLongInstruction (string name, int index) {
         var constIndex = _chunk.Code[index + 1]
             | (_chunk.Code[index + 2] << 8)
@@ -153,7 +161,7 @@ public class JasmDisassembler {
             | (_chunk.Code[index + 4] << 24);
 
         Dump += IdStr(name) + " ";
-        Dump += HexIntegerStr(_chunk.Code[index + 1]) + "; " + Constant(constIndex);
+        Dump += HexIntegerStr(_chunk.Code[index + 1]) + " ; " + Constant(constIndex);
 
         return index + 5;
     }
@@ -164,20 +172,20 @@ public class JasmDisassembler {
     }
 
     private string Constant (int constIndex) {
-        int offset = _chunk.ConstantTable.Offsets[constIndex];
-        ConstantType ctype = (ConstantType)_chunk.ConstantTable.Bytes[offset++];
+        int offset = _file.ConstantTable.Offsets[constIndex];
+        ConstantType ctype = (ConstantType)_file.ConstantTable.Bytes[offset++];
 
         switch (ctype) {
             case ConstantType.Error:
                 return "<error-type>";
             case ConstantType.Int64:
-                return _chunk.ConstantTable.ReadInt64(offset).ToString();
+                return _file.ConstantTable.ReadInt64(offset).ToString();
             case ConstantType.Float64:
-                return _chunk.ConstantTable.ReadFloat64(offset).ToString();
+                return _file.ConstantTable.ReadFloat64(offset).ToString();
             case ConstantType.UnsignedInt64:
-                return _chunk.ConstantTable.ReadUnsignedInt64(offset).ToString();
+                return _file.ConstantTable.ReadUnsignedInt64(offset).ToString();
             case ConstantType.StringASCII:
-                return '"' + _chunk.ConstantTable.ReadStringASCII(offset) + '"';
+                return '"' + _file.ConstantTable.ReadStringASCII(offset) + '"';
             default:
                 return "<unknown-type>";
         }
