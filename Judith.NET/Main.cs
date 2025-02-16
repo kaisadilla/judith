@@ -47,6 +47,12 @@ messages.Add(comp.Messages);
 string symbolTableJson = JsonConvert.SerializeObject(comp.SymbolTable, Formatting.Indented);
 File.WriteAllText(AppContext.BaseDirectory + "/res/test.symbol-table.json", symbolTableJson);
 
+string typeTableJson = JsonConvert.SerializeObject(comp.TypeTable, Formatting.Indented);
+File.WriteAllText(AppContext.BaseDirectory + "/res/test.type-table.json", typeTableJson);
+
+string binderJson = JsonConvert.SerializeObject(comp.Binder, Formatting.Indented);
+File.WriteAllText(AppContext.BaseDirectory + "/res/test.binder.json", binderJson);
+
 string astJson = JsonConvert.SerializeObject(cu, Formatting.Indented);
 File.WriteAllText(AppContext.BaseDirectory + "/res/test.ast.json", astJson);
 

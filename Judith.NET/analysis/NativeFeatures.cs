@@ -23,9 +23,12 @@ public static class NativeFeatures {
         AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, "Ui64");
         AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, "String");
         AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, "Bool");
+        AddNativeType(typeTbl, symbolTbl, SymbolKind.AliasType, "Byte");
         AddNativeType(typeTbl, symbolTbl, SymbolKind.AliasType, "Int");
         AddNativeType(typeTbl, symbolTbl, SymbolKind.AliasType, "Float");
         AddNativeType(typeTbl, symbolTbl, SymbolKind.AliasType, "Num");
+
+        AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, "Void");
     }
 
     private static void AddNativeType (

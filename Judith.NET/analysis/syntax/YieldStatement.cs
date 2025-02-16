@@ -6,26 +6,26 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.analysis.syntax;
 
-public class YieldStatement : Statement
-{
+public class YieldStatement : Statement {
     public Expression Expression { get; init; }
 
     public Token? YieldToken { get; init; }
 
-    public YieldStatement(Expression expression) : base(SyntaxKind.YieldStatement)
-    {
+    public YieldStatement (Expression expression) : base(SyntaxKind.YieldStatement) {
         Expression = expression;
 
         Children.Add(Expression);
     }
 
-    public override void Accept(SyntaxVisitor visitor)
-    {
+    public override void Accept (SyntaxVisitor visitor) {
         visitor.Visit(this);
     }
 
-    public override string ToString()
-    {
+    public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
+        return visitor.Visit(this);
+    }
+
+    public override string ToString () {
         return "|yield> " + Expression.ToString() + " <|";
     }
 }

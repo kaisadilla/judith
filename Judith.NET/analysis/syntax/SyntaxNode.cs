@@ -39,6 +39,7 @@ public abstract class SyntaxNode {
     }
 
     public abstract void Accept(SyntaxVisitor visitor);
+    public abstract T? Accept<T>(SyntaxVisitor<T> visitor);
 
     public abstract override string ToString();
 

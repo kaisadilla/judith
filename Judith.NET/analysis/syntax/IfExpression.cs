@@ -7,8 +7,7 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.analysis.syntax;
 
-public class IfExpression : Expression
-{
+public class IfExpression : Expression {
     public Expression Test { get; init; }
     public Statement Consequent { get; init; }
     public Statement? Alternate { get; init; }
@@ -16,9 +15,8 @@ public class IfExpression : Expression
     public Token? IfToken { get; init; }
     public Token? ElseToken { get; init; }
 
-    public IfExpression(Expression test, Statement consequent, Statement? alternate)
-        : base(SyntaxKind.IfExpression)
-    {
+    public IfExpression (Expression test, Statement consequent, Statement? alternate)
+        : base(SyntaxKind.IfExpression) {
         Test = test;
         Consequent = consequent;
         Alternate = alternate;
@@ -27,15 +25,16 @@ public class IfExpression : Expression
         if (Alternate != null) Children.Add(Alternate);
     }
 
-    public override void Accept(SyntaxVisitor visitor)
-    {
+    public override void Accept (SyntaxVisitor visitor) {
         visitor.Visit(this);
     }
 
-    public override string ToString()
-    {
-        return "|if> " + Stringify(new
-        {
+    public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
+        throw new NotImplementedException();
+    }
+
+    public override string ToString () {
+        return "|if> " + Stringify(new {
             Test = Test.ToString(),
             Consequent = Consequent.ToString(),
             Alternate = Alternate?.ToString(),

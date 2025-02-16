@@ -12,12 +12,12 @@ namespace Judith.NET.analysis.analyzers;
 /// defined in it.
 /// </summary>
 public class SymbolTableBuilder : SyntaxVisitor {
-    private Compilation _program;
+    private Compilation _cmp;
 
     private SymbolTable _currentTable;
 
     public SymbolTableBuilder (Compilation program) {
-        _program = program;
+        _cmp = program;
         _currentTable = program.SymbolTable;
     }
 
@@ -31,7 +31,9 @@ public class SymbolTableBuilder : SyntaxVisitor {
 
     public override void Visit (FunctionDefinition node) {
         string name = node.Identifier.Name;
-        _currentTable.AddSymbol(SymbolKind.Function, name);
+
+        var symbol = _currentTable.AddSymbol(SymbolKind.Function, name);
+        _cmp.Binder.BindFunctionDefinition(node, symbol);
 
         if (_currentTable.TryGetInnerTable(name, out var innerTable) == false) {
             throw new Exception(
@@ -46,6 +48,7 @@ public class SymbolTableBuilder : SyntaxVisitor {
     }
 
     public override void Visit (LocalDeclarator node) {
-        _currentTable.AddSymbol(SymbolKind.Local, node.Identifier.Name);
+        var symbol = _currentTable.AddSymbol(SymbolKind.Local, node.Identifier.Name);
+        _cmp.Binder.BindLocalDeclarator(node, symbol);
     }
 }

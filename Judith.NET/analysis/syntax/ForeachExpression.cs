@@ -6,8 +6,7 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.analysis.syntax;
 
-public class ForeachExpression : Expression
-{
+public class ForeachExpression : Expression {
     public List<LocalDeclarator> Declarators { get; init; }
     public Expression Enumerable { get; init; }
     public Statement Body { get; init; }
@@ -15,13 +14,12 @@ public class ForeachExpression : Expression
     public Token? ForeachToken { get; init; }
     public Token? InToken { get; init; }
 
-    public ForeachExpression(
+    public ForeachExpression (
         List<LocalDeclarator> declarators,
         Expression enumerable,
         Statement body
     )
-        : base(SyntaxKind.ForeachExpression)
-    {
+        : base(SyntaxKind.ForeachExpression) {
         Declarators = declarators;
         Enumerable = enumerable;
         Body = body;
@@ -30,15 +28,16 @@ public class ForeachExpression : Expression
         Children.Add(Enumerable, Body);
     }
 
-    public override void Accept(SyntaxVisitor visitor)
-    {
+    public override void Accept (SyntaxVisitor visitor) {
         visitor.Visit(this);
     }
 
-    public override string ToString()
-    {
-        return "|foreach> " + Stringify(new
-        {
+    public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
+        throw new NotImplementedException();
+    }
+
+    public override string ToString () {
+        return "|foreach> " + Stringify(new {
             Declarators = Declarators.Select(d => d.ToString()),
             Enumerable = Enumerable.ToString(),
             Body = Body.ToString(),

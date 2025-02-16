@@ -44,8 +44,10 @@ public enum TokenKind {
 
     // % operators
 
-    // Literals
+    // Identifier
     Identifier,
+
+    // Literals
     String,
     Number,
 

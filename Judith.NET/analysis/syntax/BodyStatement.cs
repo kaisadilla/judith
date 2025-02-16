@@ -7,58 +7,56 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.analysis.syntax;
 
-public abstract class BodyStatement : Statement
-{
-    protected BodyStatement(SyntaxKind kind) : base(kind) { }
+public abstract class BodyStatement : Statement {
+    protected BodyStatement (SyntaxKind kind) : base(kind) { }
 }
 
-public class BlockStatement : BodyStatement
-{
+public class BlockStatement : BodyStatement {
     public List<SyntaxNode> Nodes { get; init; }
     public Token? OpeningToken { get; init; }
     public Token? ClosingToken { get; init; }
 
-    public BlockStatement(List<SyntaxNode> nodes)
-        : base(SyntaxKind.BlockStatement)
-    {
+    public BlockStatement (List<SyntaxNode> nodes)
+        : base(SyntaxKind.BlockStatement) {
         Nodes = nodes;
 
         Children.AddRange(Nodes);
     }
 
-    public override void Accept(SyntaxVisitor visitor)
-    {
+    public override void Accept (SyntaxVisitor visitor) {
         visitor.Visit(this);
     }
 
-    public override string ToString()
-    {
-        return "|block> " + Stringify(new
-        {
+    public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
+        return visitor.Visit(this);
+    }
+
+    public override string ToString () {
+        return "|block> " + Stringify(new {
             Statements = Nodes.Select(stmt => stmt.ToString()),
         }) + " <|";
     }
 }
 
-public class ArrowStatement : BodyStatement
-{
+public class ArrowStatement : BodyStatement {
     public Statement Statement { get; init; }
     public Token? ArrowToken { get; init; }
 
-    public ArrowStatement(Statement statement) : base(SyntaxKind.ArrowStatement)
-    {
+    public ArrowStatement (Statement statement) : base(SyntaxKind.ArrowStatement) {
         Statement = statement;
 
         Children.Add(Statement);
     }
 
-    public override void Accept(SyntaxVisitor visitor)
-    {
+    public override void Accept (SyntaxVisitor visitor) {
         visitor.Visit(this);
     }
 
-    public override string ToString()
-    {
+    public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
+        return visitor.Visit(this);
+    }
+
+    public override string ToString () {
         return "|arrow> " + Statement.ToString() + " <|";
     }
 }

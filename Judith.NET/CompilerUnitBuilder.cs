@@ -25,12 +25,12 @@ public class CompilerUnitBuilder {
         foreach (var node in _nodes) {
             implicitFunctionNodes.Add(node);
         }
-        ParameterList parameters = new ParameterList([
+        ParameterList parameters = new([
             new Parameter(
                 new LocalDeclarator(
                     new Identifier("args", false),
                     LocalKind.Constant,
-                    null // TODO: List<String>
+                    new(new("String", false)) // TODO: List<String>
                 ),
                 null
             ),

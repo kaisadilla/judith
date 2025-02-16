@@ -7,8 +7,7 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.analysis.syntax;
 
-public class Identifier : SyntaxNode
-{
+public class Identifier : SyntaxNode {
     private const char ESCAPE_CHAR = '\\';
 
     public string Name { get; private set; }
@@ -22,36 +21,27 @@ public class Identifier : SyntaxNode
 
     public Token? RawToken { get; private set; }
 
-    /// <summary>
-    /// The symbol this identifier resolved to.
-    /// </summary>
-    public Symbol? Symbol { get; private set; }
-
     // TODO: Move this logic to the parser.
-    public Identifier(Token rawToken) : base(SyntaxKind.Identifier)
-    {
+    public Identifier (Token rawToken) : base(SyntaxKind.Identifier) {
         RawToken = rawToken;
         ExtractIdentifier(rawToken);
     }
 
-    public Identifier(string name, bool isMetaName) : base(SyntaxKind.Identifier)
-    {
+    public Identifier (string name, bool isMetaName) : base(SyntaxKind.Identifier) {
         Name = name;
         IsMetaName = isMetaName;
         IsEscaped = false;
     }
 
-    public override void Accept(SyntaxVisitor visitor)
-    {
+    public override void Accept (SyntaxVisitor visitor) {
         visitor.Visit(this);
     }
 
-    public void SetSymbol (Symbol symbol) {
-        Symbol = symbol;
+    public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
+        return visitor.Visit(this);
     }
 
-    public override string ToString()
-    {
+    public override string ToString () {
         return $"`{RawToken?.Lexeme ?? "<unknown identifier>"}`";
     }
 
@@ -61,15 +51,12 @@ public class Identifier : SyntaxNode
     /// </summary>
     /// <param name="rawToken">The token to extract data from.</param>
     [MemberNotNull(nameof(Name))]
-    private void ExtractIdentifier(Token rawToken)
-    {
-        if (rawToken.Lexeme.StartsWith(ESCAPE_CHAR))
-        {
+    private void ExtractIdentifier (Token rawToken) {
+        if (rawToken.Lexeme.StartsWith(ESCAPE_CHAR)) {
             Name = rawToken.Lexeme[1..];
             IsEscaped = true;
         }
-        else
-        {
+        else {
             Name = rawToken.Lexeme;
             IsEscaped = false;
         }

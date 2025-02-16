@@ -17,6 +17,7 @@ public enum MessageOrigin {
     Lexer,
     Parser,
     SymbolResolver,
+    Binder,
     TypeResolver,
     Compiler,
 }
@@ -314,6 +315,64 @@ public class CompilerMessage {
                 MessageOrigin.SymbolResolver,
                 (int)MessageCode.NameDoesNotExist,
                 $"The name '{name}' does not exist in the current context.",
+                line
+            );
+        }
+
+        public static CompilerMessage NumberSuffixCannotBeUsedForDecimal (
+            string suffix, int line
+        ) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.Binder,
+                (int)MessageCode.NumberSuffixCannotBeUsedForDecimal,
+                $"Suffix '{suffix}' cannot be used for decimal number literal.",
+                line
+            );
+        }
+
+        public static CompilerMessage FloatLiteralOverflow (
+            string literalStr, string type, int line
+        ) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.Binder,
+                (int)MessageCode.FloatLiteralOverflow,
+                $"Floating-point literal '{literalStr}' is outside the range of type '{type}'.",
+                line
+            );
+        }
+
+        public static CompilerMessage IntegerLiteralOverflow (
+            string literalStr, string type, int line
+        ) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.Binder,
+                (int)MessageCode.IntegerLiteralOverflow,
+                $"Signed integer literal '{literalStr}' is outside the range of type '{type}'.",
+                line
+            );
+        }
+
+        public static CompilerMessage UnsignedIntegerLiteralOverflow (
+            string literalStr, string type, int line
+        ) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.Binder,
+                (int)MessageCode.UnsignedIntegerLiteralOverflow,
+                $"Unsigned integer literal '{literalStr}' is outside the range of type '{type}'.",
+                line
+            );
+        }
+
+        public static CompilerMessage IntegerLiteralIsTooLarge (int line) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.Binder,
+                (int)MessageCode.IntegerLiteralIsTooLarge,
+                $"Integer literal is too large.",
                 line
             );
         }

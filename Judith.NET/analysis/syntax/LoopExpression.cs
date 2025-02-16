@@ -6,26 +6,26 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.analysis.syntax;
 
-public class LoopExpression : Expression
-{
+public class LoopExpression : Expression {
     public Statement Body { get; init; }
 
     public Token? LoopToken { get; init; }
 
-    public LoopExpression(Statement body) : base(SyntaxKind.LoopExpression)
-    {
+    public LoopExpression (Statement body) : base(SyntaxKind.LoopExpression) {
         Body = body;
 
         Children.Add(Body);
     }
 
-    public override void Accept(SyntaxVisitor visitor)
-    {
+    public override void Accept (SyntaxVisitor visitor) {
         visitor.Visit(this);
     }
 
-    public override string ToString()
-    {
+    public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
+        throw new NotImplementedException();
+    }
+
+    public override string ToString () {
         return "|loop> " + Stringify(new { Body = Body.ToString() }) + " <|";
     }
 }

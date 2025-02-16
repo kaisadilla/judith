@@ -14,22 +14,22 @@ public class CompilerUnit : SyntaxNode {
     public List<Item> TopLevelItems { get; private init; }
     public FunctionDefinition? ImplicitFunction { get; private set; }
 
-    public CompilerUnit(List<Item> topLevelItems, FunctionDefinition? implicitFunction)
-        : base(SyntaxKind.CompilerUnit)
-    {
+    public CompilerUnit (List<Item> topLevelItems, FunctionDefinition? implicitFunction)
+        : base(SyntaxKind.CompilerUnit) {
         TopLevelItems = topLevelItems;
         ImplicitFunction = implicitFunction;
     }
 
-    public override void Accept(SyntaxVisitor visitor)
-    {
+    public override void Accept (SyntaxVisitor visitor) {
         visitor.Visit(this);
     }
 
-    public override string ToString()
-    {
-        return "|compiler unit> " + Stringify(new
-        {
+    public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
+        return visitor.Visit(this);
+    }
+
+    public override string ToString () {
+        return "|compiler unit> " + Stringify(new {
             TopLevelItems = TopLevelItems.Select(i => i.ToString()),
             ImplicitFunction = ImplicitFunction?.ToString(),
         }) + " <|";

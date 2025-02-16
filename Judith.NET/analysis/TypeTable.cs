@@ -12,23 +12,23 @@ namespace Judith.NET.analysis;
 /// defined in it.
 /// </summary>
 public class TypeTable {
-    private Dictionary<string, TypeInfo> _types = new();
+    public Dictionary<string, TypeInfo> Types { get; private set; } = new();
 
     public bool ContainsType (string fullyQualifiedName) {
-        return _types.ContainsKey(fullyQualifiedName);
+        return Types.ContainsKey(fullyQualifiedName);
     }
 
     public bool TryGetType (
         string fullyQualifiedName, [NotNullWhen(true)] out TypeInfo? type
     ) {
-        return _types.TryGetValue(fullyQualifiedName, out type);
+        return Types.TryGetValue(fullyQualifiedName, out type);
     }
 
     public void AddType (TypeInfo type) {
-        if (_types.ContainsKey(type.FullyQualifiedName)) {
+        if (Types.ContainsKey(type.FullyQualifiedName)) {
             throw new Exception($"Type '{type.FullyQualifiedName}' already exists.");
         }
 
-        _types[type.FullyQualifiedName] = type;
+        Types[type.FullyQualifiedName] = type;
     }
 }

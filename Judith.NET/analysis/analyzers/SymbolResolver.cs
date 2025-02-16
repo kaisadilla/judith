@@ -16,12 +16,12 @@ namespace Judith.NET.analysis.analyzers;
 public class SymbolResolver : SyntaxVisitor {
     public MessageContainer Messages { get; private set; } = new();
 
-    private Compilation _program;
+    private Compilation _cmp;
 
     private SymbolTable _currentTable;
 
     public SymbolResolver (Compilation program) {
-        _program = program;
+        _cmp = program;
 
         _currentTable = program.SymbolTable;
     }
@@ -44,8 +44,6 @@ public class SymbolResolver : SyntaxVisitor {
             );
         }
 
-        node.Identifier.SetSymbol(symbol);
-
         if (_currentTable.TryGetInnerTable(name, out var innerTable) == false) {
             throw ExNameShouldExist(name);
         }
@@ -53,6 +51,8 @@ public class SymbolResolver : SyntaxVisitor {
         _currentTable = innerTable;
         Visit(node.Parameters);
         Visit(node.Body);
+
+        if (node.ReturnTypeAnnotation != null) Visit(node.ReturnTypeAnnotation);
     }
 
     public override void Visit (IdentifierExpression node) {
@@ -65,7 +65,7 @@ public class SymbolResolver : SyntaxVisitor {
             return;
         }
 
-        node.Identifier.SetSymbol(symbol);
+        _cmp.Binder.BindIdentifierExpression(node, symbol);
     }
 
     public override void Visit (LocalDeclarator node) {
@@ -75,7 +75,20 @@ public class SymbolResolver : SyntaxVisitor {
             throw ExNameShouldExist(name);
         }
 
-        node.Identifier.SetSymbol(symbol);
+        if (node.TypeAnnotation != null) Visit(node.TypeAnnotation);
+    }
+
+    public override void Visit (TypeAnnotation node) {
+        string name = node.Identifier.Name;
+
+        if (_currentTable.TryFindSymbolRecursively(name, out Symbol? symbol) == false) {
+            Messages.Add(CompilerMessage.Analyzers.NameDoesNotExist(
+                name, node.Identifier.Line
+            ));
+            return;
+        }
+
+        _cmp.Binder.BindTypeAnnotation(node, symbol);
     }
 
     private Exception ExNameShouldExist (string name) {

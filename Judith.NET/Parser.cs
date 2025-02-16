@@ -811,19 +811,19 @@ public class Parser {
 
     private bool TryConsumeLiteral ([NotNullWhen(true)] out Literal? literal) {
         if (TryConsume(TokenKind.KwTrue, out Token? token)) {
-            literal = MakeBooleanLiteral(token);
+            literal = SF.Literal(token);
             return true;
         }
         if (TryConsume(TokenKind.KwFalse, out token)) {
-            literal = MakeBooleanLiteral(token);
+            literal = SF.Literal(token);
             return true;
         }
         if (TryConsume(TokenKind.Number, out token)) {
-            literal = MakeNumberLiteral(token);
+            literal = SF.Literal(token);
             return true;
         }
         if (TryConsume(TokenKind.String, out token)) {
-            literal = MakeStringLiteral(token);
+            literal = SF.Literal(token);
             return true;
         }
 
@@ -1086,57 +1086,6 @@ public class Parser {
 
         statement = SF.PrivPrintStmt(p_printToken, expr);
         return true;
-    }
-    #endregion
-
-    #region Node builders
-    private Literal MakeNumberLiteral (Token token) {
-        // The part of the lexeme that represents the number, removing
-        // underscores as they don't have any meaning.
-        string numberString = token.Lexeme.Replace("_", "");
-        // If it contains a dot, it's decimal and will be hold in a double.
-        // Same applies if it's expressed in scientific notation: XeY.
-        bool isDecimal = numberString.Contains('.') || numberString.Contains('e');
-
-        if (isDecimal) {
-            if (double.TryParse(numberString, out double val)) {
-                return SF.NumberLiteral(token, val);
-            }
-            else {
-                throw Error(CompilerMessage.Parser.InvalidFloatLiteral(token.Line));
-            }
-        }
-        else {
-            if (long.TryParse(numberString, out long val)) {
-                return SF.NumberLiteral(token, val);
-            }
-            else {
-                throw Error(CompilerMessage.Parser.InvalidIntegerLiteral(token.Line));
-            }
-        }
-    }
-
-    private Literal MakeBooleanLiteral (Token token) {
-        if (token.Kind == TokenKind.KwTrue) {
-            return SF.BooleanLiteral(token, true);
-        }
-        if (token.Kind == TokenKind.KwFalse) {
-            return SF.BooleanLiteral(token, false);
-        }
-
-        throw new Exception("Trying to parse an invalid token as a boolean.");
-    }
-
-    private Literal MakeStringLiteral (Token token) {
-        // TODO: Right now we can only parse strings without flags that start
-        // and end with a single delimiter (" or `).
-        var delimiter = token.Lexeme[0];
-        var str = token.Lexeme[1..^1]
-            .Replace("\\\\", "\\")
-            .Replace("\\n", "\n")
-            .Replace("\\r", "\r");
-
-        return SF.StringLiteral(token, str);
     }
     #endregion
 

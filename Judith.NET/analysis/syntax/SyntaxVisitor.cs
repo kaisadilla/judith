@@ -6,15 +6,12 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.analysis.syntax;
 
-public abstract class SyntaxVisitor
-{
-
+public abstract class SyntaxVisitor {
     /// <summary>
     /// Visits the node given and all of its children.
     /// </summary>
     /// <param name="node">The node to visit.</param>
-    protected virtual void Visit(SyntaxNode node)
-    {
+    protected virtual void Visit (SyntaxNode node) {
         node.Accept(this);
     }
 
@@ -22,10 +19,8 @@ public abstract class SyntaxVisitor
     /// Visits each of the nodes given and all of their children.
     /// </summary>
     /// <param name="nodes">A list of nodes to visit.</param>
-    protected virtual void Visit(IEnumerable<SyntaxNode> nodes)
-    {
-        foreach (var node in nodes)
-        {
+    protected virtual void Visit(IEnumerable<SyntaxNode> nodes) {
+        foreach (var node in nodes) {
             node.Accept(this);
         }
     }
@@ -34,10 +29,8 @@ public abstract class SyntaxVisitor
     /// Visits the children of the node given (not the node itself).
     /// </summary>
     /// <param name="node">The node whose children will be visited.</param>
-    protected virtual void VisitChildren(SyntaxNode node)
-    {
-        foreach (var child in node.Children)
-        {
+    protected virtual void VisitChildren(SyntaxNode node) {
+        foreach (var child in node.Children) {
             child.Accept(this);
         }
     }

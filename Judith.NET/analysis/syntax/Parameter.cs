@@ -6,14 +6,12 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.analysis.syntax;
 
-public class Parameter : SyntaxNode
-{
+public class Parameter : SyntaxNode {
     public LocalDeclarator Declarator { get; private init; }
     public EqualsValueClause? DefaultValue { get; private init; }
 
-    public Parameter(LocalDeclarator declarator, EqualsValueClause? defaultValue)
-        : base(SyntaxKind.Parameter)
-    {
+    public Parameter (LocalDeclarator declarator, EqualsValueClause? defaultValue)
+        : base(SyntaxKind.Parameter) {
         Declarator = declarator;
         DefaultValue = defaultValue;
 
@@ -21,13 +19,15 @@ public class Parameter : SyntaxNode
         if (DefaultValue != null) Children.Add(DefaultValue);
     }
 
-    public override void Accept(SyntaxVisitor visitor)
-    {
+    public override void Accept (SyntaxVisitor visitor) {
         visitor.Visit(this);
     }
 
-    public override string ToString()
-    {
+    public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
+        return visitor.Visit(this);
+    }
+
+    public override string ToString () {
         return Declarator.ToString() + (DefaultValue?.ToString() ?? "");
     }
 }

@@ -96,34 +96,6 @@ public enum LocalDeclaratorKind
     ObjectPattern, // const { a, b } = ...c
 }
 
-[JsonConverter(typeof(StringEnumConverter))]
-public enum LiteralKind
-{
-    Unknown,
-
-    // Basic
-    String,
-    Character,
-    Keyword, // literals like 'true' or 'null'.
-
-    // Numbers (common name - suffix)
-    Int8, // sbyte - i8
-    Int16, // short - i16
-    Int32, // int - i32
-    Int64, // long - i64
-    UnsignedInt8, // byte - u8
-    UnsignedInt16, // ushort - u16
-    UnsignedInt32, // uint - u32
-    UnsignedInt64, // ulong - u64
-    Float16, // single - f16
-    Float32, // float - f32
-    Float64, // double - f64 (can appear without suffix)
-    NativeInt, // nint - in
-    NativeUnsignedInt, // nuint - un
-    NativeFloat, // nfloat - fn
-    Decimal, // decimal - d
-}
-
 public enum OperatorKind
 {
     Add, // +

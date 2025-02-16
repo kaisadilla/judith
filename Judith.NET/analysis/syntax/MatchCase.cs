@@ -6,17 +6,15 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.analysis.syntax;
 
-public class MatchCase : SyntaxNode
-{
+public class MatchCase : SyntaxNode {
     public List<Expression> Tests { get; init; }
     public Statement Consequent { get; init; }
     public bool IsElseCase { get; init; }
 
     public Token? ElseToken { get; init; }
 
-    public MatchCase(List<Expression> tests, Statement consequent, bool isElseCase)
-        : base(SyntaxKind.MatchCase)
-    {
+    public MatchCase (List<Expression> tests, Statement consequent, bool isElseCase)
+        : base(SyntaxKind.MatchCase) {
         Tests = tests;
         Consequent = consequent;
         IsElseCase = isElseCase;
@@ -25,15 +23,16 @@ public class MatchCase : SyntaxNode
         Children.Add(Consequent);
     }
 
-    public override void Accept(SyntaxVisitor visitor)
-    {
+    public override void Accept (SyntaxVisitor visitor) {
         visitor.Visit(this);
     }
 
-    public override string ToString()
-    {
-        return "|match case> " + Stringify(new
-        {
+    public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
+        throw new NotImplementedException();
+    }
+
+    public override string ToString () {
+        return "|match case> " + Stringify(new {
             Tests = Tests.Select(t => t.ToString()),
             Consequent = Consequent.ToString(),
             IsElseCase,

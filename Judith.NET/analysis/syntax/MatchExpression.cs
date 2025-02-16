@@ -6,8 +6,7 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.analysis.syntax;
 
-public class MatchExpression : Expression
-{
+public class MatchExpression : Expression {
     public Expression Discriminant { get; init; }
     public List<MatchCase> Cases { get; init; }
 
@@ -15,9 +14,8 @@ public class MatchExpression : Expression
     public Token? DoToken { get; init; }
     public Token? EndToken { get; init; }
 
-    public MatchExpression(Expression discriminant, List<MatchCase> cases)
-        : base(SyntaxKind.MatchExpression)
-    {
+    public MatchExpression (Expression discriminant, List<MatchCase> cases)
+        : base(SyntaxKind.MatchExpression) {
         Discriminant = discriminant;
         Cases = cases;
 
@@ -25,15 +23,16 @@ public class MatchExpression : Expression
         Children.AddRange(Cases);
     }
 
-    public override void Accept(SyntaxVisitor visitor)
-    {
+    public override void Accept (SyntaxVisitor visitor) {
         visitor.Visit(this);
     }
 
-    public override string ToString()
-    {
-        return "|match> " + Stringify(new
-        {
+    public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
+        throw new NotImplementedException();
+    }
+
+    public override string ToString () {
+        return "|match> " + Stringify(new {
             Discriminant = Discriminant.ToString(),
             Cases = Cases.Select(c => c.ToString()),
         }) + " <|";

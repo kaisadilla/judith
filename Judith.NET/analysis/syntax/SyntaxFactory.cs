@@ -314,64 +314,9 @@ public static class SyntaxFactory
 
     public static Literal Literal(Token rawToken)
     {
-        var lit = new Literal(LiteralKind.Unknown)
-        {
-            RawToken = rawToken,
-        };
+        var lit = new Literal(rawToken);
         lit.SetSpan(new(rawToken.Start, rawToken.End));
-        lit.SetLine(lit.RawToken.Line);
-
-        return lit;
-    }
-
-    public static Literal NumberLiteral(Token rawToken, double value)
-    {
-        var lit = new Literal(LiteralKind.Float64)
-        {
-            RawToken = rawToken,
-        };
-        lit.SetSpan(new(rawToken.Start, rawToken.End));
-        lit.SetLine(lit.RawToken.Line);
-        lit.SetValue(value);
-
-        return lit;
-    }
-
-    public static Literal NumberLiteral(Token rawToken, long value)
-    {
-        var lit = new Literal(LiteralKind.Int64)
-        {
-            RawToken = rawToken,
-        };
-        lit.SetSpan(new(rawToken.Start, rawToken.End));
-        lit.SetLine(lit.RawToken.Line);
-        lit.SetValue(value);
-
-        return lit;
-    }
-
-    public static Literal BooleanLiteral(Token rawToken, bool value)
-    {
-        var lit = new Literal(LiteralKind.Keyword)
-        {
-            RawToken = rawToken,
-        };
-        lit.SetSpan(new(rawToken.Start, rawToken.End));
-        lit.SetLine(lit.RawToken.Line);
-        lit.SetValue(value);
-
-        return lit;
-    }
-
-    public static Literal StringLiteral(Token rawToken, string value)
-    {
-        var lit = new Literal(LiteralKind.String)
-        {
-            RawToken = rawToken,
-        };
-        lit.SetSpan(new(rawToken.Start, rawToken.End));
-        lit.SetLine(lit.RawToken.Line);
-        lit.SetValue(value);
+        lit.SetLine(rawToken.Line);
 
         return lit;
     }

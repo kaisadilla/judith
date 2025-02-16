@@ -11,11 +11,10 @@ public class AssignmentExpression : Expression {
     public Operator Operator { get; init; }
     public Expression Right { get; init; }
 
-    public AssignmentExpression(
+    public AssignmentExpression (
         Expression left, Operator op, Expression right
     )
-        : base(SyntaxKind.AssignmentExpression)
-    {
+        : base(SyntaxKind.AssignmentExpression) {
         Left = left;
         Operator = op;
         Right = right;
@@ -23,13 +22,15 @@ public class AssignmentExpression : Expression {
         Children.Add(Left, Right);
     }
 
-    public override void Accept(SyntaxVisitor visitor)
-    {
+    public override void Accept (SyntaxVisitor visitor) {
         visitor.Visit(this);
     }
 
-    public override string ToString()
-    {
+    public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
+        return visitor.Visit(this);
+    }
+
+    public override string ToString () {
         return $"({Left} = {Right})";
     }
 }

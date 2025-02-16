@@ -6,8 +6,7 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.analysis.syntax;
 
-public class LocalDeclarationStatement : Statement
-{
+public class LocalDeclarationStatement : Statement {
     public LocalDeclaratorList DeclaratorList { get; private init; }
     public EqualsValueClause? Initializer { get; private init; }
 
@@ -16,27 +15,27 @@ public class LocalDeclarationStatement : Statement
     /// </summary>
     public Token? DeclaratorToken { get; init; }
 
-    public LocalDeclarationStatement(
+    public LocalDeclarationStatement (
         LocalDeclaratorList declaratorList, EqualsValueClause? initializer
     )
-        : base(SyntaxKind.LocalDeclarationStatement)
-    {
+        : base(SyntaxKind.LocalDeclarationStatement) {
         DeclaratorList = declaratorList;
         Initializer = initializer;
 
         Children.Add(DeclaratorList);
-        if (Initializer != null ) Children.Add(Initializer);
+        if (Initializer != null) Children.Add(Initializer);
     }
 
-    public override void Accept(SyntaxVisitor visitor)
-    {
+    public override void Accept (SyntaxVisitor visitor) {
         visitor.Visit(this);
     }
 
-    public override string ToString()
-    {
-        return $"|local_decl_stmt > " + Stringify(new
-        {
+    public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
+        return visitor.Visit(this);
+    }
+
+    public override string ToString () {
+        return $"|local_decl_stmt > " + Stringify(new {
             DeclaratorList = DeclaratorList.ToString(),
             Initializer = Initializer?.ToString(),
         }) + " <|";

@@ -73,65 +73,65 @@ public class JubCompiler : SyntaxVisitor {
         Visit(node.Value);
     }
 
-    public override void Visit (LiteralExpression node) {
-        RequireFunction();
-
-        int index;
-        // TODO and WARNING: LiteralKind is the type of literal the user wrote,
-        // not the actual type of the value it represents. I.e. any number the
-        // user writes (without an suffix) is considered an Int64 if it doesn't
-        // have a decimal point or a Float64 if it does. in "const a: Float = 3",
-        // that 3 is parsed as an Int64 number. In the future, the type resolution
-        // pass will identify the type each number should have.
-        if (node.Literal.LiteralKind == LiteralKind.Float64) {
-            if (node.Literal.Value is FloatValue fval) {
-                index = Bin.ConstantTable.WriteFloat64(fval.Value);
-            }
-            else {
-                throw new Exception("Literal node (F64) has invalid value.");
-            }
-        }
-        else if (node.Literal.LiteralKind == LiteralKind.Int64) {
-            if (node.Literal.Value is IntegerValue ival) {
-                index = Bin.ConstantTable.WriteFloat64((double)ival.Value);
-            }
-            else {
-                throw new Exception("Literal node (I64) has invalid value.");
-            }
-        }
-        else if (node.Literal.LiteralKind == LiteralKind.String) {
-            if (node.Literal.Value is StringValue sval) {
-                index = Bin.ConstantTable.WriteStringASCII(sval.Value);
-            }
-            else {
-                throw new Exception("Literal node (String) has invalid value.");
-            }
-        }
-        else {
-            throw new NotImplementedException("Literals of this type cannot yet be added to the constant stack.");
-        }
-
-        if (node.Literal.LiteralKind == LiteralKind.String) {
-            if (index < byte.MaxValue + 1) {
-                _currentFunction.Chunk.WriteInstruction(OpCode.ConstStr, node.Line);
-                _currentFunction.Chunk.WriteByte((byte)index, node.Line);
-            }
-            else {
-                _currentFunction.Chunk.WriteInstruction(OpCode.ConstStrLong, node.Line);
-                _currentFunction.Chunk.WriteInt32(index, node.Line);
-            }
-        }
-        else {
-            if (index < byte.MaxValue + 1) {
-                _currentFunction.Chunk.WriteInstruction(OpCode.Const, node.Line);
-                _currentFunction.Chunk.WriteByte((byte)index, node.Line);
-            }
-            else {
-                _currentFunction.Chunk.WriteInstruction(OpCode.ConstLong, node.Line);
-                _currentFunction.Chunk.WriteInt32(index, node.Line);
-            }
-        }
-    }
+    //public override void Visit (LiteralExpression node) {
+    //    RequireFunction();
+    //
+    //    int index;
+    //    // TODO and WARNING: LiteralKind is the type of literal the user wrote,
+    //    // not the actual type of the value it represents. I.e. any number the
+    //    // user writes (without an suffix) is considered an Int64 if it doesn't
+    //    // have a decimal point or a Float64 if it does. in "const a: Float = 3",
+    //    // that 3 is parsed as an Int64 number. In the future, the type resolution
+    //    // pass will identify the type each number should have.
+    //    if (node.Literal.LiteralKind == LiteralKind.Float64) {
+    //        if (node.Literal.Value is FloatValue fval) {
+    //            index = Bin.ConstantTable.WriteFloat64(fval.Value);
+    //        }
+    //        else {
+    //            throw new Exception("Literal node (F64) has invalid value.");
+    //        }
+    //    }
+    //    else if (node.Literal.LiteralKind == LiteralKind.Int64) {
+    //        if (node.Literal.Value is IntegerValue ival) {
+    //            index = Bin.ConstantTable.WriteFloat64((double)ival.Value);
+    //        }
+    //        else {
+    //            throw new Exception("Literal node (I64) has invalid value.");
+    //        }
+    //    }
+    //    else if (node.Literal.LiteralKind == LiteralKind.String) {
+    //        if (node.Literal.Value is StringValue sval) {
+    //            index = Bin.ConstantTable.WriteStringASCII(sval.Value);
+    //        }
+    //        else {
+    //            throw new Exception("Literal node (String) has invalid value.");
+    //        }
+    //    }
+    //    else {
+    //        throw new NotImplementedException("Literals of this type cannot yet be added to the constant stack.");
+    //    }
+    //
+    //    if (node.Literal.LiteralKind == LiteralKind.String) {
+    //        if (index < byte.MaxValue + 1) {
+    //            _currentFunction.Chunk.WriteInstruction(OpCode.ConstStr, node.Line);
+    //            _currentFunction.Chunk.WriteByte((byte)index, node.Line);
+    //        }
+    //        else {
+    //            _currentFunction.Chunk.WriteInstruction(OpCode.ConstStrLong, node.Line);
+    //            _currentFunction.Chunk.WriteInt32(index, node.Line);
+    //        }
+    //    }
+    //    else {
+    //        if (index < byte.MaxValue + 1) {
+    //            _currentFunction.Chunk.WriteInstruction(OpCode.Const, node.Line);
+    //            _currentFunction.Chunk.WriteByte((byte)index, node.Line);
+    //        }
+    //        else {
+    //            _currentFunction.Chunk.WriteInstruction(OpCode.ConstLong, node.Line);
+    //            _currentFunction.Chunk.WriteInt32(index, node.Line);
+    //        }
+    //    }
+    //}
 
     public override void Visit (IdentifierExpression node) {
         RequireFunction();

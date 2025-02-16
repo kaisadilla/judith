@@ -6,26 +6,26 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.analysis.syntax;
 
-public class P_PrintStatement : Statement
-{
+public class P_PrintStatement : Statement {
     public Expression Expression { get; init; }
 
     public Token? P_PrintToken { get; init; }
 
-    public P_PrintStatement(Expression expression) : base(SyntaxKind.P_PrintStatement)
-    {
+    public P_PrintStatement (Expression expression) : base(SyntaxKind.P_PrintStatement) {
         Expression = expression;
 
         Children.Add(Expression);
     }
 
-    public override void Accept(SyntaxVisitor visitor)
-    {
+    public override void Accept (SyntaxVisitor visitor) {
         visitor.Visit(this);
     }
 
-    public override string ToString()
-    {
+    public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
+        throw new NotImplementedException();
+    }
+
+    public override string ToString () {
         return "|__p_print> " + Expression.ToString() + " <|";
     }
 }

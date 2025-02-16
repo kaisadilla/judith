@@ -6,21 +6,17 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.analysis.syntax;
 
-public class LocalDeclarator : SyntaxNode
-{
+public class LocalDeclarator : SyntaxNode {
     public Identifier Identifier { get; init; }
     public LocalKind LocalKind { get; init; }
     public TypeAnnotation? TypeAnnotation { get; private set; }
 
-    public TypeInfo? Type { get; private set; }
-
     public Token? FieldKindToken { get; init; }
 
-    public LocalDeclarator(
+    public LocalDeclarator (
         Identifier identifier, LocalKind localKind, TypeAnnotation? typeAnnotation
     )
-        : base(SyntaxKind.LocalDeclarator)
-    {
+        : base(SyntaxKind.LocalDeclarator) {
         Identifier = identifier;
         LocalKind = localKind;
         TypeAnnotation = typeAnnotation;
@@ -29,29 +25,25 @@ public class LocalDeclarator : SyntaxNode
         if (TypeAnnotation != null) Children.Add(TypeAnnotation);
     }
 
-    public override void Accept(SyntaxVisitor visitor)
-    {
+    public override void Accept (SyntaxVisitor visitor) {
         visitor.Visit(this);
     }
 
-    public void SetType (TypeInfo type) {
-        Type = type;
+    public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
+        return visitor.Visit(this);
     }
 
-    public override string ToString()
-    {
+    public override string ToString () {
         string str = $"[{LocalKind}] {Identifier}";
 
-        if (TypeAnnotation != null)
-        {
+        if (TypeAnnotation != null) {
             str += $": {TypeAnnotation}";
         }
 
         return str;
     }
 
-    public void SetType(TypeAnnotation? type)
-    {
+    public void SetType (TypeAnnotation? type) {
         TypeAnnotation = type;
     }
 }

@@ -35,6 +35,7 @@ public class Symbol {
     public SymbolKind Kind { get; set; }
     public string Name { get; set; }
     public string FullyQualifiedName { get; set; }
+    public TypeInfo? Type { get; set; }
 
     public Symbol (SymbolTable table, SymbolKind kind, string name, string fullyQualifiedName) {
         Table = table;

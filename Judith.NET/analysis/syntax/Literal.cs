@@ -1,104 +1,69 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Judith.NET.analysis.syntax;
-public class Literal : SyntaxNode
-{
-    public LiteralValue? Value { get; private set; }
-    public LiteralKind LiteralKind { get; init; }
+public class Literal : SyntaxNode {
+    public TokenKind TokenKind { get; private set; }
+    public string Source { get; private set; }
 
     public Token? RawToken { get; init; }
 
+    /// <summary>
+    /// Builds a literal from a literal token (that is, types "string" or "number").
+    /// </summary>
+    /// <param name="token"></param>
+    public Literal (Token token) : base(SyntaxKind.Literal) {
+        if (IsValidTokenKind(token.Kind) == false) throw new Exception(
+            $"Token kind '{Token.GetTokenName(token.Kind)}' cannot be used " +
+            $"to build a literal."
+        );
 
-    private Literal() : base(SyntaxKind.Literal) { }
-
-    public Literal(LiteralKind kind) : this()
-    {
-        LiteralKind = kind;
+        RawToken = token;
+        TokenKind = token.Kind;
+        Source = token.Lexeme;
     }
 
-    public void SetValue(double value)
-    {
-        Value = new FloatValue(value);
+    /// <summary>
+    /// Builds a literal from a description of what a token for it would have.
+    /// </summary>
+    /// <param name="literalKind">Either "string" or "number"</param>
+    /// <param name="source">The Judith string that represents that literal.</param>
+    public Literal (TokenKind literalKind, string source) : base(SyntaxKind.Literal) {
+        if (IsValidTokenKind(literalKind) == false) throw new Exception(
+            $"Token kind '{Token.GetTokenName(literalKind)}' cannot be used " +
+            $"to build a literal."
+        );
+
+        TokenKind = literalKind;
+        Source = source;
     }
 
-    public void SetValue(long value)
-    {
-        Value = new IntegerValue(value);
-    }
-
-    public void SetValue(bool value)
-    {
-        Value = new BooleanValue(value);
-    }
-
-    public void SetValue(string value)
-    {
-        Value = new StringValue(value);
-    }
-
-    public override void Accept(SyntaxVisitor visitor)
-    {
+    public override void Accept (SyntaxVisitor visitor) {
         visitor.Visit(this);
     }
 
-    public override string ToString()
-    {
+    public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
+        return visitor.Visit(this);
+    }
+
+    public override string ToString () {
         return $"{RawToken?.Lexeme ?? "<unknown literal>"}";
     }
-}
 
-public abstract class LiteralValue
-{
-
-}
-
-public class BooleanValue : LiteralValue
-{
-    public bool Value { get; init; }
-
-    public BooleanValue(bool value)
-    {
-        Value = value;
+    private bool IsValidTokenKind (TokenKind kind) {
+        return kind == TokenKind.String
+            || kind == TokenKind.Number
+            || kind == TokenKind.KwTrue
+            || kind == TokenKind.KwFalse
+            || kind == TokenKind.KwNull
+            || kind == TokenKind.KwUndefined;
     }
-}
-
-public class FloatValue : LiteralValue
-{
-    public double Value { get; init; }
-
-    public FloatValue(double value)
-    {
-        Value = value;
-    }
-}
-
-public class IntegerValue : LiteralValue
-{
-    public long Value { get; init; }
-
-    public IntegerValue(long value)
-    {
-        Value = value;
-    }
-}
-
-public class StringValue : LiteralValue
-{
-    public string Value { get; init; }
-    public StringValue(string value)
-    {
-        Value = value;
-    }
-}
-
-public class InterpolatedStringValue : LiteralValue
-{
-    // TODO.
 }

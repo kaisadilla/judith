@@ -348,6 +348,9 @@ public class Lexer {
     private Token? ScanNumber (char firstChar) {
         // The amount of dot characters in this literal.
         int dotsFound = firstChar == '.' ? 1 : 0;
+        // The amount of times we found the character "e", used for scientific
+        // notation (e.g. 1.81e33). This is a valid way to express numbers.
+        int esFound = 0;
 
         // Whether the next character in this literal can be an underscore.
         // Numeric literals can include underscores as long as the underscore
@@ -356,6 +359,15 @@ public class Lexer {
         bool underscoreAllowed = IsDigit(firstChar);
 
         char c = Peek();
+        char c2 = PeekNext();
+
+        // Consume leading base prefixes ("0x", "0b" and "0o").
+        if (c == '0' || (c2 == 'x' || c2 == 'b' || c2 == 'o')) {
+            Advance();
+            Advance();
+            c = Peek();
+        }
+
         while (true) {
             if (c == '.') {
                 // If this isn't the first decimal point we find, the number
@@ -365,7 +377,7 @@ public class Lexer {
                     break;
                 }
 
-                char c2 = PeekNext();
+                c2 = PeekNext();
                 bool numberContinues = IsDigit(c2);
 
                 // If the character after the dot is not valid for a number,
@@ -377,6 +389,12 @@ public class Lexer {
 
                 // The number continues, increase the number of dots inside it.
                 dotsFound++;
+            }
+            else if (c == 'e') {
+                if (esFound > 0) {
+                    break;
+                }
+                esFound++;
             }
             else if (c == '_') {
                 // If an underscore is not allowed, the number ends.
@@ -401,6 +419,24 @@ public class Lexer {
 
             Advance();
             c = Peek();
+        }
+
+        // Parse the suffix:
+        c = Peek();
+        // If the number is followed by a letter, and that letter is not an 'e',
+        // then we've got a suffix. Note that the previous step of this scan
+        // doesn't consume trailing dots, so we are guaranteed this character
+        // is not part of a member access.
+        if (IsLetter(c) && c != 'e') {
+            Advance();
+            c = Peek();
+            
+            // We keep consuming characters until we find something that isn't
+            // a letter or number. This will consume prefixes like "f32".
+            while (IsLetter(c) || IsDigit(c)) {
+                Advance();
+                c = Peek();
+            }
         }
 
         int numberEndIndex = _cursor;
