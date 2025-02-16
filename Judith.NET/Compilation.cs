@@ -35,11 +35,12 @@ public class Compilation {
             symbolTableBuilder.Analyze(cu);
         }
 
-        //SymbolResolver symbolResolver = new(this);
-        //foreach (var cu in _units) {
-        //    symbolResolver.Analyze(cu);
-        //}
-        //
+        SymbolResolver symbolResolver = new(this);
+        foreach (var cu in _units) {
+            symbolResolver.Analyze(cu);
+        }
+        Messages.Add(symbolResolver.Messages);
+
         //TypeTableBuilder typeTableBuilder = new(this);
         //foreach (var cu in _units) {
         //    typeTableBuilder.Analyze(cu);
@@ -49,5 +50,6 @@ public class Compilation {
         //foreach (var cu in _units) {
         //    typeResolver.Analyze(cu);
         //}
+        //Messages.Add(typeResolver.Messages);
     }
 }

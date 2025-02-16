@@ -16,7 +16,8 @@ public enum MessageKind {
 public enum MessageOrigin {
     Lexer,
     Parser,
-    TypeAnalyzer,
+    SymbolResolver,
+    TypeResolver,
     Compiler,
 }
 
@@ -306,13 +307,23 @@ public class CompilerMessage {
         }
     }
 
-    public static class Analyzer {
+    public static class Analyzers {
+        public static CompilerMessage NameDoesNotExist (string name, int line) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.SymbolResolver,
+                (int)MessageCode.NameDoesNotExist,
+                $"The name '{name}' does not exist in the current context.",
+                line
+            );
+        }
+
         public static CompilerMessage TypeDoesntExist (string type, int line) {
             return new(
                 MessageKind.Error,
-                MessageOrigin.TypeAnalyzer,
+                MessageOrigin.TypeResolver,
                 (int)MessageCode.TypeDoesntExist,
-                $"Type '{type}' doesn't exist.",
+                $"The type '{type}' does not exist in the current context.",
                 line
             );
         }

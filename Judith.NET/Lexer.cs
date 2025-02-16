@@ -42,7 +42,7 @@ public class Lexer {
         ["__p_print"] = TokenKind.PkwPrint,
     };
 
-    public MessageContainer? Messages { get; private set; }
+    public MessageContainer Messages { get; private set; } = new();
 
     private readonly string _src;
 
@@ -72,9 +72,8 @@ public class Lexer {
     /// </summary>
     public List<Token>? Tokens { get; private set; } = null;
 
-    public Lexer (string src, MessageContainer? messages = null) {
+    public Lexer (string src) {
         _src = src;
-        Messages = messages;
     }
 
     [MemberNotNull(nameof(Tokens))]
@@ -499,6 +498,6 @@ public class Lexer {
 
     private void Error (CompilerMessage message) {
         HasError = true;
-        Messages?.Add(message);
+        Messages.Add(message);
     }
 }

@@ -6,8 +6,7 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.analysis.syntax;
 
-public class AssignmentExpression : Expression
-{
+public class AssignmentExpression : Expression {
     public Expression Left { get; init; }
     public Operator Operator { get; init; }
     public Expression Right { get; init; }

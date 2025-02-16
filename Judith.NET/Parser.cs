@@ -13,7 +13,7 @@ using SF = Judith.NET.analysis.syntax.SyntaxFactory;
 namespace Judith.NET;
 
 public class Parser {
-    public MessageContainer? Messages { get; private set; }
+    public MessageContainer Messages { get; private set; } = new();
     public bool HasError { get; private set; } = false;
 
     private readonly List<Token> _tokens;
@@ -21,9 +21,8 @@ public class Parser {
 
     public List<SyntaxNode>? Nodes { get; private set; } = null;
 
-    public Parser (List<Token> tokens, MessageContainer? messages = null) {
+    public Parser (List<Token> tokens) {
         _tokens = tokens.Where(t => t.Kind != TokenKind.Comment).ToList(); // TODO: incorporate comments, whitespaces and enters to tokens as trivia in the lexer.
-        Messages = messages;
     }
 
     [MemberNotNull(nameof(Nodes))]
@@ -1204,7 +1203,7 @@ public class Parser {
     /// <param name="error">The error to add.</param>
     private ParseException Error (CompilerMessage error) {
         HasError = true;
-        Messages?.Add(error);
+        Messages.Add(error);
 
         return new(error);
     }

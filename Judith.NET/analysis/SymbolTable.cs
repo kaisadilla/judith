@@ -72,19 +72,33 @@ public class SymbolTable {
     }
 
     /// <summary>
+    /// Returns the symbol identified by the name given. The symbol is only
+    /// searched inside this table, not any of its ancestors, so this symbol
+    /// must be defined specifically in this scope.
+    /// </summary>
+    /// <param name="name">The unqualified name of the symbol.</param>
+    /// <param name="symbol">The symbol found, if any.</param>
+    /// <returns></returns>
+    public bool TryFindSymbol (string name, [NotNullWhen(true)] out Symbol? symbol) {
+        return Symbols.TryGetValue(name, out symbol);
+    }
+
+    /// <summary>
     /// Returns the symbol identified by the name given. The symbol is searched
     /// across all ancestors of this table, starting from the innermost table
     /// (this one).
     /// </summary>
     /// <param name="name">The unqualified name of the symbol.</param>
     /// <param name="symbol">The symbol found, if any.</param>
-    public bool TryGetSymbol (string name, [NotNullWhen(true)] out Symbol? symbol) {
+    public bool TryFindSymbolRecursively (
+        string name, [NotNullWhen(true)] out Symbol? symbol
+    ) {
         if (Symbols.TryGetValue(name, out symbol)) {
             return true;
         }
 
         if (OuterTable != null) {
-            return OuterTable.TryGetSymbol(name, out symbol);
+            return OuterTable.TryFindSymbolRecursively(name, out symbol);
         }
 
         symbol = null;

@@ -36,6 +36,9 @@ public enum MessageCode {
     InvalidIntegerLiteral,
     InvalidFloatLiteral,
 
-    // 3xxx - Type errors
+    // 3xxx - Analyzer errors
+    // SymbolResolver
+    NameDoesNotExist = 3_000,
+    // TypeResolver
     TypeDoesntExist,
 }

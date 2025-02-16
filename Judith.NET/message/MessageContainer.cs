@@ -24,4 +24,10 @@ public class MessageContainer {
                 break;
         }
     }
+
+    public void Add (MessageContainer other) {
+        Infos.AddRange(other.Infos);
+        Warnings.AddRange(other.Warnings);
+        Errors.AddRange(other.Errors);
+    }
 }

@@ -17,18 +17,17 @@ string src = File.ReadAllText(AppContext.BaseDirectory + "/res/test.judith");
 
 MessageContainer messages = new();
 
-Lexer lexer = new(src, messages);
+Lexer lexer = new(src);
 lexer.Tokenize();
+messages.Add(lexer.Messages);
 // PrintTokens();
 AbortIfError();
 
-Parser parser = new(lexer.Tokens, messages);
+Parser parser = new(lexer.Tokens);
 parser.Parse();
+messages.Add(parser.Messages);
 // PrintAST();
 AbortIfError();
-
-string astJson = JsonConvert.SerializeObject(parser.Nodes, Formatting.Indented);
-File.WriteAllText(AppContext.BaseDirectory + "/res/test.ast.json", astJson);
 
 //SymbolCollectionAnalyzer symbolAnalyzer = new();
 //symbolAnalyzer.Analyze(parser.Nodes);
@@ -43,9 +42,16 @@ CompilerUnit cu = cub.CompilerUnit;
 
 Compilation comp = new([cu]);
 comp.Analyze();
+messages.Add(comp.Messages);
 
 string symbolTableJson = JsonConvert.SerializeObject(comp.SymbolTable, Formatting.Indented);
 File.WriteAllText(AppContext.BaseDirectory + "/res/test.symbol-table.json", symbolTableJson);
+
+string astJson = JsonConvert.SerializeObject(cu, Formatting.Indented);
+File.WriteAllText(AppContext.BaseDirectory + "/res/test.ast.json", astJson);
+
+string msgJson = JsonConvert.SerializeObject(messages, Formatting.Indented);
+File.WriteAllText(AppContext.BaseDirectory + "/res/test.compile-messages.json", msgJson);
 
 JubCompiler compiler = new(parser.Nodes);
 compiler.Compile();

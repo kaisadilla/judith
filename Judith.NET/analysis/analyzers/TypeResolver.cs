@@ -153,7 +153,7 @@ public class TypeResolver : SyntaxVisitor {
         // Otherwise, it's a compile-time error because the annotation points to
         // an unexistent type:
         else {
-            Messages.Add(CompilerMessage.Analyzer.TypeDoesntExist(
+            Messages.Add(CompilerMessage.Analyzers.TypeDoesntExist(
                 typeName, node.TypeAnnotation.Line
             ));
         }
