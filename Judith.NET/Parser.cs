@@ -1,5 +1,5 @@
-﻿using Judith.NET.message;
-using Judith.NET.syntax;
+﻿using Judith.NET.analysis.syntax;
+using Judith.NET.message;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-using SF = Judith.NET.syntax.SyntaxFactory;
+using SF = Judith.NET.analysis.syntax.SyntaxFactory;
 
 namespace Judith.NET;
 
@@ -42,7 +42,7 @@ public class Parser {
                     // TODO: Throw compiler error.
                 }
             }
-            catch (ParseException ex) {
+            catch (ParseException) {
                 // Recovery
                 Advance();
             }
@@ -273,7 +273,9 @@ public class Parser {
             return false;
         }
 
-        TryConsumeExpression(out Expression? expr);
+        if (TryConsumeExpression(out Expression? expr) == false) {
+            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+        }
 
         statement = SF.YieldStatement(yieldToken, expr);
         return true;
@@ -808,7 +810,7 @@ public class Parser {
         return true;
     }
 
-    private bool TryConsumeLiteral (out Literal? literal) {
+    private bool TryConsumeLiteral ([NotNullWhen(true)] out Literal? literal) {
         if (TryConsume(TokenKind.KwTrue, out Token? token)) {
             literal = MakeBooleanLiteral(token);
             return true;
@@ -890,8 +892,8 @@ public class Parser {
         // type, in which case it will propagate "null" as its type.
         // This is valid behavior, as type may be inferred from usage.
         for (int i = declarators.Count - 2; i >= 0; i--) {
-            if (declarators[i].Type is null) {
-                declarators[i].SetType(declarators[i + 1].Type);
+            if (declarators[i].TypeAnnotation is null) {
+                declarators[i].SetType(declarators[i + 1].TypeAnnotation);
             }
         }
 

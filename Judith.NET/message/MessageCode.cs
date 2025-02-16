@@ -35,4 +35,7 @@ public enum MessageCode {
     InvalidTopLevelStatement,
     InvalidIntegerLiteral,
     InvalidFloatLiteral,
+
+    // 3xxx - Type errors
+    TypeDoesntExist,
 }

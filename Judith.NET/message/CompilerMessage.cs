@@ -1,4 +1,4 @@
-﻿using Judith.NET.syntax;
+﻿using Judith.NET.analysis.syntax;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,6 +16,7 @@ public enum MessageKind {
 public enum MessageOrigin {
     Lexer,
     Parser,
+    TypeAnalyzer,
     Compiler,
 }
 
@@ -300,6 +301,18 @@ public class CompilerMessage {
                 MessageOrigin.Parser,
                 (int)MessageCode.InvalidFloatLiteral,
                 $"Invalid float literal.",
+                line
+            );
+        }
+    }
+
+    public static class Analyzer {
+        public static CompilerMessage TypeDoesntExist (string type, int line) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.TypeAnalyzer,
+                (int)MessageCode.TypeDoesntExist,
+                $"Type '{type}' doesn't exist.",
                 line
             );
         }

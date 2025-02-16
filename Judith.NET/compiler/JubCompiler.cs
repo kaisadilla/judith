@@ -1,5 +1,5 @@
-﻿using Judith.NET.compiler.jub;
-using Judith.NET.syntax;
+﻿using Judith.NET.analysis.syntax;
+using Judith.NET.compiler.jub;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
