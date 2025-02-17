@@ -30,14 +30,6 @@ public class IfExpression : Expression {
     }
 
     public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
-        throw new NotImplementedException();
-    }
-
-    public override string ToString () {
-        return "|if> " + Stringify(new {
-            Test = Test.ToString(),
-            Consequent = Consequent.ToString(),
-            Alternate = Alternate?.ToString(),
-        }) + " <|";
+        return visitor.Visit(this);
     }
 }

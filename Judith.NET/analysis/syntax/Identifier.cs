@@ -41,10 +41,6 @@ public class Identifier : SyntaxNode {
         return visitor.Visit(this);
     }
 
-    public override string ToString () {
-        return $"`{RawToken?.Lexeme ?? "<unknown identifier>"}`";
-    }
-
     /// <summary>
     /// Extracts a name and escape flag from the token given and uses it to
     /// set this Identifier's properties.

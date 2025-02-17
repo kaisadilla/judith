@@ -54,10 +54,6 @@ public class Literal : SyntaxNode {
         return visitor.Visit(this);
     }
 
-    public override string ToString () {
-        return $"{RawToken?.Lexeme ?? "<unknown literal>"}";
-    }
-
     private bool IsValidTokenKind (TokenKind kind) {
         return kind == TokenKind.String
             || kind == TokenKind.Number

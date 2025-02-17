@@ -49,13 +49,4 @@ public class FunctionDefinition : Item {
     public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
         return visitor.Visit(this);
     }
-
-    public override string ToString () {
-        return "|ITEM function> " + Stringify(new {
-            Name = Identifier.ToString(),
-            Parameters = Parameters.ToString(),
-            ReturnType = ReturnTypeAnnotation?.ToString(),
-            Body = Body.ToString(),
-        }) + " <|";
-    }
 }

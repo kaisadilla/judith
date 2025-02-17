@@ -27,11 +27,4 @@ public class CompilerUnit : SyntaxNode {
     public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
         return visitor.Visit(this);
     }
-
-    public override string ToString () {
-        return "|compiler unit> " + Stringify(new {
-            TopLevelItems = TopLevelItems.Select(i => i.ToString()),
-            ImplicitFunction = ImplicitFunction?.ToString(),
-        }) + " <|";
-    }
 }

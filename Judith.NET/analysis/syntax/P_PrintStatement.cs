@@ -22,10 +22,6 @@ public class P_PrintStatement : Statement {
     }
 
     public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
-        throw new NotImplementedException();
-    }
-
-    public override string ToString () {
-        return "|__p_print> " + Expression.ToString() + " <|";
+        return visitor.Visit(this);
     }
 }

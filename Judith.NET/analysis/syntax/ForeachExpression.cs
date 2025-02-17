@@ -33,15 +33,7 @@ public class ForeachExpression : Expression {
     }
 
     public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
-        throw new NotImplementedException();
-    }
-
-    public override string ToString () {
-        return "|foreach> " + Stringify(new {
-            Declarators = Declarators.Select(d => d.ToString()),
-            Enumerable = Enumerable.ToString(),
-            Body = Body.ToString(),
-        }) + " <|";
+        return visitor.Visit(this);
     }
 }
 

@@ -30,12 +30,6 @@ public class BlockStatement : BodyStatement {
     public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
         return visitor.Visit(this);
     }
-
-    public override string ToString () {
-        return "|block> " + Stringify(new {
-            Statements = Nodes.Select(stmt => stmt.ToString()),
-        }) + " <|";
-    }
 }
 
 public class ArrowStatement : BodyStatement {
@@ -54,9 +48,5 @@ public class ArrowStatement : BodyStatement {
 
     public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
         return visitor.Visit(this);
-    }
-
-    public override string ToString () {
-        return "|arrow> " + Statement.ToString() + " <|";
     }
 }

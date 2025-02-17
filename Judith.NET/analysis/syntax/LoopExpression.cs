@@ -22,10 +22,6 @@ public class LoopExpression : Expression {
     }
 
     public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
-        throw new NotImplementedException();
-    }
-
-    public override string ToString () {
-        return "|loop> " + Stringify(new { Body = Body.ToString() }) + " <|";
+        return visitor.Visit(this);
     }
 }

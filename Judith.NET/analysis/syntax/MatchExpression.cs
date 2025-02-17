@@ -28,13 +28,6 @@ public class MatchExpression : Expression {
     }
 
     public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
-        throw new NotImplementedException();
-    }
-
-    public override string ToString () {
-        return "|match> " + Stringify(new {
-            Discriminant = Discriminant.ToString(),
-            Cases = Cases.Select(c => c.ToString()),
-        }) + " <|";
+        return visitor.Visit(this);
     }
 }

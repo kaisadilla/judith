@@ -24,8 +24,4 @@ public class Operator : SyntaxNode {
     public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
         return visitor.Visit(this);
     }
-
-    public override string ToString () {
-        return $"{RawToken?.Lexeme ?? "<unknown operator>"}";
-    }
 }

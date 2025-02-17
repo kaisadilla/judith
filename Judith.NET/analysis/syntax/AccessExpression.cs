@@ -7,15 +7,15 @@ using System.Threading.Tasks;
 namespace Judith.NET.analysis.syntax;
 
 public class AccessExpression : Expression {
-    public Expression LeftExpr { get; private init; }
+    public Expression Left { get; private init; }
     public Operator Operator { get; private init; }
-    public Expression RightExpr { get; private init; }
+    public Expression Right { get; private init; }
 
     public AccessExpression (Expression leftExpr, Operator op, Expression rightExpr)
         : base(SyntaxKind.AccessExpression) {
-        LeftExpr = leftExpr;
+        Left = leftExpr;
         Operator = op;
-        RightExpr = rightExpr;
+        Right = rightExpr;
     }
 
     public override void Accept (SyntaxVisitor visitor) {
@@ -23,12 +23,6 @@ public class AccessExpression : Expression {
     }
 
     public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
-        throw new NotImplementedException();
-    }
-
-    public override string ToString () {
-        return "(" + LeftExpr.ToString()
-            + (Operator.OperatorKind == OperatorKind.ScopeResolution ? "::" : ".")
-            + RightExpr.ToString() + ")";
+        return visitor.Visit(this);
     }
 }

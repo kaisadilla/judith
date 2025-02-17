@@ -59,6 +59,10 @@ File.WriteAllText(AppContext.BaseDirectory + "/res/test.ast.json", astJson);
 string msgJson = JsonConvert.SerializeObject(messages, Formatting.Indented);
 File.WriteAllText(AppContext.BaseDirectory + "/res/test.compile-messages.json", msgJson);
 
+var simpleAst = new SimpleAstPrinter().Visit(cu);
+File.WriteAllText(AppContext.BaseDirectory + "/res/test.simple-ast.json", string.Join('\n', simpleAst));
+
+
 JubCompiler compiler = new(parser.Nodes);
 compiler.Compile();
 

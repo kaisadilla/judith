@@ -33,12 +33,5 @@ public class LocalDeclarationStatement : Statement {
     public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
         return visitor.Visit(this);
     }
-
-    public override string ToString () {
-        return $"|local_decl_stmt > " + Stringify(new {
-            DeclaratorList = DeclaratorList.ToString(),
-            Initializer = Initializer?.ToString(),
-        }) + " <|";
-    }
 }
 

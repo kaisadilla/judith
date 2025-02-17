@@ -23,8 +23,4 @@ public class IdentifierExpression : Expression {
     public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
         return visitor.Visit(this);
     }
-
-    public override string ToString () {
-        return $"{Identifier}";
-    }
 }

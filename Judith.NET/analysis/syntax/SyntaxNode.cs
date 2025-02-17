@@ -41,24 +41,8 @@ public abstract class SyntaxNode {
     public abstract void Accept(SyntaxVisitor visitor);
     public abstract T? Accept<T>(SyntaxVisitor<T> visitor);
 
-    public abstract override string ToString();
-
-    /// <summary>
-    /// Given an object, returns a string that can be used in ToString() methods
-    /// to represent the information given with correct indentation.
-    /// </summary>
-    /// <param name="obj"></param>
-    /// <returns></returns>
-    protected static string Stringify(object obj)
-    {
-        return JsonConvert.SerializeObject(obj, Formatting.Indented)
-            .Replace("\\r\\n", "\r\n");
-    }
-
-    protected static string Stringify<T>(List<T> list)
-    {
-        return JsonConvert.SerializeObject(list, Formatting.Indented)
-            .Replace("\\r\\n", "\r\n");
+    public override string ToString () {
+        return $"{Kind} (Line: {Line}, Span: {Span.Start} - {Span.End})";
     }
 }
 

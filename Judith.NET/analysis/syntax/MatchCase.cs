@@ -28,14 +28,6 @@ public class MatchCase : SyntaxNode {
     }
 
     public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
-        throw new NotImplementedException();
-    }
-
-    public override string ToString () {
-        return "|match case> " + Stringify(new {
-            Tests = Tests.Select(t => t.ToString()),
-            Consequent = Consequent.ToString(),
-            IsElseCase,
-        }) + " <|";
+        return visitor.Visit(this);
     }
 }

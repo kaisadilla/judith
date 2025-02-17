@@ -24,10 +24,6 @@ public class BinaryExpression : Expression {
     }
 
     public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
-        throw new NotImplementedException();
-    }
-
-    public override string ToString () {
-        return $"({Left} {Operator} {Right})";
+        return visitor.Visit(this);
     }
 }

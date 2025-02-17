@@ -25,8 +25,4 @@ public class WhenStatement : Statement {
     public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
         return visitor.Visit(this);
     }
-
-    public override string ToString () {
-        return Statement.ToString() + " when " + Test.ToString();
-    }
 }

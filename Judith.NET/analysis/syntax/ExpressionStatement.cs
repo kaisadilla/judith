@@ -21,10 +21,6 @@ public class ExpressionStatement : Statement {
     }
 
     public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
-        throw new NotImplementedException();
-    }
-
-    public override string ToString () {
-        return $"|> {Expression} <|";
+        return visitor.Visit(this);
     }
 }

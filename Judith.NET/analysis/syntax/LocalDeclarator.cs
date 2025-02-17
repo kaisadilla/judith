@@ -33,16 +33,6 @@ public class LocalDeclarator : SyntaxNode {
         return visitor.Visit(this);
     }
 
-    public override string ToString () {
-        string str = $"[{LocalKind}] {Identifier}";
-
-        if (TypeAnnotation != null) {
-            str += $": {TypeAnnotation}";
-        }
-
-        return str;
-    }
-
     public void SetType (TypeAnnotation? type) {
         TypeAnnotation = type;
     }

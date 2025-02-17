@@ -29,8 +29,4 @@ public class LeftUnaryExpression : UnaryExpression {
     public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
         return visitor.Visit(this);
     }
-
-    public override string ToString () {
-        return $"({Operator} {Expression})";
-    }
 }

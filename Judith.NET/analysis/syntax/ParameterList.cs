@@ -25,8 +25,4 @@ public class ParameterList : SyntaxNode {
     public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
         return visitor.Visit(this);
     }
-
-    public override string ToString () {
-        return "( " + Stringify(Parameters.Select(p => p.ToString())) + " )";
-    }
 }
