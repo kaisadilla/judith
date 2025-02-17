@@ -377,6 +377,18 @@ public class CompilerMessage {
             );
         }
 
+        public static CompilerMessage IntegerLiteralIsTooLarge (
+            string type1, string type2, string op, int line
+        ) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.Binder,
+                (int)MessageCode.UndefinedBinaryOperation,
+                $"Operator '{op}' cannot be applied to types '{type1}' and '{type2}'.",
+                line
+            );
+        }
+
         public static CompilerMessage TypeDoesntExist (string type, int line) {
             return new(
                 MessageKind.Error,

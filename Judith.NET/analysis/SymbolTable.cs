@@ -1,4 +1,4 @@
-﻿using Judith.NET.analysis.serialization;
+﻿using Judith.NET.diagnostics.serialization;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;

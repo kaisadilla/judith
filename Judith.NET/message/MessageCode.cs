@@ -45,6 +45,7 @@ public enum MessageCode {
     IntegerLiteralOverflow,
     UnsignedIntegerLiteralOverflow,
     IntegerLiteralIsTooLarge,
+    UndefinedBinaryOperation,
     // TypeResolver
     TypeDoesntExist,
 }

@@ -16,32 +16,32 @@ public class Compilation {
     /// <summary>
     /// All the compiler units that make up this program.
     /// </summary>
-    private List<CompilerUnit> _units;
+    public List<CompilerUnit> Units { get; private set; } = new();
 
+    public NativeFeatures Native { get; private set; }
     public SymbolTable SymbolTable { get; private set; }
     public Binder Binder { get; private set; }
     public TypeTable TypeTable { get; private set; }
 
     public Compilation (List<CompilerUnit> units) {
-        _units = units;
+        Units = units;
         SymbolTable = SymbolTable.CreateGlobalTable();
         Binder = new(this);
         TypeTable = new();
+        Native = new(TypeTable, SymbolTable);
     }
 
     public void Analyze () {
-        NativeFeatures.AddNativeTypes(TypeTable, SymbolTable);
-
         // Add all the different symbols that exist in the program to the table,
         // and binds declarations to the symbols they create.
         SymbolTableBuilder symbolTableBuilder = new(this);
-        foreach (var cu in _units) {
+        foreach (var cu in Units) {
             symbolTableBuilder.Analyze(cu);
         }
 
         // Resolves which symbol each identifier is referring to.
         SymbolResolver symbolResolver = new(this);
-        foreach (var cu in _units) {
+        foreach (var cu in Units) {
             symbolResolver.Analyze(cu);
         }
         Messages.Add(symbolResolver.Messages);
@@ -49,12 +49,14 @@ public class Compilation {
         // Identifies all nodes that define new types and add said types to
         // the type table.
         TypeTableBuilder typeTableBuilder = new(this);
-        foreach (var cu in _units) {
+        foreach (var cu in Units) {
             typeTableBuilder.Analyze(cu);
         }
 
         ResolveTypes();
         ResolveTypes();
+
+        //Binder.ResolveIncomplete();
 
         Messages.Add(Binder.Messages);
     }
@@ -64,7 +66,7 @@ public class Compilation {
         // reference other nodes (whose type may not be resolved yet), this
         // pass will leave some types unresolved.
         TypeResolver typeResolver = new(this);
-        foreach (var cu in _units) {
+        foreach (var cu in Units) {
             typeResolver.Analyze(cu);
         }
         Messages.Add(typeResolver.Messages);

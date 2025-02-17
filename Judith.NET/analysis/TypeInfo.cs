@@ -19,6 +19,10 @@ public class TypeInfo {
         "Void", "Void"
     );
 
+    public static TypeInfo ErrorType { get; private set; } = new(
+        "<error-type>", "<error-type>"
+    );
+
     public static bool IsResolved ([NotNullWhen(true)] TypeInfo? typeInfo) {
         return typeInfo != null && typeInfo != UnresolvedType;
     }

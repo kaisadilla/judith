@@ -5,8 +5,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Judith.NET.analysis;
 
-namespace Judith.NET.analysis.serialization;
+namespace Judith.NET.diagnostics.serialization;
 public class SymbolJsonConverter : JsonConverter<Symbol> {
     public override void WriteJson (JsonWriter writer, Symbol? value, JsonSerializer serializer) {
         if (value == null) {
@@ -18,7 +19,8 @@ public class SymbolJsonConverter : JsonConverter<Symbol> {
             ["Table"] = value.Table.TableSymbol.FullyQualifiedName,
             ["Kind"] = JToken.FromObject(value.Kind, serializer),
             ["Name"] = JToken.FromObject(value.Name, serializer),
-            ["FullyQualifiedName"] = JToken.FromObject(value.FullyQualifiedName, serializer)
+            ["FullyQualifiedName"] = JToken.FromObject(value.FullyQualifiedName, serializer),
+            ["Type"] = value.Type != null ? JToken.FromObject(value.Type, serializer) : null,
         };
 
         obj.WriteTo(writer);

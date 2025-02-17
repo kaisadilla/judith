@@ -29,41 +29,18 @@ messages.Add(parser.Messages);
 // PrintAST();
 AbortIfError();
 
-//SymbolCollectionAnalyzer symbolAnalyzer = new();
-//symbolAnalyzer.Analyze(parser.Nodes);
-//
-//foreach (var function in symbolAnalyzer.ExistingFunctions) {
-//    Console.WriteLine(function);
-//}
-
 CompilerUnitBuilder cub = new(parser.Nodes);
 cub.BuildUnit();
 CompilerUnit cu = cub.CompilerUnit;
 
-Compilation comp = new([cu]);
-comp.Analyze();
-messages.Add(comp.Messages);
+Compilation cmp = new([cu]);
+cmp.Analyze();
+messages.Add(cmp.Messages);
 
-string symbolTableJson = JsonConvert.SerializeObject(comp.SymbolTable, Formatting.Indented);
-File.WriteAllText(AppContext.BaseDirectory + "/res/test.symbol-table.json", symbolTableJson);
+GenerateDebugFiles();
+AbortIfError();
 
-string typeTableJson = JsonConvert.SerializeObject(comp.TypeTable, Formatting.Indented);
-File.WriteAllText(AppContext.BaseDirectory + "/res/test.type-table.json", typeTableJson);
-
-string binderJson = JsonConvert.SerializeObject(comp.Binder, Formatting.Indented);
-File.WriteAllText(AppContext.BaseDirectory + "/res/test.binder.json", binderJson);
-
-string astJson = JsonConvert.SerializeObject(cu, Formatting.Indented);
-File.WriteAllText(AppContext.BaseDirectory + "/res/test.ast.json", astJson);
-
-string msgJson = JsonConvert.SerializeObject(messages, Formatting.Indented);
-File.WriteAllText(AppContext.BaseDirectory + "/res/test.compile-messages.json", msgJson);
-
-var simpleAst = new SimpleAstPrinter().Visit(cu);
-File.WriteAllText(AppContext.BaseDirectory + "/res/test.simple-ast.json", string.Join('\n', simpleAst));
-
-
-JubCompiler compiler = new(parser.Nodes);
+JubCompiler compiler = new(cmp);
 compiler.Compile();
 
 Console.WriteLine("=== BIN DISASSEMBLY ===");
@@ -120,4 +97,28 @@ void PrintAst () {
 
     Console.WriteLine();
     PrintErrors();
+}
+
+void GenerateDebugFiles () {
+    string symbolTableJson = JsonConvert.SerializeObject(cmp.SymbolTable, Formatting.Indented);
+    File.WriteAllText(AppContext.BaseDirectory + "/res/test.symbol-table.json", symbolTableJson);
+
+    string typeTableJson = JsonConvert.SerializeObject(cmp.TypeTable, Formatting.Indented);
+    File.WriteAllText(AppContext.BaseDirectory + "/res/test.type-table.json", typeTableJson);
+
+    string binderJson = JsonConvert.SerializeObject(cmp.Binder, Formatting.Indented);
+    File.WriteAllText(AppContext.BaseDirectory + "/res/test.binder.json", binderJson);
+
+    string astJson = JsonConvert.SerializeObject(cu, Formatting.Indented);
+    File.WriteAllText(AppContext.BaseDirectory + "/res/test.ast.json", astJson);
+
+    string msgJson = JsonConvert.SerializeObject(messages, Formatting.Indented);
+    File.WriteAllText(AppContext.BaseDirectory + "/res/test.compile-messages.json", msgJson);
+
+    var simpleAst = new SimpleAstPrinter().Visit(cu);
+    File.WriteAllText(AppContext.BaseDirectory + "/res/test.simple-ast.txt", string.Join('\n', simpleAst));
+
+    var semanticAst = new AstWithSemanticsPrinter(cmp).Visit(cu);
+    string semanticAstStr = JsonConvert.SerializeObject(semanticAst, Formatting.Indented);
+    File.WriteAllText(AppContext.BaseDirectory + "/res/test.semantic-ast.json", semanticAstStr);
 }

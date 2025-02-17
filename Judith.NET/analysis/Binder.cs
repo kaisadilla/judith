@@ -20,10 +20,6 @@ public class Binder {
 
     [JsonIgnore]
     private Compilation _cmp;
-    [JsonIgnore]
-    private List<BoundFunctionDefinition> _incompleteFunctions = new();
-    [JsonIgnore]
-    private List<BoundExpression> _incompleteExpressions = new();
 
     public Dictionary<SyntaxNode, BoundNode> BoundNodes { get; private set; } = new();
 
@@ -61,9 +57,6 @@ public class Binder {
         BoundNodes[funcDef] = boundFuncDef;
 
         ResolveFunction(boundFuncDef);
-        if (boundFuncDef.IsComplete == false) {
-            _incompleteFunctions.Add(boundFuncDef);
-        }
 
         return boundFuncDef;
     }
@@ -76,6 +69,7 @@ public class Binder {
             out BoundLocalDeclarationStatement? boundLocalDeclStmt
         ) == false) {
             boundLocalDeclStmt = new(localDeclStmt);
+            BoundNodes[localDeclStmt] = boundLocalDeclStmt;
         }
 
         TypeInfo implicitType = TypeInfo.UnresolvedType;
@@ -105,6 +99,7 @@ public class Binder {
     ) {
         if (TryGetBoundNode(assignmentExpr, out BoundAssignmentExpression? boundAssignmentExpr) == false) {
             boundAssignmentExpr = new(assignmentExpr);
+            BoundNodes[assignmentExpr] = boundAssignmentExpr;
         }
 
         if (boundAssignmentExpr.IsComplete == false) {
@@ -117,6 +112,7 @@ public class Binder {
     public BoundBinaryExpression BindBinaryExpression (BinaryExpression binaryExpr) {
         if (TryGetBoundNode(binaryExpr, out BoundBinaryExpression? boundBinaryExpr) == false) {
             boundBinaryExpr = new(binaryExpr);
+            BoundNodes[binaryExpr] = boundBinaryExpr;
         }
 
         if (boundBinaryExpr.IsComplete == false) {
@@ -129,6 +125,7 @@ public class Binder {
     public BoundLeftUnaryExpression BindLeftUnaryExpression (LeftUnaryExpression leftUnaryExpr) {
         if (TryGetBoundNode(leftUnaryExpr, out BoundLeftUnaryExpression? boundLeftUnaryExpr) == false) {
             boundLeftUnaryExpr = new(leftUnaryExpr);
+            BoundNodes[leftUnaryExpr] = boundLeftUnaryExpr;
         }
 
         if (boundLeftUnaryExpr.IsComplete == false) {
@@ -141,6 +138,7 @@ public class Binder {
     public BoundGroupExpression BindGroupExpression (GroupExpression groupExpr) {
         if (TryGetBoundNode(groupExpr, out BoundGroupExpression? boundGroupExpr) == false) {
             boundGroupExpr = new(groupExpr);
+            BoundNodes[groupExpr] = boundGroupExpr;
         }
 
         if (boundGroupExpr.IsComplete == false) {
@@ -201,12 +199,10 @@ public class Binder {
     public BoundLocalDeclarator BindLocalDeclarator (
         LocalDeclarator localDecl, Symbol symbol
     ) {
-        if (TryGetBoundNode(localDecl, out BoundLocalDeclarator? boundLocalDecl)) {
-            return boundLocalDecl;
+        if (TryGetBoundNode(localDecl, out BoundLocalDeclarator? boundLocalDecl) == false) { 
+            boundLocalDecl = new(localDecl, symbol);
+            BoundNodes[localDecl] = boundLocalDecl;
         }
-
-        boundLocalDecl = new(localDecl, symbol);
-        BoundNodes[localDecl] = boundLocalDecl;
 
         // The type of a local declarator is calculated by the node that contains it
         // (e.g. by the LocalDeclarationStatement that contains them).
@@ -217,12 +213,10 @@ public class Binder {
     public BoundTypeAnnotation BindTypeAnnotation (
         TypeAnnotation typeAnnt, Symbol symbol
     ) {
-        if (TryGetBoundNode(typeAnnt, out BoundTypeAnnotation? boundTypeAnnt)) {
-            return boundTypeAnnt;
+        if (TryGetBoundNode(typeAnnt, out BoundTypeAnnotation? boundTypeAnnt) == false) {
+            boundTypeAnnt = new(typeAnnt, symbol);
+            BoundNodes[typeAnnt] = boundTypeAnnt;
         }
-
-        boundTypeAnnt = new(typeAnnt, symbol);
-        BoundNodes[typeAnnt] = boundTypeAnnt;
 
         return boundTypeAnnt;
     }
@@ -310,7 +304,7 @@ public class Binder {
                     value = 0;
                 }
 
-                bound = new(expr, GetTypeInfo("F64"), new((double)value));
+                bound = new(expr, _cmp.Native.Types.Num, new((double)value)); // F64
             }
             else if (suffix == "f32") {
                 try {
@@ -323,13 +317,13 @@ public class Binder {
                     value = 0;
                 }
 
-                bound = new(expr, GetTypeInfo("F32"), new((double)value));
+                bound = new(expr, _cmp.Native.Types.Num, new((double)value)); // F32
             }
             else {
                 Messages.Add(CompilerMessage.Analyzers.NumberSuffixCannotBeUsedForDecimal(
                     suffix, expr.Literal.Line
                 ));
-                bound = new(expr, GetTypeInfo("F64"), new(0d));
+                bound = new(expr, _cmp.Native.Types.Num, new(0d)); // F64
             }
 
         }
@@ -356,22 +350,22 @@ public class Binder {
 
                 // suffixes "i64", "i" and null are always ok. else:
                 if (suffix == "u64" || suffix == "u") {
-                    bound = new(expr, GetTypeInfo("U64"), new((ulong)value));
+                    bound = new(expr, _cmp.Native.Types.Num, new((double)value)); // U64 / (ulong)
                 }
                 else if (suffix == "i32") {
                     CheckUnsignedIntegerSize(value, int.MaxValue, "U32");
-                    bound = new(expr, GetTypeInfo("U32"), new((ulong)value));
+                    bound = new(expr, _cmp.Native.Types.Num, new((double)value)); // U32 / (ulong)
                 }
                 else if (suffix == "i16") {
                     CheckUnsignedIntegerSize(value, int.MaxValue, "U16");
-                    bound = new(expr, GetTypeInfo("U16"), new((ulong)value));
+                    bound = new(expr, _cmp.Native.Types.Num, new((double)value)); // U16 / (ulong)
                 }
                 else if (suffix == "i8") {
                     CheckUnsignedIntegerSize(value, int.MaxValue, "U8");
-                    bound = new(expr, GetTypeInfo("U8"), new((ulong)value));
+                    bound = new(expr, _cmp.Native.Types.Num, new((double)value)); // U8 / (ulong)
                 }
                 else {
-                    bound = new(expr, GetSuffixTypeInfo(suffix), new((ulong)value));
+                    bound = new(expr, _cmp.Native.Types.Num, new((double)value)); //GetSuffixTypeInfo(suffix) / (ulong)
                 }
             }
             // Signed integer
@@ -395,22 +389,22 @@ public class Binder {
 
                 // suffixes "i64", "i" and null are always ok. else:
                 if (suffix == "i64" || suffix == "i" || suffix == null) {
-                    bound = new(expr, GetTypeInfo("I64"), new((long)value));
+                    bound = new(expr, _cmp.Native.Types.Num, new((double)value)); // I64 / (long)
                 }
                 else if (suffix == "i32") {
                     CheckIntegerSize(value, int.MaxValue, "I32");
-                    bound = new(expr, GetTypeInfo("I32"), new((long)value));
+                    bound = new(expr, _cmp.Native.Types.Num, new((double)value)); // I32 / (long)
                 }
                 else if (suffix == "i16") {
                     CheckIntegerSize(value, short.MaxValue, "I16");
-                    bound = new(expr, GetTypeInfo("I16"), new((long)value));
+                    bound = new(expr, _cmp.Native.Types.Num, new((double)value)); // I16 / (long)
                 }
                 else if (suffix == "i8") {
                     CheckIntegerSize(value, short.MaxValue, "I8");
-                    bound = new(expr, GetTypeInfo("I8"), new((long)value));
+                    bound = new(expr, _cmp.Native.Types.Num, new((double)value)); // I8 / (long)
                 }
                 else {
-                    bound = new(expr, GetSuffixTypeInfo(suffix), new((long)value));
+                    bound = new(expr, _cmp.Native.Types.Num, new((double)value)); // GetSuffixTypeInfo(suffix) / (long)
                 }
             }
         }
@@ -525,16 +519,35 @@ public class Binder {
         void ResolveMathOperation () {
             var opKind = boundBinaryExpr.Node.Operator.OperatorKind;
 
-            // TODO: Implement and check defined operations and stuff.
-            if (TryGetBoundNode(boundBinaryExpr.Node.Left, out BoundExpression? boundExpr)) {
-                if (TypeInfo.IsResolved(boundExpr.Type)) {
-                    boundBinaryExpr.Type = boundExpr.Type;
-                    return;
-                }
+            TryGetBoundNode(boundBinaryExpr.Node.Left, out BoundExpression? boundLeft);
+            TryGetBoundNode(boundBinaryExpr.Node.Right, out BoundExpression? boundRight);
+
+            if (boundLeft == null 
+                || boundRight == null
+                || TypeInfo.IsResolved(boundLeft.Type) == false
+                || TypeInfo.IsResolved(boundRight.Type) == false
+            ) {
+                boundBinaryExpr.Type = TypeInfo.UnresolvedType;
+                return;
             }
 
-            boundBinaryExpr.Type = TypeInfo.UnresolvedType;
-            _incompleteExpressions.Add(boundBinaryExpr);
+            if (
+                _cmp.Native.IsNumericType(boundLeft.Type)
+                && _cmp.Native.IsNumericType(boundRight.Type)
+            ) {
+                boundBinaryExpr.Type = _cmp.Native.CoalesceNumericTypes(
+                    boundLeft.Type, boundRight.Type
+                );
+                return;
+            }
+
+            // TODO: Implement and check defined operations and stuff.
+            if (boundLeft.Type == boundRight.Type) {
+                boundBinaryExpr.Type = boundLeft.Type;
+                return;
+            }
+
+            boundBinaryExpr.Type = TypeInfo.ErrorType;
         }
     }
 
@@ -547,7 +560,6 @@ public class Binder {
         }
 
         boundAssignmentExpr.Type = TypeInfo.UnresolvedType;
-        _incompleteExpressions.Add(boundAssignmentExpr);
     }
 
     private void ResolveLeftUnaryExpression (BoundLeftUnaryExpression boundLeftUnaryExpr) {
@@ -559,7 +571,6 @@ public class Binder {
         }
 
         boundLeftUnaryExpr.Type = TypeInfo.UnresolvedType;
-        _incompleteExpressions.Add(boundLeftUnaryExpr);
     }
 
     private void ResolveGroupExpression (BoundGroupExpression boundGroupExpr) {
@@ -571,7 +582,6 @@ public class Binder {
         }
 
         boundGroupExpr.Type = TypeInfo.UnresolvedType;
-        _incompleteExpressions.Add(boundGroupExpr);
     }
 
     private void ResolveIdentifierExpression (BoundIdentifierExpression boundIdExpr) {
@@ -580,7 +590,6 @@ public class Binder {
         }
         else {
             boundIdExpr.Type = TypeInfo.UnresolvedType;
-            _incompleteExpressions.Add(boundIdExpr);
         }
     }
 
@@ -589,6 +598,7 @@ public class Binder {
     ) {
         if (boundLocalDecl.Node.TypeAnnotation == null) {
             boundLocalDecl.Type = inferredType;
+            boundLocalDecl.Symbol.Type = boundLocalDecl.Type;
             return;
         }
 
@@ -610,6 +620,7 @@ public class Binder {
         }
 
         boundLocalDecl.Type = type;
+        boundLocalDecl.Symbol.Type = boundLocalDecl.Type;
     }
     #endregion
 
@@ -623,20 +634,20 @@ public class Binder {
 
     private TypeInfo GetSuffixTypeInfo (string? suffix) {
         return suffix switch {
-            "f64" => GetTypeInfo("F64"),
-            "f32" => GetTypeInfo("F32"),
-            "i64" => GetTypeInfo("I64"),
-            "i32" => GetTypeInfo("I32"),
-            "i16" => GetTypeInfo("I16"),
-            "i8" => GetTypeInfo("I8"),
-            "u64" => GetTypeInfo("Ui64"),
-            "u32" => GetTypeInfo("Ui32"),
-            "u16" => GetTypeInfo("Ui16"),
-            "u8" => GetTypeInfo("Ui8"),
-            "f" => GetTypeInfo("F64"),
-            "i" => GetTypeInfo("I64"),
-            null => GetTypeInfo("F64"),
-            _ => GetTypeInfo("F64"),
+            "f64" => _cmp.Native.Types.F64,
+            "f32" => _cmp.Native.Types.F32,
+            "i64" => _cmp.Native.Types.I64,
+            "i32" => _cmp.Native.Types.I32,
+            "i16" => _cmp.Native.Types.I16,
+            "i8" => _cmp.Native.Types.I8,
+            "u64" => _cmp.Native.Types.Ui64,
+            "u32" => _cmp.Native.Types.Ui32,
+            "u16" => _cmp.Native.Types.Ui16,
+            "u8" => _cmp.Native.Types.Ui8,
+            "f" => _cmp.Native.Types.Float,
+            "i" => _cmp.Native.Types.Int,
+            null => _cmp.Native.Types.Num,
+            _ => _cmp.Native.Types.Num,
         };
     }
 }

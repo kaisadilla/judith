@@ -96,6 +96,7 @@ public enum LocalDeclaratorKind
     ObjectPattern, // const { a, b } = ...c
 }
 
+[JsonConverter(typeof(StringEnumConverter))]
 public enum OperatorKind
 {
     Add, // +

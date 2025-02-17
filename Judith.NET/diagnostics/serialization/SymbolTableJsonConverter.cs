@@ -5,8 +5,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Judith.NET.analysis;
 
-namespace Judith.NET.analysis.serialization;
+namespace Judith.NET.diagnostics.serialization;
 public class SymbolTableJsonConverter : JsonConverter<SymbolTable> {
     public override void WriteJson (JsonWriter writer, SymbolTable? value, JsonSerializer serializer) {
         if (value == null) {

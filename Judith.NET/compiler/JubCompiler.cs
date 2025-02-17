@@ -1,4 +1,5 @@
-﻿using Judith.NET.analysis.syntax;
+﻿using Judith.NET.analysis.binder;
+using Judith.NET.analysis.syntax;
 using Judith.NET.compiler.jub;
 using System;
 using System.Collections.Generic;
@@ -13,25 +14,25 @@ namespace Judith.NET.compiler;
 public class JubCompiler : SyntaxVisitor {
     const int MAX_LOCALS = ushort.MaxValue + 1;
 
-    private List<SyntaxNode> _ast;
-    private BinaryFunction? _currentFunction = null;
+    private Compilation _cmp;
+    private BinaryFunction? _currentFunc = null;
     private LocalManager? _localManager = null;
 
     public BinaryFile Bin { get; private init; } = new();
 
-    public JubCompiler (List<SyntaxNode> ast) {
-        _ast = ast;
+    public JubCompiler (Compilation cmp) {
+        _cmp = cmp;
     }
 
     public void Compile () {
-        _currentFunction = new();
+        _currentFunc = new();
         _localManager = new(MAX_LOCALS);
 
-        Visit(_ast);
+        Visit(_cmp.Units[0]);
 
-        Bin.Functions.Add(_currentFunction);
+        Bin.Functions.Add(_currentFunc);
         Bin.EntryPoint = Bin.Functions.Count - 1;
-        _currentFunction = null;
+        _currentFunc = null;
         _localManager = null;
     }
     
@@ -45,6 +46,10 @@ public class JubCompiler : SyntaxVisitor {
         RequireFunction();
 
         _localManager.ScopeDepth--;
+    }
+
+    public override void Visit (CompilerUnit node) {
+        if (node.ImplicitFunction != null) Visit(node.ImplicitFunction);
     }
 
     public override void Visit (LocalDeclarationStatement node) {
@@ -73,65 +78,40 @@ public class JubCompiler : SyntaxVisitor {
         Visit(node.Value);
     }
 
-    //public override void Visit (LiteralExpression node) {
-    //    RequireFunction();
-    //
-    //    int index;
-    //    // TODO and WARNING: LiteralKind is the type of literal the user wrote,
-    //    // not the actual type of the value it represents. I.e. any number the
-    //    // user writes (without an suffix) is considered an Int64 if it doesn't
-    //    // have a decimal point or a Float64 if it does. in "const a: Float = 3",
-    //    // that 3 is parsed as an Int64 number. In the future, the type resolution
-    //    // pass will identify the type each number should have.
-    //    if (node.Literal.LiteralKind == LiteralKind.Float64) {
-    //        if (node.Literal.Value is FloatValue fval) {
-    //            index = Bin.ConstantTable.WriteFloat64(fval.Value);
-    //        }
-    //        else {
-    //            throw new Exception("Literal node (F64) has invalid value.");
-    //        }
-    //    }
-    //    else if (node.Literal.LiteralKind == LiteralKind.Int64) {
-    //        if (node.Literal.Value is IntegerValue ival) {
-    //            index = Bin.ConstantTable.WriteFloat64((double)ival.Value);
-    //        }
-    //        else {
-    //            throw new Exception("Literal node (I64) has invalid value.");
-    //        }
-    //    }
-    //    else if (node.Literal.LiteralKind == LiteralKind.String) {
-    //        if (node.Literal.Value is StringValue sval) {
-    //            index = Bin.ConstantTable.WriteStringASCII(sval.Value);
-    //        }
-    //        else {
-    //            throw new Exception("Literal node (String) has invalid value.");
-    //        }
-    //    }
-    //    else {
-    //        throw new NotImplementedException("Literals of this type cannot yet be added to the constant stack.");
-    //    }
-    //
-    //    if (node.Literal.LiteralKind == LiteralKind.String) {
-    //        if (index < byte.MaxValue + 1) {
-    //            _currentFunction.Chunk.WriteInstruction(OpCode.ConstStr, node.Line);
-    //            _currentFunction.Chunk.WriteByte((byte)index, node.Line);
-    //        }
-    //        else {
-    //            _currentFunction.Chunk.WriteInstruction(OpCode.ConstStrLong, node.Line);
-    //            _currentFunction.Chunk.WriteInt32(index, node.Line);
-    //        }
-    //    }
-    //    else {
-    //        if (index < byte.MaxValue + 1) {
-    //            _currentFunction.Chunk.WriteInstruction(OpCode.Const, node.Line);
-    //            _currentFunction.Chunk.WriteByte((byte)index, node.Line);
-    //        }
-    //        else {
-    //            _currentFunction.Chunk.WriteInstruction(OpCode.ConstLong, node.Line);
-    //            _currentFunction.Chunk.WriteInt32(index, node.Line);
-    //        }
-    //    }
-    //}
+    public override void Visit (LiteralExpression node) {
+        RequireFunction();
+    
+        if (_cmp.Binder.TryGetBoundNode(node, out BoundLiteralExpression? boundNode) == false) {
+            throw new Exception($"Cannot compile incomplete bound node '{node}'");
+        }
+
+        // TODO: When type alias desugaring is added, this compares directly to
+        // F64, F32, I64, I32, etc.
+        if (boundNode.Type == _cmp.Native.Types.Num) {
+            int index = Bin.ConstantTable.WriteFloat64(boundNode.Value.AsFloat);
+
+            if (index <= byte.MaxValue) {
+                _currentFunc.Chunk.WriteInstruction(OpCode.Const, node.Line);
+                _currentFunc.Chunk.WriteByte((byte)index, node.Line);
+            }
+            else {
+                _currentFunc.Chunk.WriteInstruction(OpCode.ConstLong, node.Line);
+                _currentFunc.Chunk.WriteInt32(index, node.Line);
+            }
+        }
+        else if (boundNode.Type == _cmp.Native.Types.String) {
+            int index = Bin.ConstantTable.WriteStringASCII(boundNode.Value.AsString!);
+
+            if (index <= byte.MaxValue) {
+                _currentFunc.Chunk.WriteInstruction(OpCode.ConstStr, node.Line);
+                _currentFunc.Chunk.WriteByte((byte)index, node.Line);
+            }
+            else {
+                _currentFunc.Chunk.WriteInstruction(OpCode.ConstStrLong, node.Line);
+                _currentFunc.Chunk.WriteInt32(index, node.Line);
+            }
+        }
+    }
 
     public override void Visit (IdentifierExpression node) {
         RequireFunction();
@@ -147,7 +127,7 @@ public class JubCompiler : SyntaxVisitor {
         RequireFunction();
         // TODO: Compile expression.
 
-        _currentFunction.Chunk.WriteInstruction(OpCode.Ret, node.Line);
+        _currentFunc.Chunk.WriteInstruction(OpCode.Ret, node.Line);
     }
 
     public override void Visit (BinaryExpression node) {
@@ -193,7 +173,7 @@ public class JubCompiler : SyntaxVisitor {
         );
 
         void _Instr (OpCode opCode) {
-            _currentFunction.Chunk.WriteInstruction(opCode, node.Operator.Line);
+            _currentFunc.Chunk.WriteInstruction(opCode, node.Operator.Line);
         }
     }
 
@@ -221,7 +201,7 @@ public class JubCompiler : SyntaxVisitor {
 
         Visit(node.Expression);
 
-        _currentFunction.Chunk.WriteInstruction(OpCode.Print, node.Line);
+        _currentFunc.Chunk.WriteInstruction(OpCode.Print, node.Line);
     }
 
     /// <summary>
@@ -233,23 +213,23 @@ public class JubCompiler : SyntaxVisitor {
         RequireFunction();
 
         if (addr == 0) {
-            _currentFunction.Chunk.WriteInstruction(OpCode.Store0, line);
+            _currentFunc.Chunk.WriteInstruction(OpCode.Store0, line);
         }
         else if (addr == 1) {
-            _currentFunction.Chunk.WriteInstruction(OpCode.Store1, line);
+            _currentFunc.Chunk.WriteInstruction(OpCode.Store1, line);
         }
         else if (addr == 2) {
-            _currentFunction.Chunk.WriteInstruction(OpCode.Store2, line);
+            _currentFunc.Chunk.WriteInstruction(OpCode.Store2, line);
         }
         else if (addr == 3) {
-            _currentFunction.Chunk.WriteInstruction(OpCode.Store3, line);
+            _currentFunc.Chunk.WriteInstruction(OpCode.Store3, line);
         }
         else if (addr == 4) {
-            _currentFunction.Chunk.WriteInstruction(OpCode.Store4, line);
+            _currentFunc.Chunk.WriteInstruction(OpCode.Store4, line);
         }
         else if (addr <= byte.MaxValue) {
-            _currentFunction.Chunk.WriteInstruction(OpCode.Store, line);
-            _currentFunction.Chunk.WriteByte((byte)addr, line);
+            _currentFunc.Chunk.WriteInstruction(OpCode.Store, line);
+            _currentFunc.Chunk.WriteByte((byte)addr, line);
         }
         else {
             throw new NotImplementedException("VM does not yet support locals beyond 255");
@@ -267,23 +247,23 @@ public class JubCompiler : SyntaxVisitor {
         RequireFunction();
 
         if (addr == 0) {
-            _currentFunction.Chunk.WriteInstruction(OpCode.Load0, line);
+            _currentFunc.Chunk.WriteInstruction(OpCode.Load0, line);
         }
         else if (addr == 1) {
-            _currentFunction.Chunk.WriteInstruction(OpCode.Load1, line);
+            _currentFunc.Chunk.WriteInstruction(OpCode.Load1, line);
         }
         else if (addr == 2) {
-            _currentFunction.Chunk.WriteInstruction(OpCode.Load2, line);
+            _currentFunc.Chunk.WriteInstruction(OpCode.Load2, line);
         }
         else if (addr == 3) {
-            _currentFunction.Chunk.WriteInstruction(OpCode.Load3, line);
+            _currentFunc.Chunk.WriteInstruction(OpCode.Load3, line);
         }
         else if (addr == 4) {
-            _currentFunction.Chunk.WriteInstruction(OpCode.Load4, line);
+            _currentFunc.Chunk.WriteInstruction(OpCode.Load4, line);
         }
         else if (addr <= byte.MaxValue) {
-            _currentFunction.Chunk.WriteInstruction(OpCode.Load, line);
-            _currentFunction.Chunk.WriteByte((byte)addr, line);
+            _currentFunc.Chunk.WriteInstruction(OpCode.Load, line);
+            _currentFunc.Chunk.WriteByte((byte)addr, line);
         }
         else {
             throw new NotImplementedException("VM does not yet support locals beyond 255");
@@ -298,10 +278,10 @@ public class JubCompiler : SyntaxVisitor {
     /// _currentFunction and _localManager exist.
     /// </summary>
     /// <exception cref="Exception"></exception>
-    [MemberNotNull(nameof(_currentFunction))]
+    [MemberNotNull(nameof(_currentFunc))]
     [MemberNotNull(nameof(_localManager))]
     private void RequireFunction () {
-        if (_currentFunction == null || _localManager == null) {
+        if (_currentFunc == null || _localManager == null) {
             throw new Exception(
                 "This node can only be compiled in the context of a function."
             );
