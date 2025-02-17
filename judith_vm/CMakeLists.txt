@@ -26,6 +26,8 @@ file(GLOB_RECURSE HEADER_FILES header/*.hpp)
 # Add include directory
 include_directories(header)
 
+add_subdirectory("lib/unordered_dense")
+
 # Define the executable
 add_executable(
 	judith_vm
@@ -35,6 +37,8 @@ add_executable(
 	"header/VM.hpp" "header/Chunk.hpp"
 	"src/VM.cpp" "src/Chunk.cpp" "src/Value.cpp"
  "src/ChunkReader.cpp" "src/utils.cpp" "src/utils/Buffer.cpp" "src/debug/chunk.cpp" "header/_flags.h")
+
+target_link_libraries(${APP_NAME} PRIVATE unordered_dense)
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET judith_vm PROPERTY CXX_STANDARD 20)

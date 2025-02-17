@@ -17,7 +17,16 @@ struct Object {
 struct StringObject {
     Object object;
     size_t length;
-    char* string;
+    u_ptr<char[]> string;
+
+    StringObject (size_t length, const std::string& str)
+        : object({ .objectType = ObjectType::STRING }),
+        length(length)
+    {
+        //string = (u_ptr<char>)(char*)std::malloc(sizeof(char) * length);
+        string = make_u<char[]>(length);
+        std::memcpy(this->string.get(), str.c_str(), length);
+    }
 };
 
 struct InstanceObject {

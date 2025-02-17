@@ -3,6 +3,8 @@
 #include "root.hpp"
 #include "Chunk.hpp"
 #include "Value.hpp"
+#include "Object.hpp"
+#include <ankerl/unordered_dense.h>
 
 #define STACK_MAX 1024
 #define LOCALS_MAX 256 
@@ -28,6 +30,11 @@ private:
     /// The VM's local variable array.
     /// </summary>
     Value locals[LOCALS_MAX];
+
+    /// <summary>
+    /// The string table maps strings to internet string objects.
+    /// </summary>
+    ankerl::unordered_dense::map<std::string, u_ptr<StringObject>> stringTable;
 
 public:
     ~VM();
@@ -70,8 +77,31 @@ public:
     inline void loadLocal (size_t index) {
         pushValue(locals[index]);
     }
+
+    inline StringObject* internString (std::string str) {
+        auto [it, inserted] = stringTable.try_emplace(
+            str, make_u<StringObject>(str.length(), str)
+        );
+
+        return it->second.get();
+    }
     
-    inline void printValue (const Value& value) {
-        std::cout << value.asFloat64;
+    inline void printValue (byte type, const Value& value) {
+        switch (type) {
+        case ConstantType::INT_64:
+            std::cout << value.asInt64;
+            break;
+        case ConstantType::FLOAT_64:
+            std::cout << value.asFloat64;
+            break;
+        case ConstantType::UNSIGNED_INT_64:
+            std::cout << value.asUint64;
+            break;
+        case ConstantType::STRING_ASCII:
+            std::cout << value.asStringPtr->string;
+            break;
+        default:
+            std::cout << "Error: unknown type.";
+        }
     }
 };

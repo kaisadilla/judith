@@ -64,6 +64,24 @@ static std::string constant (Chunk& chunk, size_t constIndex) {
 
 }
 
+static std::string constTypeStr (byte type) {
+    switch (type) {
+        case ConstantType::ERROR:
+            return "<error-type>";
+        case ConstantType::INT_64:
+            return "INT_64";
+        case ConstantType::FLOAT_64:
+            return "FLOAT_64";
+        case ConstantType::UNSIGNED_INT_64:
+            return "UNSIGNED_INT_64";
+        case ConstantType::STRING_ASCII:
+            return "STRING_ASCII";
+        default:
+            return "<unknown-type>";
+    }
+
+}
+
 #pragma endregion
 
 #pragma region Disassembly functions
@@ -133,6 +151,19 @@ static size_t constantLongInstruction (std::ostringstream& str, Chunk& chunk, co
     str << idStr(name) << " " << hexIntegerStr(constIndex) << " ; " << constant(chunk, constIndex);
 
     return index + 5;
+}
+
+static size_t printInstruction (std::ostringstream& str, Chunk& chunk, const char* name, size_t index) {
+    if (index + 1 >= chunk.size) {
+        std::cerr << "Print instruction at index " << index << " overflows the code array.";
+        return index + 2;
+    }
+
+    byte constType = chunk.code[index + 1];
+
+    str << idStr(name) << " " << hexByteStr(constType) << " ; " << constTypeStr(constType);
+
+    return index + 2;
 }
 #pragma endregion
 
@@ -250,7 +281,7 @@ static size_t disassembleInstruction (std::ostringstream& str, Chunk& chunk, siz
         return u16Instruction(str, chunk, "LOAD_L", index);
 
     case OpCode::PRINT:
-        return simpleInstruction(str, chunk, "PRINT", index);
+        return printInstruction(str, chunk, "PRINT", index);
     default:
         break;
     }

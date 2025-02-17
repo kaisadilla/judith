@@ -58,9 +58,18 @@ InterpretResult VM::interpret (const Chunk& chunk) {
 
             break;
 
-        case OpCode::CONST_STR:
-            pushValue({ .asInt64 = *(i64*)chunk.constants[READ_BYTE()] });
+        case OpCode::CONST_STR: {
+#define STRLEN (*(ui64*)strval)
+#define STRHEAD ((char*)(strval + sizeof(ui64)))
 
+            byte* strval = (byte*)chunk.constants[READ_BYTE()];
+            std::string str(STRHEAD, STRLEN);
+            pushValue({ .asStringPtr = internString(str) });
+            break;
+
+#undef STRLEN
+#undef STRHEAD
+        }
             break;
 
         case OpCode::CONST_STR_LONG:
@@ -167,7 +176,7 @@ InterpretResult VM::interpret (const Chunk& chunk) {
             break;
 
         case OpCode::PRINT:
-            printValue(popValue());
+            printValue(READ_BYTE(), popValue());
             std::cout << "\n";
             break;
 

@@ -82,7 +82,7 @@ public class JubCompiler : SyntaxVisitor {
         RequireFunction();
     
         if (_cmp.Binder.TryGetBoundNode(node, out BoundLiteralExpression? boundNode) == false) {
-            throw new Exception($"Cannot compile incomplete bound node '{node}'");
+            ThrowUnboundNode(node);
         }
 
         // TODO: When type alias desugaring is added, this compares directly to
@@ -201,7 +201,21 @@ public class JubCompiler : SyntaxVisitor {
 
         Visit(node.Expression);
 
+        if (_cmp.Binder.TryGetBoundNode(node.Expression, out BoundExpression? boundExpr) == false) {
+            ThrowUnboundNode(node.Expression);
+        }
+
         _currentFunc.Chunk.WriteInstruction(OpCode.Print, node.Line);
+
+        if (boundExpr.Type == _cmp.Native.Types.Num) {
+            _currentFunc.Chunk.WriteByte((byte)ConstantType.Float64, node.Expression.Line);
+        }
+        else if (boundExpr.Type == _cmp.Native.Types.String) {
+            _currentFunc.Chunk.WriteByte((byte)ConstantType.StringASCII, node.Expression.Line);
+        }
+        else {
+            throw new NotImplementedException("Cannot print given type!");
+        }
     }
 
     /// <summary>
@@ -286,6 +300,11 @@ public class JubCompiler : SyntaxVisitor {
                 "This node can only be compiled in the context of a function."
             );
         }
+    }
+
+    [DoesNotReturn]
+    private void ThrowUnboundNode (SyntaxNode node) {
+        throw new Exception($"Cannot compile incomplete bound node '{node}'");
     }
     #endregion
 }

@@ -113,7 +113,7 @@ public class JasmDisassembler {
                 return U16Instruction("LOAD_L", index);
 
             case OpCode.Print:
-                return SimpleInstruction("PRINT", index);
+                return PrintInstruction("PRINT", index);
             default:
                 break;
         }
@@ -149,7 +149,7 @@ public class JasmDisassembler {
         var constIndex = _chunk.Code[index + 1];
 
         Dump += IdStr(name) + " ";
-        Dump += HexByteStr(_chunk.Code[index + 1]) + " ; " + Constant(constIndex);
+        Dump += HexByteStr(constIndex) + " ; " + Constant(constIndex);
 
         return index + 2;
     }
@@ -161,9 +161,18 @@ public class JasmDisassembler {
             | (_chunk.Code[index + 4] << 24);
 
         Dump += IdStr(name) + " ";
-        Dump += HexIntegerStr(_chunk.Code[index + 1]) + " ; " + Constant(constIndex);
+        Dump += HexIntegerStr(constIndex) + " ; " + Constant(constIndex);
 
         return index + 5;
+    }
+
+    private int PrintInstruction (string name, int index) {
+        var constType = _chunk.Code[index + 1];
+
+        Dump += IdStr(name) + " ";
+        Dump += HexIntegerStr(constType) + " ; " + (ConstantType)constType;
+
+        return index + 2;
     }
 
     private int UnknownInstruction (int index) {
