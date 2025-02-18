@@ -63,6 +63,14 @@ public:
     }
 
     /// <summary>
+    /// Returns the value at the top of the stack, but doesn't remove it.
+    /// </summary>
+    /// <returns></returns>
+    inline Value& peekValue () {
+        return *stackTop;
+    }
+
+    /// <summary>
     /// Pops the value at the top of the stack and stores it in the local given.
     /// </summary>
     /// <param name="index"></param>

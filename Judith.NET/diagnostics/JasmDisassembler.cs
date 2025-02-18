@@ -134,6 +134,19 @@ public class JasmDisassembler {
             case OpCode.LoadLong:
                 return U16Instruction("LOAD_L", index);
 
+            case OpCode.Jmp:
+                return SByteInstruction("JMP", index);
+            case OpCode.JmpLong:
+                return I32Instruction("JMP_L", index);
+            case OpCode.JTrue:
+                return SByteInstruction("JTRUE", index);
+            case OpCode.JTrueLong:
+                return I32Instruction("JTRUE_L", index);
+            case OpCode.JFalse:
+                return SByteInstruction("JFALSE", index);
+            case OpCode.JFalseLong:
+                return I32Instruction("JFALSE_L", index);
+
             case OpCode.Print:
                 return PrintInstruction("PRINT", index);
             default:
@@ -157,6 +170,15 @@ public class JasmDisassembler {
         return index + 2;
     }
 
+    private int SByteInstruction (string name, int index) {
+        sbyte val = unchecked((sbyte)_chunk.Code[index + 1]);
+
+        Dump += IdStr(name) + " ";
+        Dump += HexSByteStr(val) + " ";
+
+        return index + 2;
+    }
+
     private int U16Instruction (string name, int index) {
         var val = _chunk.Code[index + 1]
             | (_chunk.Code[index + 2] << 8);
@@ -165,6 +187,18 @@ public class JasmDisassembler {
         Dump += HexIntegerStr(val) + " ";
 
         return index + 3;
+    }
+
+    private int I32Instruction (string name, int index) {
+        var val = _chunk.Code[index + 1]
+            | (_chunk.Code[index + 2] << 8)
+            | (_chunk.Code[index + 3] << 16)
+            | (_chunk.Code[index + 4] << 24);
+
+        Dump += IdStr(name) + " ";
+        Dump += HexIntegerStr(val) + " ";
+
+        return index + 5;
     }
 
     private int ConstantInstruction (string name, int index) {
@@ -223,6 +257,7 @@ public class JasmDisassembler {
     }
 
     private static string HexByteStr (int index) => $"0x{index:X4}";
+    private static string HexSByteStr (int index) => $"0x{index:X4}";
     private static string HexIntegerStr (long index) => $"0x{index:X8}";
     private static string JFloatStr (double val) => $"{val}";
     private static string IdStr (string id) => id.PadRight(16, ' ');

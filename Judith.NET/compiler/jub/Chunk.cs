@@ -10,8 +10,13 @@ public class Chunk {
     public List<byte> Code { get; private set; } = new();
     public List<int> CodeLines { get; private set; } = new();
 
-    public void WriteByte (byte i8, int line) {
-        Code.Add(i8);
+    public void WriteSByte (sbyte i8, int line) {
+        Code.Add(unchecked((byte)i8));
+        CodeLines.Add(line);
+    }
+
+    public void WriteByte (byte ui8, int line) {
+        Code.Add(ui8);
         CodeLines.Add(line);
     }
 

@@ -59,6 +59,13 @@ namespace OpCode {
         LOAD,
         LOAD_L,
 
+        JMP,
+        JMP_L,
+        JTRUE,
+        JTRUE_L,
+        JFALSE,
+        JFALSE_L,
+
         PRINT,
     };
 }

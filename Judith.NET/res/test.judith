@@ -19,15 +19,23 @@
 --end
 --const my_str3 = "Indeed"
 
-const a = 3 > 5
-const b = 1
-const c = 1
-const d = b == c
+-- const a = 3 > 5
+-- const b = 1
+-- const c = 1
+-- const d = b == c
+-- 
+-- __p_print a
+-- __p_print b
+-- __p_print c
+-- __p_print d
+-- __p_print c > -5
 
-__p_print a
-__p_print b
-__p_print c
-__p_print d
-__p_print c > -5
+if 3 > 5 then
+    __p_print "This is impossible!"
+else
+    __p_print "This always prints!"
+end
+
+__p_print "This can be printed."
 
 return

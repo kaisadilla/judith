@@ -129,5 +129,30 @@ public enum OpCode : byte {
     Load,
     LoadLong,
 
+    /// <summary>
+    /// JMP | JUMP | Jump to $a.
+    /// </summary>
+    Jmp,
+    /// <summary>
+    /// JMP_L | JUMP_LONG | Jump to $a.
+    /// </summary>
+    JmpLong,
+    /// <summary>
+    /// JTRUE | JUMP_TRUE | Jump to $a if top != 0.
+    /// </summary>
+    JTrue,
+    /// <summary>
+    /// JTRUE_L | JUMP_TRUE_LONG | Jump to $a if top != 0.
+    /// </summary>
+    JTrueLong,
+    /// <summary>
+    /// JFALSE | JUMP_FALSE | Jump to $a if top != 0.
+    /// </summary>
+    JFalse,
+    /// <summary>
+    /// JFALSE_L | JUMP_FALSE_LONG | Jump to $a if top != 0.
+    /// </summary>
+    JFalseLong,
+
     Print,
 }

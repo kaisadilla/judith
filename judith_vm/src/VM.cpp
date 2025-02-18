@@ -234,6 +234,24 @@ InterpretResult VM::interpret (const Chunk& chunk) {
             std::cout << "\n";
             break;
 
+        case OpCode::JMP: {
+            ip += READ_BYTE();
+            break;
+        }
+
+        case OpCode::JTRUE: {
+            byte offset = READ_BYTE();
+            if (popValue().asBool) ip += offset;
+            break;
+        }
+
+        case OpCode::JFALSE: {
+            byte offset = READ_BYTE();
+            if (popValue().asBool == false) ip += offset;
+
+            break;
+        }
+
         default:
             std::cerr << "[ERROR] UNKNOWN OPCODE: " << std::hex << instruction
                 << std::dec << std::endl;

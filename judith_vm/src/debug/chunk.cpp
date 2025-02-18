@@ -104,7 +104,7 @@ static size_t simpleInstruction (std::ostringstream& str, Chunk& chunk, const ch
 
 static size_t byteInstruction (std::ostringstream& str, Chunk& chunk, const char* name, size_t index) {
     if (index + 1 >= chunk.size) {
-        std::cerr << "Constant instruction at index " << index << " overflows the code array.";
+        std::cerr << "Byte instruction at index " << index << " overflows the code array.";
         return index + 2;
     }
 
@@ -117,7 +117,7 @@ static size_t byteInstruction (std::ostringstream& str, Chunk& chunk, const char
 
 static size_t u16Instruction (std::ostringstream& str, Chunk& chunk, const char* name, size_t index) {
     if (index + 2 >= chunk.size) {
-        std::cerr << "Constant long instruction at index " << index << " overflows the code array.";
+        std::cerr << "U16 instruction at index " << index << " overflows the code array.";
         return index + 3;
     }
 
@@ -127,6 +127,22 @@ static size_t u16Instruction (std::ostringstream& str, Chunk& chunk, const char*
     str << idStr(name) << " " << hexIntegerStr(val) << " ";
 
     return index + 3;
+}
+
+static size_t u32Instruction (std::ostringstream& str, Chunk& chunk, const char* name, size_t index) {
+    if (index + 2 >= chunk.size) {
+        std::cerr << "U32 instruction at index " << index << " overflows the code array.";
+        return index + 5;
+    }
+
+    i32 val = chunk.code[index + 1]
+        + (chunk.code[index + 2] << 8)
+        + (chunk.code[index + 3] << 16)
+        + (chunk.code[index + 4] << 24);
+
+    str << idStr(name) << " " << hexIntegerStr(val) << " ";
+
+    return index + 5;
 }
 
 static size_t constantInstruction (std::ostringstream& str, Chunk& chunk, const char* name, size_t index) {
@@ -305,6 +321,24 @@ static size_t disassembleInstruction (std::ostringstream& str, Chunk& chunk, siz
 
     case OpCode::LOAD_L:
         return u16Instruction(str, chunk, "LOAD_L", index);
+
+    case OpCode::JMP:
+        return byteInstruction(str, chunk, "JMP", index);
+
+    case OpCode::JMP_L:
+        return u32Instruction(str, chunk, "JMP_L", index);
+
+    case OpCode::JTRUE:
+        return byteInstruction(str, chunk, "JTRUE", index);
+
+    case OpCode::JTRUE_L:
+        return u32Instruction(str, chunk, "JTRUE_L", index);
+
+    case OpCode::JFALSE:
+        return byteInstruction(str, chunk, "JFALSE", index);
+
+    case OpCode::JFALSE_L:
+        return u32Instruction(str, chunk, "JFALSE_L", index);
 
     case OpCode::PRINT:
         return printInstruction(str, chunk, "PRINT", index);

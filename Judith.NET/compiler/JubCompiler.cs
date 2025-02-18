@@ -70,12 +70,27 @@ public class JubCompiler : SyntaxVisitor {
         if (node.Initializer == null) return;
 
         Visit(node.Initializer);
-        WriteStore(addr, node.Initializer.Line);
+        EmitStore(addr, node.Initializer.Line);
         _localManager.MarkInitialized(addr);
     }
 
-    public override void Visit (EqualsValueClause node) {
-        Visit(node.Value);
+    public override void Visit (IfExpression node) {
+        Visit(node.Test);
+
+        var thenJump = EmitJump(OpCode.JFalse, node.Test.Line);
+        Visit(node.Consequent);
+
+        int elseJump = -1;
+        if (node.Alternate != null) {
+            elseJump = EmitJump(OpCode.Jmp, node.Test.Line);
+        }
+
+        PatchJump(thenJump);
+
+        if (node.Alternate != null) {
+            Visit(node.Alternate);
+            PatchJump(elseJump);
+        }
     }
 
     public override void Visit (LiteralExpression node) {
@@ -120,7 +135,7 @@ public class JubCompiler : SyntaxVisitor {
             throw new Exception("Local not found");
         }
 
-        WriteLoad(addr, node.Line);
+        EmitLoad(addr, node.Line);
     }
 
     public override void Visit (ReturnStatement node) {
@@ -199,7 +214,11 @@ public class JubCompiler : SyntaxVisitor {
             throw new Exception("Local not found");
         }
 
-        WriteStore(addr, node.Line);
+        EmitStore(addr, node.Line);
+    }
+
+    public override void Visit (EqualsValueClause node) {
+        Visit(node.Value);
     }
 
     public override void Visit (P_PrintStatement node) {
@@ -229,7 +248,7 @@ public class JubCompiler : SyntaxVisitor {
     /// </summary>
     /// <param name="addr">The address of the variable in the local variable array.</param>
     /// <param name="line">The line of code that produced this.</param>
-    private void WriteStore (int addr, int line) {
+    private void EmitStore (int addr, int line) {
         RequireFunction();
 
         if (addr == 0) {
@@ -263,7 +282,7 @@ public class JubCompiler : SyntaxVisitor {
     /// </summary>
     /// <param name="addr">The address of the variable in the local variable array.</param>
     /// <param name="line">The line of code that produced this.</param>
-    private void WriteLoad (int addr, int line) {
+    private void EmitLoad (int addr, int line) {
         RequireFunction();
 
         if (addr == 0) {
@@ -290,6 +309,39 @@ public class JubCompiler : SyntaxVisitor {
             //Chunk.WriteInstruction(OpCode.LoadLong, line);
             //Chunk.WriteUint16((ushort)addr, line);
         }
+    }
+
+    /// <summary>
+    /// Emits the short jump code given and a byte for the offset set at 0.
+    /// Returns the index of the offset byte so it can be patched with PatchJump.
+    /// </summary>
+    /// <param name="code">The opcode to emit.</param>
+    /// <param name="line">The line that caused this jump.</param>
+    /// <returns></returns>
+    private int EmitJump (OpCode code, int line) {
+        RequireFunction();
+
+        _currentFunc.Chunk.WriteInstruction(code, line);
+        _currentFunc.Chunk.WriteByte(0, line);
+
+        return _currentFunc.Chunk.Code.Count - 1;
+    }
+
+    /// <summary>
+    /// Patches the jump byte at the offset given so it points to the current
+    /// instruction.
+    /// </summary>
+    /// <param name="offsetByte">The byte that stores the jump offset.</param>
+    private void PatchJump (int offsetByte) {
+        RequireFunction();
+
+        int jumpOffset = _currentFunc.Chunk.Code.Count - offsetByte - 1;
+
+        if (jumpOffset < sbyte.MinValue || jumpOffset > sbyte.MaxValue) {
+            throw new NotImplementedException("Long jumps are not implemented");
+        }
+
+        _currentFunc.Chunk.Code[offsetByte] = (byte)((sbyte)jumpOffset);
     }
 
     #region Requires
