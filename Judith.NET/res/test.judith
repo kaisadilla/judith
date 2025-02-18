@@ -30,6 +30,14 @@
 -- __p_print d
 -- __p_print c > -5
 
+__p_print 1 and 3 and 5 + 7 and 9
+__p_print 10 or 20 or 30
+__p_print 100 and 200 or 300 and 400
+__p_print false or 9 * 3
+__p_print true or 9 * 3
+__p_print false and 9 * 3
+__p_print true and 9 * 3
+
 if 3 > 5 then
     __p_print "This is impossible!"
 else

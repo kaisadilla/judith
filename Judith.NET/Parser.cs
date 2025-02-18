@@ -602,8 +602,9 @@ public class Parser {
     private bool TryConsumeAssignmentExpression (
         [NotNullWhen(true)]  out Expression? expr
     ) {
-        if (TryConsumeLogicalExpression(out Expression? leftExpr) == false) {
-            return TryConsumeLogicalExpression(out expr);
+        if (TryConsumeLogicalAndExpression(out Expression? leftExpr) == false) {
+            expr = null;
+            return false;
         }
 
         if (TryConsumeOperator(out Operator? op, TokenKind.Equal) == false) {
@@ -619,16 +620,33 @@ public class Parser {
         return true;
     }
 
-    // "and" | "or"
-    private bool TryConsumeLogicalExpression ([NotNullWhen(true)] out Expression? expr) {
+    // "and"
+    private bool TryConsumeLogicalAndExpression ([NotNullWhen(true)] out Expression? expr) {
+        if (TryConsumeLogicalOrExpression(out Expression? leftExpr) == false) {
+            expr = null;
+            return false;
+        }
+
+        while (TryConsumeOperator(out Operator? op, TokenKind.KwAnd)) {
+            if (TryConsumeLogicalOrExpression(out Expression? rightExpr) == false) {
+                throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+            }
+
+            leftExpr = SF.BinaryExpression(leftExpr, op, rightExpr);
+        }
+
+        expr = leftExpr;
+        return true;
+    }
+
+    // "or"
+    private bool TryConsumeLogicalOrExpression ([NotNullWhen(true)] out Expression? expr) {
         if (TryConsumeBooleanExpression(out Expression? leftExpr) == false) {
             expr = null;
             return false;
         }
 
-        while (TryConsumeOperator(
-            out Operator? op, TokenKind.KwAnd, TokenKind.KwOr
-        )) {
+        while (TryConsumeOperator(out Operator? op, TokenKind.KwOr)) {
             if (TryConsumeBooleanExpression(out Expression? rightExpr) == false) {
                 throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
             }

@@ -114,6 +114,14 @@ public class JubCompiler : SyntaxVisitor {
                 _currentFunc.Chunk.WriteInt32(index, node.Line);
             }
         }
+        else if (boundNode.Type == _cmp.Native.Types.Bool) {
+            if (boundNode.Value.AsBoolean == true) {
+                _currentFunc.Chunk.WriteInstruction(OpCode.IConst1, node.Line);
+            }
+            else {
+                _currentFunc.Chunk.WriteInstruction(OpCode.Const0, node.Line);
+            }
+        }
         else if (boundNode.Type == _cmp.Native.Types.String) {
             int index = Bin.ConstantTable.WriteStringASCII(boundNode.Value.AsString!);
 
@@ -146,6 +154,117 @@ public class JubCompiler : SyntaxVisitor {
     }
 
     public override void Visit (BinaryExpression node) {
+        if (node.Kind == SyntaxKind.LogicalBinaryExpression) {
+            CompileLogicalBinaryExpression(node);
+        }
+        else {
+            CompileRegularBinaryExpression(node);
+        }
+    }
+
+    public override void Visit (AssignmentExpression node) {
+        RequireFunction();
+
+        if (node.Left.Kind != SyntaxKind.IdentifierExpression) {
+            throw new Exception("Can't assign to that."); // TODO: Compile error.
+        }
+        if (node.Left is not IdentifierExpression idExpr) {
+            throw new Exception("Invalid type.");
+        }
+
+        Visit(node.Right);
+
+        if (_localManager.TryGetLocalAddr(idExpr.Identifier.Name, out int addr) == false) {
+            throw new Exception("Local not found");
+        }
+
+        EmitStore(addr, node.Line);
+    }
+
+    public override void Visit (EqualsValueClause node) {
+        Visit(node.Value);
+    }
+
+    public override void Visit (P_PrintStatement node) {
+        RequireFunction();
+
+        Visit(node.Expression);
+
+        if (_cmp.Binder.TryGetBoundNode(node.Expression, out BoundExpression? boundExpr) == false) {
+            ThrowUnboundNode(node.Expression);
+        }
+
+        _currentFunc.Chunk.WriteInstruction(OpCode.Print, node.Line);
+
+        if (boundExpr.Type == _cmp.Native.Types.Num) {
+            _currentFunc.Chunk.WriteByte((byte)ConstantType.Float64, node.Expression.Line);
+        }
+        else if (boundExpr.Type == _cmp.Native.Types.String) {
+            _currentFunc.Chunk.WriteByte((byte)ConstantType.StringASCII, node.Expression.Line);
+        }
+        else {
+            _currentFunc.Chunk.WriteByte((byte)ConstantType.Bool, node.Expression.Line);
+        }
+    }
+
+    private void CompileLogicalBinaryExpression (BinaryExpression node) {
+        RequireFunction();
+
+        List<int> jumpsToPatch = new();
+        // TODO: Simplify as CompileNestedLogicalBinaryExpression is basically a duplicate.
+        if (node.Left.Kind == SyntaxKind.LogicalBinaryExpression) {
+            var binaryExpr = CastOrThrow<BinaryExpression>(node.Left);
+            if (binaryExpr.Operator.Kind == node.Operator.Kind) {
+                CompileNestedLogicalBinaryExpression(binaryExpr, jumpsToPatch);
+            }
+            else {
+                Visit(node.Left);
+            }
+        }
+        else {
+            Visit(node.Left);
+        }
+
+        var code = node.Operator.OperatorKind switch {
+            OperatorKind.LogicalAnd => OpCode.JFalse,
+            _ => OpCode.JTrue,
+        };
+        jumpsToPatch.Add(EmitJump(code, node.Operator.Line));
+
+        Visit(node.Right);
+        var rightJump = EmitJump(OpCode.Jmp, node.Operator.Line);
+
+        foreach (var jump in jumpsToPatch) PatchJump(jump);
+        _currentFunc.Chunk.WriteInstruction(OpCode.Const0, node.Operator.Line);
+        PatchJump(rightJump);
+    }
+
+    private void CompileNestedLogicalBinaryExpression (
+        BinaryExpression expr, List<int> jumpList
+    ) {
+        if (expr.Left.Kind == SyntaxKind.LogicalBinaryExpression) {
+            var binaryExpr = CastOrThrow<BinaryExpression>(expr.Left);
+            if (binaryExpr.Operator.Kind == expr.Operator.Kind) {
+                CompileNestedLogicalBinaryExpression(binaryExpr, jumpList);
+            }
+            else {
+                Visit(expr.Left);
+            }
+        }
+        else {
+            Visit(expr.Left);
+        }
+
+        var code = expr.Operator.OperatorKind switch {
+            OperatorKind.LogicalAnd => OpCode.JFalse,
+            _ => OpCode.JTrue,
+        };
+        jumpList.Add(EmitJump(code, expr.Operator.Line));
+
+        Visit(expr.Right);
+    }
+
+    private void CompileRegularBinaryExpression (BinaryExpression node) {
         RequireFunction();
 
         Visit(node.Left);
@@ -198,49 +317,12 @@ public class JubCompiler : SyntaxVisitor {
         }
     }
 
-    public override void Visit (AssignmentExpression node) {
-        RequireFunction();
-
-        if (node.Left.Kind != SyntaxKind.IdentifierExpression) {
-            throw new Exception("Can't assign to that."); // TODO: Compile error.
-        }
-        if (node.Left is not IdentifierExpression idExpr) {
-            throw new Exception("Invalid type.");
+    private T CastOrThrow<T> (SyntaxNode node) where T : SyntaxNode {
+        if (node is not T tNode) {
+            throw new Exception("Class and SyntaxKind mismatch.");
         }
 
-        Visit(node.Right);
-
-        if (_localManager.TryGetLocalAddr(idExpr.Identifier.Name, out int addr) == false) {
-            throw new Exception("Local not found");
-        }
-
-        EmitStore(addr, node.Line);
-    }
-
-    public override void Visit (EqualsValueClause node) {
-        Visit(node.Value);
-    }
-
-    public override void Visit (P_PrintStatement node) {
-        RequireFunction();
-
-        Visit(node.Expression);
-
-        if (_cmp.Binder.TryGetBoundNode(node.Expression, out BoundExpression? boundExpr) == false) {
-            ThrowUnboundNode(node.Expression);
-        }
-
-        _currentFunc.Chunk.WriteInstruction(OpCode.Print, node.Line);
-
-        if (boundExpr.Type == _cmp.Native.Types.Num) {
-            _currentFunc.Chunk.WriteByte((byte)ConstantType.Float64, node.Expression.Line);
-        }
-        else if (boundExpr.Type == _cmp.Native.Types.String) {
-            _currentFunc.Chunk.WriteByte((byte)ConstantType.StringASCII, node.Expression.Line);
-        }
-        else {
-            _currentFunc.Chunk.WriteByte((byte)ConstantType.Bool, node.Expression.Line);
-        }
+        return tNode;
     }
 
     /// <summary>

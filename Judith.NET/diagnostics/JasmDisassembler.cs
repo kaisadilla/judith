@@ -135,17 +135,17 @@ public class JasmDisassembler {
                 return U16Instruction("LOAD_L", index);
 
             case OpCode.Jmp:
-                return SByteInstruction("JMP", index);
+                return JumpInstruction("JMP", index);
             case OpCode.JmpLong:
-                return I32Instruction("JMP_L", index);
+                return JumpLongInstruction("JMP_L", index);
             case OpCode.JTrue:
-                return SByteInstruction("JTRUE", index);
+                return JumpInstruction("JTRUE", index);
             case OpCode.JTrueLong:
-                return I32Instruction("JTRUE_L", index);
+                return JumpLongInstruction("JTRUE_L", index);
             case OpCode.JFalse:
-                return SByteInstruction("JFALSE", index);
+                return JumpInstruction("JFALSE", index);
             case OpCode.JFalseLong:
-                return I32Instruction("JFALSE_L", index);
+                return JumpLongInstruction("JFALSE_L", index);
 
             case OpCode.Print:
                 return PrintInstruction("PRINT", index);
@@ -218,6 +218,27 @@ public class JasmDisassembler {
 
         Dump += IdStr(name) + " ";
         Dump += HexIntegerStr(constIndex) + " ; " + Constant(constIndex);
+
+        return index + 5;
+    }
+
+    private int JumpInstruction (string name, int index) {
+        sbyte val = unchecked((sbyte)_chunk.Code[index + 1]);
+
+        Dump += IdStr(name) + " ";
+        Dump += HexSByteStr(val) + " ; to " + HexSByteStr(index + val + 2);
+
+        return index + 2;
+    }
+
+    private int JumpLongInstruction (string name, int index) {
+        var val = _chunk.Code[index + 1]
+            | (_chunk.Code[index + 2] << 8)
+            | (_chunk.Code[index + 3] << 16)
+            | (_chunk.Code[index + 4] << 24);
+
+        Dump += IdStr(name) + " ";
+        Dump += HexIntegerStr(val) + " ; to " + HexSByteStr(index + val + 5);
 
         return index + 5;
     }

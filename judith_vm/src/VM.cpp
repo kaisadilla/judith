@@ -16,14 +16,14 @@
     do { \
         f64 b = popValue().asFloat64; \
         f64 a = popValue().asFloat64; \
-        pushValue({ .asBool = (a op b) }); \
+        pushValue({ .asInt64 = (a op b) }); \
     } while (false)
 
 #define I_BOOLEAN_OP(op) \
     do { \
         f64 b = popValue().asInt64; \
         f64 a = popValue().asInt64; \
-        pushValue({ .asBool = (a op b) }); \
+        pushValue({ .asInt64 = (a op b) }); \
     } while (false)
 
 VM::~VM() {
@@ -41,8 +41,14 @@ InterpretResult VM::interpret (const Chunk& chunk) {
         }
         std::cout << "]" << std::endl;
 #endif
+#ifdef DEBUG_CHECK_STACK_UNDERFLOW
+        if (ip < chunk.code) {
+            throw std::exception("Trying to access an invalid stack position!");
+        }
+#endif
 
         byte instruction = *(ip++);
+
         switch (instruction) {
         case OpCode::NOOP:
             break;
@@ -241,13 +247,17 @@ InterpretResult VM::interpret (const Chunk& chunk) {
 
         case OpCode::JTRUE: {
             byte offset = READ_BYTE();
-            if (popValue().asBool) ip += offset;
+            if (popValue().asInt64) {
+                ip += offset;
+            }
             break;
         }
 
         case OpCode::JFALSE: {
             byte offset = READ_BYTE();
-            if (popValue().asBool == false) ip += offset;
+            if (popValue().asInt64 == 0) {
+                ip += offset;
+            }
 
             break;
         }

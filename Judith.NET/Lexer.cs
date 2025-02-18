@@ -362,7 +362,7 @@ public class Lexer {
         char c2 = PeekNext();
 
         // Consume leading base prefixes ("0x", "0b" and "0o").
-        if (c == '0' || (c2 == 'x' || c2 == 'b' || c2 == 'o')) {
+        if (c == '0' && (c2 == 'x' || c2 == 'b' || c2 == 'o')) {
             Advance();
             Advance();
             c = Peek();

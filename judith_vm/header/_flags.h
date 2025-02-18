@@ -1,3 +1,5 @@
 #pragma once
 
 //#define DEBUG_DUMP_STACK
+#define DEBUG_CHECK_STACK_UNDERFLOW
+//#define DEBUG_CHECK_IP_UNDERFLOW

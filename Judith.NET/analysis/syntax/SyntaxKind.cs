@@ -60,6 +60,7 @@ public enum SyntaxKind
     ForeachExpression,
 
     AssignmentExpression,
+    LogicalBinaryExpression,
     BinaryExpression,
     LeftUnaryExpression,
     AccessExpression,

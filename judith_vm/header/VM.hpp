@@ -58,6 +58,11 @@ public:
     /// Returns the value at the top of the stack, removing it from the stack.
     /// </summary>
     inline Value& popValue () {
+#ifdef DEBUG_CHECK_STACK_UNDERFLOW
+        if (stackTop == stack) {
+            throw std::exception("Trying to access an invalid stack position!");
+        }
+#endif
         stackTop--;
         return *stackTop;
     }
@@ -67,6 +72,11 @@ public:
     /// </summary>
     /// <returns></returns>
     inline Value& peekValue () {
+#ifdef DEBUG_CHECK_IP_UNDERFLOW
+        if (stackTop == stack) {
+            throw std::exception("Trying to access an invalid stack position!");
+        }
+#endif
         return *stackTop;
     }
 
@@ -109,7 +119,7 @@ public:
             std::cout << value.asStringPtr->string;
             break;
         case ConstantType::BOOL:
-            std::cout << (value.asBool == false ? "false" : "true");
+            std::cout << (value.asInt64 == 0 ? "false" : "true");
             break;
         default:
             std::cout << "Error: unknown type.";
