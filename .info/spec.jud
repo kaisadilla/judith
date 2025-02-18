@@ -1,0 +1,1485 @@
+-- Single-line comment.
+
+--[[
+Multi-line comment.
+]]--
+
+--# Documentation comment.
+--- Indentation in the Judithdoc comment.
+
+#region Modularization
+
+#region Module
+-- Modules organize top-level nodes into separate regions. All top-level nodes
+-- in Judith must belong to a module. If no module is defined in a file, then
+-- nodes declared in that file will be included in the global module. Libraries
+-- are not allowed to include anything in the global module.
+
+-- Each file may only contain one module declaration, and that declaration must
+-- precede any other node in the file, excluding import nodes (who must go at
+-- the top of the file)
+
+-- When a file is included in a module, that module is implicitly imported into
+-- the file.
+module awesome_game -- all contents of this file belong to module "awesome_game"
+
+-- Modules can contain other modules. In this case, the module and all of its
+-- ancestors are imported into the file.
+module awesome_game::physics -- this file will have access to awesome_game, too.
+
+-- Modules can be imported into other files:
+import awesome_game
+
+-- Members of a module can also be accessed explicitly, without importing the
+-- module itself:
+const game = awesome_game::Game!()
+
+-- Explicitly accessing members like this may be necessary to resolve name
+-- conflicts:
+import awesome_game
+
+typedef struct Game {
+    -- ...
+}
+
+const game = Game!() -- Error, as Game here is referring to the Game struct we
+                     -- just defined, which doesn't have a constructor.
+const game = awesome_game::Game!() -- Fine, it's pointing to the correct Game type.
+
+-- The global namespace is literally named "global" and can be explicitly referred
+-- to:
+module awesome_game
+const global_game_struct = global::Game{
+    -- ...
+} -- here, "Game" alone would refer to awesome_game::Game, as it takes precedence
+  -- since it belongs to the module we are currently working with.
+
+-- In any other module, no module (not even global) has precedence:
+module some_unrelated_module
+var game: Game -- error, "Game" is ambiguous between "global::Game" and
+               -- "awesome_game::Game".
+#endregion
+
+#region Namespace
+-- Namespaces are similar to modules, but they are intended to be named
+-- explicitly. Namespaces cannot be imported.
+namespace Math
+    symbol PI = 3.1415
+
+    func pow (a, b: Num)
+        var r = a
+        for i in 1..b do
+            r *= a
+        end
+
+        return r
+    end
+end
+
+-- access namespace members like this:
+const value = Math::PI
+const squared = Math::pow(Math::PI, 2)
+#endregion
+
+#region File imports
+-- That isn't a thing in Judith. You don't have to deal with that. For multi-file
+-- projects, the compiler is responsible for including the necessary files and
+-- libraries to compile a program.
+#endregion
+
+#endregion
+
+#region Enumerate
+-- Enumerate is a feature used to generate integer symbols automatically.
+-- Anonymous enumerates don't create a new scope. Instead, generated symbols
+-- become part of whichever scope the anonymous enumerate is used in.
+enumerate
+    STATUS_CONTINUE = 100 -- you can define where enumerate starts counting
+    STATUS_SWITCHING_PROTOCOLS -- 101
+    STATUS_PROCESSING
+    STATUS_EARLY_HINTS -- 103
+    STATUS_OK = 200 -- you can jump to higher numbers
+    STATUS_CREATED -- 201
+    STATUS_ACCEPTED
+    STATUS_NON_AUTHORITATIVE_INFORMATION
+    STATUS_NO_CONTENT -- 204
+end
+
+-- These symbols are now in the global space:
+const status: Num = STATUS_OK -- equals 200.
+
+-- Named enumerates define their own scope:
+enumerate Direction
+    NORTH
+    EAST
+    SOUTH
+    WEST
+end
+
+const direction: Num = Direction::WEST
+
+-- Note that enumerates are not types. They are simply syntactic sugar to declare
+-- multiple symbols without explicitly declaring their value. The above enumerate
+-- is equivalent to:
+namespace Direction
+    symbol NORTH = 0
+    symbol EAST = 1
+    symbol SOUTH = 2
+    symbol WEST = 3
+end
+
+-- As it becomes evident here, enumerate members are just symbols, i.e. aliases
+-- for compile-time constants. Also, as they are symbols, they don't have any
+-- intrinsic type.
+#endregion
+
+#region Mutability
+----------------
+-- MUTABILITY --
+----------------
+
+const immutable_var: String = "My string"
+immutable_var = "Another string" -- error
+
+var mutable_var: Num = 11
+mutable_var = 17 -- valid
+mutable_var = "Car" -- error
+#endregion
+
+#region Primitives
+----------------
+-- PRIMITIVES --
+----------------
+
+-- Basic primitive types in Judith:
+const is_enabled: Bool = true; -- boolean: true or false
+const score: Num = 36.8; -- 64-bit IEEE 754 floating point number.
+const name: String = "Iulius"; -- a string of characters.
+
+-- Extra primitive types in Judith:
+-- These types are used when the specific byte layout of the value is
+-- important.
+-- Numeric types:
+--- I8      Xi8
+--- I16     Xi16
+--- I32     Xi32
+--- I64     Xi64
+--- Ui8     Xu8
+--- Ui16    Xu16
+--- Ui32    Xu32
+--- Ui64    Xu64
+--- F16     Xf16
+--- F32     Xf32
+--- F64     Xf64
+--- Decimal Xm
+--- BigInt  Xib
+--- Byte         (alias type: by default, Ui8)
+--- Int     Xi   (alias type: by default, I64)
+--- Float   Xf   (alias type: by default, F64)
+--- Num     X    (alias type: by default, Float)
+
+-- Int: A typedef for the native integer size (I8, I16, I32 or I64)
+-- UnsignedInt: A typedef for native unsigned integer size (Ui8, Ui16, Ui32 or Ui64)
+-- Float: A typedef for native floating point size (F16, F32 or F64)
+
+-- Additionally, Judith features some special pseudo-types:
+-- Void: used to represent the abscence of a type where a type has to be
+--     expressed. For example, function signatures are indicated as:
+--     '(<parameters>) => <return_type>'. A function that doesn't return
+--     anything is expressed as () => Void.
+-- Any: used to represent a value that can be used in any way. A value of this
+--     type allows any operation at compile-time.
+-- Unknown: used to represent a value whose type is not known. Unlike "Any",
+--     "Unknown" doesn't allow any operation on itself other than checking its
+--     type and certain methods available to all types (such as Unknown.str()).
+-- Never: used to represent a type that can never occur. This type can appear
+--     when we've narrowed down an object's type until it cannot be any type
+--     at all. E.g. after exhausting all possible types of a union type.
+--     Using a field of type "Never" is always a compiler error.
+-- Null: a type whose only possible value is "null".
+-- Undefined: a type whose only possible value is "undefined". Unlike null,
+--     "undefined" ALWAYS belongs to this type.
+#endregion
+
+#region Numbers and number casting.
+-- Number literals can be expressed in the following ways:
+1512 -- Regular number.
+1_512 -- Underscores can be used to make the number more readable. They are
+      -- discarded during compilation. Underscores cannot appear at the start
+      -- of the number (as it would turn it into an identifier) or following
+      -- a decimal point or another underscore.
+0xFF -- Hexadecimal number, prefixed with "0x"
+0b1100_0111 -- Binary number, prefixed with "0b"
+0o7712 -- Octal number, prefixed with "0o"
+5.53 -- Number with a decimal point.
+.315 -- The decimal point can be at the front of the number.
+--661. -- ERROR: But cannot be at the back, as it would become the member access
+       -- token.
+8.21e73 -- Scientific notation, not allowed for integers.
+
+-- ## By default, numbers are not implicitly casted between numeric types.
+const float: Float = 32
+const integer: Int = float -- compile error, Float is not compatible with Int.
+const integer: Int = float:?Int -- valid assignment, we are casting float to Int.
+
+-- ## When a binary expression contains two operands of different types, the
+-- following rules determine what happens:
+
+-- One operand is a float and the other is an integer (signed or unsigned):
+   -- Integer operand gets casted into float:
+3f + 5u -- gets transformed into "3f + 5u:Float"
+
+-- Operands have different sizes:
+   -- Smaller operand gets casted into the type of the bigger opperand:
+188i16 + 21i32 -- gets transformed into "188i16:I32 + 21i32"
+
+-- One operand is signed and the other is unsigned:
+   -- This is not allowed. The user must explicitly cast values to the desired
+   -- type:
+
+135i + 19u -- compiler error - cast 135i to unsigned int or 19u to signed one.
+135i:Uint + 19u -- correct way to do it, specifying you want to operate as unsigned.
+
+-- ## All numeric types can be casted to each other, as defined in the section
+-- "Typecasting".
+
+#endregion
+
+#region Operations
+----------------
+-- OPERATIONS --
+----------------
+
+5 + 2 -- addition
+5 - 2 -- substraction
+5 * 2 -- multiplication
+5 / 2 -- division (returning decimal number)
+5 %i 2 -- integer division (casts both sides to integers and returns an integer)
+5 %f 2 -- decimal division (casts both sides to double and returns a double)
+5 %m 2 -- modulo: returns 5 mod 2
+5 %r 2 -- remainder: returns the remainder of 5 / 2, corresponds to % in C.
+5 ** 2 -- exponentiation
+5 // 2 -- 2root(5)
+
+-- Bitwise operations:
+~2 -- bitwise not (2s complement)
+5 & 2 -- bitwise and
+5 | 2 -- bitwise or
+5 ^ 2 -- bitwise xor
+5 << 2 -- left shift
+5 >> 2 -- right shift
+5 >>> 2 -- zero-fill right shift
+
+not is_enabled -- boolean negation
+is_enabled and is_allowed -- boolean and
+is_enabled or is_allowed -- boolean or
+
+5 == 2 -- equals (only for comparable types)
+5 != 2 -- not equals (only for comparable types)
+5 ~~ 2 -- approximate (when the compared types implement it)
+5 !~ 2 -- not approximate (when the compared types implement it)
+5 === 2 -- reference equals (only for reference variables)
+5 !== 2 -- reference not equals (only for reference variables)
+5 > 2 -- greater than
+5 >= 2 -- greater than or equal to
+5 < 2 -- less than
+5 <= 2 -- less than or equal to
+3 < 4 < 5 -- between: 4 is greater than 3 and less than 5.
+
+a ?? b -- returns a if it's not null or undefined, or b otherwise
+#endregion
+
+#region Strings
+-------------
+-- STRINGS --
+-------------
+-- Strings can be created with double quotes or backticks:
+var valid_string: string = "This is valid."
+valid_string = `This is also valid.`
+-- By convention, double quotes are preferred, while backticks are used for
+-- strings that contain double quotes.
+
+-- String interpolation can be achieved with the flag "f" and {}:
+-- const score_str = f"Your score is {player.score}!"
+
+-- Escaped strings (verbatim) can be achieved with the flag "e". In verbatim
+-- strings, the backslash (\) doesn't escape characters. In this case, quotes
+-- are escaped by writting two of them.
+
+const path: String = e"C:\Windows\System32"
+
+-- you can escape line breaks inside strings with \. This will ignore the line
+-- break and all the spaces in the next line before the first non-space character:
+const not_broken: String = "This string is \
+                            not broken." -- Equals "This string is not broken."
+
+-- Raw string:
+-- Raw strings are delimited by, at least, two double quotes on each end.
+-- The content inside these quotes must be in new lines, and that content must
+-- be indented one level deeper than the closing quotes. Indentation inside the
+-- raw string is not part of the string.
+-- Raw strings don't need to escape double quotes that are part of the string,
+-- for as long as there are fewer consecutive double quotes than what was used
+-- to delimit the string. Using backticks (``` content ```) is also valid.
+const json_content: String = """
+    {
+        "type": "Text",
+        "id": 6
+    }
+""" -- <-- Because the closing quotes are indented at level 0, the content must
+    --     be indented at level 1.
+#endregion
+
+#region Control structures
+------------------------
+-- CONTROL STRUCTURES --
+------------------------
+
+-- if block
+if element == 'Water' then
+    -- statements
+elsif element == 'Earth' then
+    -- statements
+end
+
+if element == 'Water' => my_func()
+else => my_other_func()
+
+-- Match
+-- Match is syntactic sugar for an if-else block. It's similar to switches in
+-- other languages.
+
+match country do
+    'Germany' then
+        -- statements
+    end
+    'France' then
+        -- statements
+    end
+    'Italy' then
+        -- statements
+    end
+    'Spain', 'Greece', 'Sweden' then -- multiple matches.
+        -- statements
+    end
+    else -- all other cases
+        -- statements
+    end
+end
+
+-- while loop
+while i < 32 do
+    -- statements
+end
+
+-- infinite loop, can only be stopped with "break"
+loop
+    -- statements
+end
+
+-- foreach loops:
+-- foreach loops execute once for each item in a list. More technically, it
+-- traverses an iterable object.
+
+--- Foreach loop:
+for const item in item_array do
+    -- statements
+end
+
+-- ranges:
+-- ranges are a special syntax designed to work well with foreach loops. Ranges
+-- are lists that contain a set of numbers.
+const range = Range(0, 10) -- start is inclusive, end is exclusive. This creates
+                           -- the list [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].
+-- Range has a custom syntax built into the language:
+const range = 0..10 -- same as Range(0, 10)
+
+-- Range can have a step:
+const range = Range(9, -1, -1) -- the third argument is the step, in this case -1.
+const range = 9..-1 step -1 -- same as above.
+
+-- Ranges can be created with inclusive end:
+const range = Range(0, 10, true) -- this time, the end value (10) is inclusive.
+const range = 0..=10 -- same as above.
+
+-- loop through a range from A to B:
+for const i in 0..20 do
+    -- statements
+end
+
+-- This loop can specify the step to use in the range
+for const i in 20..0 step -2 do
+    -- statements, triggers for 20, 18, 16, 14, 12, 10, 8, 6, 4, 2
+end
+
+-- The part before "in" is an initialization, not an assignment, it will always
+-- initialize a new variable even if you omit "const":
+for i in 0..10 do -- here i is a new variable.
+    -- statements
+end
+
+var j = 3;
+for j in 0..10 do -- error: j already exists.
+    -- statements
+end
+
+const my_val = if (i < 5) then
+    const something = my_func()
+    yield something.str()
+else
+    yield "too low"
+end
+
+-- if, match, while, loop and for statements are expressions that can resolve to
+-- a value. This can be done with arrow bodies or "yield" statements:
+const name: String = match id do
+    0 => "Germany" -- when id == 0, returns 'Germany'
+    1 => "France"
+    2 => "Italy"
+    default => "Unknown" -- if id didn't match any previous value, returns "Unknown".
+end
+
+-- When
+-- 'when' is a a syntactic sugar for 'if' for one-liners:
+print("Number is big!") when i > 1_000_000
+-- is equivalent to
+if i > 1_000_000 then print("Number is big!") endif
+
+-- You can break or continue out of an inner loop by using a number:
+for i in 0..15 do
+    for j in 0..15 do
+        break 2 when i == 3 and j == 3 -- will break from the i loop.
+
+        continue 2 when j == 7 -- once j = 7, it will continue the i loop, so
+                               -- the console.log below will never be printed.
+    end
+
+    Console::log(f"Completed cycle for i = {i}.")
+end
+
+#endregion
+
+#region Functions
+---------------
+-- FUNCTIONS --
+---------------
+-- functions are defined by the keyword "func":
+func get_value_plus_10 (const value: Num) : Num
+    return value + 10
+end
+
+-- functions can return more than one value:
+func get_info (id: Guid) : String, Num
+    -- statements
+    return (name, num) -- wrap all the returned values with a parentheses.
+end
+
+const name, num = get_info(player_id) -- valid assignment, as this assigns to values.
+const name = get_info(player_id) -- valid assignment, second value is discarded.
+const num: Num = get_info(player_id) -- invalid assignment, first value is of type String.
+const _, num = get_info(player_id) -- valid assignment, first value is assigned to discard.
+
+-- variadic functions can take any number of arguments. To write a variadic
+-- function, the last parameter of the parameter list has to use the spread
+-- operator (...), and its signature has to be any collection that can be
+-- initialized from a list of values (i.e. any collection that can be initialized
+-- with [a, b, c] syntax).
+func add_many_numbers (...nums: List<Num>)
+    var sum = 0;
+    for n in nums
+        sum += n
+    end
+    return sum
+end
+-- You can call it as a variadic function:
+const sum = add_many_numbers(3, 5, 2, 4, -7, 9, 4, 11)
+-- Or you can ignore that it's a variadic function and pass it the collection
+-- it asks for as if it was a normal parameter (in this case, a List<Num>):
+const my_list: List<Num> = [1, -2, 5, 6.6, 0.4, 2]
+const sum = add_many_numbers(my_list)
+
+-- ctor parameters are parameters that unpack to _any_ constructor for the given
+-- type. This allows functions to be used to create objects.
+func build_person (person_ctor: Person!) -- "Person!" means "ctor signature for Person".
+    const person = Person!(person_ctor) -- matches any valid Person!() signature.
+    -- do stuff
+end
+-- named constructors can also be used for ctor parameters:
+func build_person (ctor person_ctor: Person::make_kevin!)
+    const person = Person!(person_ctor) -- matches any valid Person::make_kevin!() signature.
+end
+
+----------------
+-- GENERATORS --
+----------------
+-- generators are a special type of function that uses 'yield' statements to
+-- return values, one by one, when iterated.
+generator get_single_digit_numbers () -- return type: IEnumerable<Num>
+    for const i in 0..10 do
+        yield i
+    end
+end
+
+const gen: IEnumerable<Num> = get_single_digit_numers()
+const a = gen.next() -- equals 0
+const b = gen.next() -- equals 1
+
+for const i in gen do -- will loop for 2, 3, 4, 5, 6, 7, 8, 9.
+    -- statements
+end
+#endregion
+
+#region Locals and types
+----------------------
+-- LOCALS AND TYPES --
+----------------------
+-- Locals can be mutable or immutable.
+const name = "Kevin" -- immutable local, cannot be reassigned.
+name = "Steve" -- error: cannot assign to name after initialization.
+var name = "Kevin" -- mutable local, can be reassigned.
+name = "Steve" -- ok
+
+-- Every local in Judith has a type, and only values of that type can be
+-- assigned to it.
+var name: String = "Kevin" -- local of type String.
+name = 3 -- error: number cannot be assigned to local of type String.
+
+-- Even though locals always have a type in Judith, that type doesn't have to
+-- be explicitly written down when it can be inferred from context:
+var score = 12 -- "score" is of type Num, because it's been initialized with a Num.
+score = "Kevin" -- error, score was inferred to be a Num.
+
+-- null and undefined
+-- 'null' and 'undefined' are special values.
+
+-- 'null' represents the abscence of a value, and can ONLY be used in locals
+-- with a nullable type. The nullable version of a type T is denoted as T?
+var name: String = null -- error, String is not nullable.
+var name: String? = null -- ok
+var name = null -- error, type cannot be inferred.
+
+-- 'undefined' is a special value that represents that the value being accessed
+-- doesn't exist (for example, accessing a field in an object that hasn't been
+-- defined). 'undefined' cannot be assigned to anything, but can be used to test
+-- if values are equal to it.
+#endregion
+
+#region Field shadowing
+---------------
+-- SHADOWING --
+---------------
+-- Judith allows local fields to be shadowed - that is, replaced by new fields
+-- with the same name:
+var score: Num = 6
+score = 8
+const score: String = score.str() -- starting here, "score" will refer to this
+                                  -- new String, rather than the old Num field.
+score = 8 -- error: score is of type 'String'.
+
+-- Shadowing allows a special construct that can be used to turn variable fields
+-- into constant versions of themselves:
+var score: Num = 6
+score = 8
+const score; -- this is shorthand for "const score = score". By doing this,
+             -- score, which was a variable field before, becomes a constant
+             -- field from this point forward. This allows developers to
+             -- initialize an object and mutate it, and then lock it into its
+             -- mutated form for the rest of its lifetime.
+#endregion
+
+#region Collections
+-----------------
+-- COLLECTIONS --
+-----------------
+-- ## List ##
+-- Lists are the most basic collection in Judith. They are a set of values of the
+-- same type.
+const scores: List<Num> = [3, 5, 9, 15]
+-- Lists indices start at 0.
+scores[0] -- Returns 3.
+scores[4] -- Returns 'undefined', as only indices 0, 1, 2 and 3 exist in the list.
+scores[-1] -- Returns the first value from the end,
+           -- that is the value at index 3: 15
+scores[1..3] -- Returns the values in the range given,
+             -- that is values at 1 and 2: [5, 9]
+
+const map: List<Tile, 2> = [
+    ['Dirt', 'Dirt', 'Dirt'],
+    ['Dirt', 'Water', 'Water'],
+    ['Water', 'Water', 'Dirt'],
+] -- Lists can have more than one dimension.
+map[0, 2] -- returns 'Dirt' (subarray #0, position #2).
+
+-- ## Dictionary ##
+-- Dictionaries are the basic collection of key-value pairs.
+const scores: Dictionary<String, Num> = [
+    "Kevin" = 7,
+    "Ryan" = 5,
+    "Steve" = 11,
+    "Alice" = 8,
+]
+-- Access dictionaries like you would lists:
+scores["Ryan"] -- returns 5.
+scores["Regina"] -- returns 'undefined'.
+#endregion
+
+#region Typecasting
+-- Typecasting in Judith is restricted to operations that change types between
+-- compatible types. There's three types of typecasting:
+
+-- ## Upcasting: this cast uses the ":" operator, and allows values to be casted
+-- into a type they are guaranteed to be compatible with. This cast happens at
+-- compile time and has no overhead:
+typedef struct Person
+    name: String
+end
+typedef struct Employee
+    salary: Num
+end
+typedef Worker = Person & Employee
+
+const worker = Worker{
+    name: "Kevin",
+    salary: 160_000,
+}
+const person: Person = worker:Person -- valid cast, as Worker includes Person.
+
+-- ## Downcasting: this cast uses the ":?" operator, and is used to cast values
+-- into other values that are descended from them. This cast occurs dynamically
+-- during runtime and can throw an exception if it's incorrect.
+const str: Num | String = "Some string"
+try
+    const some_number: Num = str:?Num -- as "id" is a String right now, this cast
+                                     -- will fail.
+catch ex: InvalidCastException -- and throw an InvalidCastException
+    Console::log("Error while casting 'str'.")
+end
+
+-- ## Number casting: this allows casting between different numeric types (Num,
+-- Int, Byte, Ui32, etc.). This casting features the same syntax as the previous
+-- two (: when errors cannot occur, :? when errors can occur). Despite this,
+-- this cast ALWAYS occurs at runtime and, as such, has minimal overhead.
+const num: Num = 13
+const integer: Int = num:?Int -- Error occurs if num is too big for an Int.
+const num2: Num = integer:Num -- Errors cannot occur, every Int can be a Num.
+
+-- When the casting is done in an unchecked context, then ":" is ALWAYS used,
+-- as errors can never occur. When the casting is done in a checked context, then
+-- the rules for which operator to use can be found here. In case two rules
+-- contradict each other, ":?" prevails over ":":
+
+-- Smaller size to bigger size*                          :
+-- Bigger* size to smaller size                          :?
+-- Signed integer to unsigned integer, and vice versa    :?
+-- Integer to float                                      :
+-- Integer to decimal                                    :
+-- Float to integer                                      :?
+-- Float to decimal                                      :
+-- Decimal to integer                                    :?
+-- Decimal to float                                      :?
+
+-- * BigInt is considered an integer of infinite size, so it's always bigger
+-- than any other Int.
+
+-- ## keyword 'is': TODO
+
+-- Casting operators have the highest precedence in Judith, so they don't
+-- require parentheses to be used in an expression:
+worker:Person.some_person_method() -- Here some_person_method() is called on
+                                   -- "worker:Person".
+
+-- Judith does not feature a syntax to dynamically cast one value into an
+-- unrelated type at downtime. To achieve this, a pattern called
+-- "casting constructor" is recommended. A casting constructor is a constructor
+-- with a single const parameter that is a value of a different type:
+typedef struct Car (...) end
+typedef struct Boat (...) end
+
+-- Here we define a constructor for Car that takes a boat (as const, so it cannot
+-- alter the boat object) and builds the new Car with boat's information.
+Car::ctor (boat: Boat)
+    -- constructing a new car based on boat's values.
+end
+
+const boat = Boat!() -- a regular instance of Boat.
+const car = Car!(boat) -- calling a constructor for Car that reads that boat.
+#endregion
+
+#region User-defined types
+------------------------
+-- USER-DEFINED TYPES --
+------------------------
+-- New types of any kind are always defined with the "typedef" keyword.
+
+#region Alias
+-- Aliases are the simplest way to create a new type. They simply define that
+-- type as another type.
+typedef UniqueId = Int
+
+const id: UniqueId = 32i -- UniqueId is an alias for Int, so Ints can be used.
+const integer: Int = id -- valid, as "id" is an int and is implicitly casted.
+
+-- You can prevent type aliases from being used as the type they refer to by
+-- making them explicit:
+typedef expl UniqueId = Int
+
+const id: UniqueId = 32i -- Valid, as before.
+const integer: Int = id -- Compile error: "id" is UniqueId, not Int.
+const integer: Int = id:Int -- Valid: explicit aliases can be upcasted to their
+                            -- original type.
+#endregion
+
+#region Union
+-- A union type defines a value as one type from a group of valid types. It's
+-- defined with the bitwise OR operator (|)
+typedef Id = Num | String
+const id: Id = 36 -- valid assignment, as "Num" is a possible kind of Id.
+id = "string_id" -- valid assignment, as "String" is also a possible kind of Id.
+
+-- We can downcast unions into any of the types that conform it.
+const some_number: Num = id:?Num
+
+-- Any member that is common to all types in an union is accessible from the
+-- union type:
+typedef MyCollection = List | Dictionary
+const col: MyCollection = [] -- type: List
+Console::log(col.count) -- valid access, as both "List" and "Dictionary" have
+                        -- a property named "count" that is the exact same.
+#endregion
+
+#region Set
+-- A set is defined by a group of literals. Any literal inside that group is
+-- a valid member of the set. Note that String literals used in sets use single
+-- quotes rather than multiquotes.
+typedef set Countries
+    'Germany',
+    'Sweden',
+    'France',
+    'Italy',
+    'Japan'
+end
+
+const country: Countries = 'Germany' -- valid, as 'Germany' is part of the set.
+country = "Great Britain" -- invalid, as 'Great Britain' is not part of the set.
+
+-- Sets can contain literals of different types
+typedef set ExpressionsThatMeanYes
+    true,
+    1,
+    "ok"
+end
+
+const yes_expr: ExpressionsThatMeanYes = true -- valid
+yes_expr = 1 -- also valid, '1' is another possible value of type ExpressionsThatMeanYes.
+yes_expr = 2 -- invalid, '2' is not part of the set.
+
+-- Sets are also implicitly union types, and as such any member shared among all
+-- members of the set can be accessed, and sets can be downcasted into types
+-- that are part of the set.
+country.substr(4) -- valid, as all members of Countries have the substr() member.
+const my_num: Num = yes_expr?:Num -- also valid.
+#endregion
+
+#region Anonymous struct
+-- Anonymous struct are a special kind of structs that are not defined anywhere.
+-- These are not typeless values, however - it's just that their type is
+-- implicitly generated.
+const anon = {
+    username = "x__the_best__x",
+    score = 500_000_000,
+} -- anonymous struct. Its type is "{ username: String, score: Num }".
+
+anon.id = "what?" -- Error: anon has a clearly defined type, even if it's
+                  -- anonymous and thus, created implicitly by its initialization.
+
+-- Anonymous structs are used similarly to tuples: to bundle unrelated
+-- information to pass it around. The only difference is that, while tuples just
+-- feature values, anonymous structs give them names.
+
+func get_user_and_score () -- again, return type is "{ username: String, score: Num }".
+    return {
+        username = "x__the_best__x",
+        score = 500_000_000,
+    }
+end
+
+-- You can destructure the anonymous struct just like any other struct:
+const username, score = ...get_user_and_score()
+#endregion
+
+#region Struct
+-- Structs define an object that contains a number of member fields. They are
+-- used to define POD (plain old data) types.
+typedef struct Person
+    name: String
+    age: Num
+    country: Country
+    salary: Decimal
+end
+
+-- Structs are then constructed like objects.
+const person = Person {
+    name = "Kevin",
+    age = 28,
+    country = 'Germany',
+    salary = 103_000d,
+}
+
+-- Structs can have default values and optional keys:
+typedef struct Person
+    name: String
+    country: Country = 'Other' -- default value
+    age?: Num -- optional key, notice that the '?' is added to the key and
+               -- not its type.
+    salary: Decimal? -- mandatory key of type nullable Decimal
+end
+
+-- Structs can extend other structs.
+typedef struct Employee
+    Person -- Including the name of another struct (without defining a member)
+           -- means Employee will have all of the fields of Person.
+    role: CompanyRole
+    antiquity: Num
+    salary: Num -- this member conflicts with Person.salary, and it doesn't even
+                -- have the same type. In this case, both "salary" members exist.
+end
+
+const employee: Employee = -- init
+employee.country -- Valid access, "country" is a member of Employee.
+employee.salary -- Type Num, this is the "salary" we defined in "Employee".
+employee:Person.salary -- We can still cast employee to Person to access
+                       -- Person.salary (type Decimal).
+#endregion
+
+#region Interface
+-- If structs hold data, intefaces define behavior. Objects cannot be of an
+-- interface's type, but instead interfaces are implemented into types to give
+-- them new functionalities.
+
+-- By convention, interfaces are prefixed with the letter "I".
+typedef interface ISummarizable
+    -- Abstract methods: methods declared by the interface that must be
+    -- implemented by the class.
+    func summary () : Void
+    
+    -- As any other method, these methods may be pure or impure.
+    impure func mark_as_read () : Void
+
+    -- As interfaces cannot have member fields, any member data that wants to
+    -- be guaranteed must be exposed through a getter method:
+    func is_read () : Bool
+
+    -- Concrete methods: methods provided by the interface. These methods are
+    -- inherited by the types that implement the interface, so there's no need
+    -- to cast them back to the interface type to use them (unless they collide
+    -- with members of that type).
+    func extended_summary () : Bool
+        -- Note that the interface still has access to a "self". This "self" is
+        -- the object this method is being called off, casted to the interface
+        -- type.
+        return .summary() + " (Read more...)"
+    end
+end
+
+-- Here we define two structs for two different kinds of objects: newspaper
+-- articles and blog posts.
+typedef struct Article
+    headline: String,
+    country: Country,
+    author: Person,
+    content: String,
+    is_read: Bool,
+end
+
+typedef struct Post
+    username: String,
+    content: String,
+    comments: Num,
+    is_read: Bool,
+end
+
+-- Now, we'll implement ISummarizable for both types:
+impl ISummarizable for Article
+    func summary ()
+        -- Here we are implementing ISummarizable methods for instances of
+        -- Article specifically, so "self" is of type Article. Thus, .content
+        -- refers to Article.content, not ISummarizable.content (which doesn't
+        -- exist).
+        return .content.substr(100) + "..."
+    end
+
+    func get_is_read ()
+        return .is_read
+    end
+
+    impure func mark_as_read ()
+        .is_read = true
+    end
+
+    -- Note that extended_summary cannot be implemented, as that's a method
+    -- owned and implemented by ISummarizable.
+end
+
+impl ISummarizable for Post
+    -- ...
+end
+
+-- Now, we can use ISummarizable methods on our objects:
+const article: Article = --{}
+const post: Post = --{}
+
+Console::log(article.summary()) -- valid, we are calling ISummarizable.summary()
+Console::log(post.summary()) -- valid, we are calling ISummarizable.summary()
+
+const summarizable: ISummarizable = article -- valid, article is ISummarizable
+article:ISummarizable -- upcast at compile time.
+summarizable:?Article -- downcast at runtime, fails if summarizable is a Post.
+
+-- If member identifier collisions occur between two interfaces implemented by
+-- a specific type (e.g. Post implements two different interfaces that define
+-- "summary()"), then that ambiguity is resolved by upcasting the object
+post:ISummarizable.summary() -- calling ISummarizable.summary()
+post:IOther.summary() -- calling IOther.summary()
+
+-- If the collision occurs between the type itself and an interface, then the
+-- type itself takes precedence. If Post contained summary() itself then:
+post.summary() -- calling Post.summary()
+post:ISummarizable.summary() -- calling ISummarizable.summary()
+#endregion
+
+#region Class
+-- Classes are the most complex type in Judith. They define state machines whose
+-- behavior is controlled by the class, who defines how outside code can
+-- interact with it. For this purpose, classes feature privacy rules.
+
+typedef class Person
+    -- Fields contained by the class. Fields are variable inside the class, but
+    -- are exposed as constant to the outside. This means that code from the
+    -- outside can read their value, but cannot assign new values to it nor call
+    -- any impure method in them.
+    name: String
+    -- A member field can be hidden from the outside altogether with the "hid"
+    -- keyword. A hidden field will not be visible at all from outside the class.
+    hid birth_year: Num?
+    -- A member field can be exposed as a variable to the outside, allowing
+    -- code from the outside to mutate its state or assign a new value to it.
+    -- This can be achieved with the "pub" keyword, that makes it public.
+    pub country: Country -- todo: maybe prevent this entirely and force setter methods.
+    -- A member field can be marked as mutable with the "mut" keyword. A mutable
+    -- field can be mutated even by pure methods. Semantically, mutable members
+    -- are not considered part of the object's state, so they should not have
+    -- any effect on the object's behavior.
+    mut times_age_was_read: Num = 0 -- Default initializer.
+
+    -- static members do not belong to any instance, but rather the class itself.
+    static people_created: Num = 0
+
+    -- Classes may include constructors inside their own definition:
+    ctor (name: String, birth_year: Num?, country: Country)
+        -- The instance a method or constructor is running on is contained in
+        -- a special local named "self".
+        self.name = name
+        -- "self" can be implied by simply using the accessor token "." on nothing.
+        .birth_year = birth_year
+        .country = country
+
+        -- similarly, the class itself can be implied by using the scope
+        -- resolution token "::" on nothing. "::people_created" is the same as
+        -- "Person::people_created".
+        ::people_created += 1
+    end
+
+    -- Classes can define their own methods. By default, functions are pure,
+    -- which mean they cannot mutate their own member fields.
+    func print_name ()
+        Console::log(.name)
+        .name = "New name" -- error: pure function cannot mutate the instance.
+    end
+
+    func get_age () : Num
+        -- Methods defined inside the class can access hidden members.
+        const age = .calc_age()
+
+        -- Mutable fields can be mutated even by pure functions.
+        .times_age_was_read += 1
+
+        -- Static fields are not part of any instance's state, so they can be
+        -- mutated freely even by pure functions. This specific line doesn't
+        -- make much sense, but it's for demonstrative purposes.
+        ::people_created += 1
+
+        return age
+    end
+
+    -- The keyword "impure" can be used to define an impure method, which can
+    -- mutate the instance's members. These methods cannot be called on instances
+    -- assigned to constants, but only those assigned to variables.
+    impure func relocate (new_country: Country)
+        -- Valid assignment, as this is an impure function
+        .country = new_country
+    end
+
+    hid func calc_age () : Num
+        return Date::now().year() - .birth_year
+    end
+
+    -- Since static members are not part of any instance's state, they can be
+    -- mutated freely in pure functions
+    static func print_people_created ()
+        Console::log(::people_created)
+    end
+end
+
+-- create a new object that is an instance of Person.
+var kevin = Person!("Kevin", 1975, 'Germany')
+-- unlike structs, classes can only be created through their constructors.
+Console::log(kevin.name) -- valid, as "name" is visible from the outside.
+kevin.name == "George" -- invalid, as "name" is constant to the outside.
+kevin.country = 'Italy' -- valid, as "country" is variable to the outside.
+
+kevin.print_name() -- valid call, will print "Kevin"
+kevin.calc_age() -- invalid call, calc_age is a hidden member.
+kevin.relocate('France') -- valid call, impure functions (that mutate state)
+                          -- can be called in variables.
+kevin.print_people_created() -- invalid call, "kevin" object doesn't have a member
+                              -- with that name, as that method belongs to Person.
+
+const kevin -- redeclare it as a constant
+kevin.relocate('France') -- error, relocate is an impure function that would
+                          -- mutate this constant.
+kevin.print_name() -- still valid, as it's a pure function.
+
+Person::print_people_created() -- valid, as this method belongs to Person.
+
+-- Classes can implement interfaces in their own declaration, allowing that
+-- interface declaration to access private members:
+typedef class Announcement
+    organization: Organization
+    text: String
+    is_read: Bool
+
+    impl ISummarizable
+        func summary ()
+            return .text.substr(100) + "..."
+        end
+
+        func get_is_read ()
+            return .is_read
+        end
+
+        impure func mark_as_read ()
+            .is_read = true
+        end
+    end
+
+    -- constructor, methods and stuff.
+end
+
+-- As classes are big objects, it is sometimes convenient to have them form their
+-- own "namespace". For this purpose, types can be defined inside classes:
+typedef class Vehicle
+    typedef set Type
+        'Car',
+        'Boat',
+        'Airplane',
+        'Train',
+    end
+
+    typedef struct Id
+        registrar: String,
+        license: Num,
+    end
+
+    type: Type -- This is Vehicle::Type
+    id: Id -- This is Vehicle::Id
+end
+
+-- These types are not special nor restricted in any way. The only particularity
+-- is that the class acts as their namespace:
+const vehicleType: Vehicle::Type = 'Boat';
+const id: Vehicle::Id = {
+    registrar: "Kevin",
+    license: 42069,
+};
+
+-- This is a convenient way to create types that only make sense when dealing
+-- with a specific class, without polluting the module with them or forcing
+-- weird type names such as "Vehicle_Type".
+
+#endregion
+
+#region Extension methods and constructors
+-- Extension methods are methods implemented into types from outside that type's
+-- definition. As such, they are just syntactic sugar for functions that take
+-- an object of a type as an implicit parameter.
+impl func Person::print_name ()
+    Console::log(.name) -- "self" here is of type "Person".
+    .name = "MUTATED" -- invalid, as "self" is a constant and cannot be mutated.
+end
+
+-- Any type in Judith can have constructors. Constructors are special functions
+-- that return an object of a given type. Constructors are defined with the
+-- "ctor" keyword.
+impl ctor Person (name: String, country: Country, birth_year: Num)
+    .name = name -- Inside constructors, "self" is a VARIABLE reference to the
+                  -- object being constructed.
+    .country = country
+    .age = Date::now().year() - birth_year
+    .salary = null
+end
+
+-- Constructors are called with the name of the type followed by "!".
+const person = Person!("Kevin", 'Germany', 1977)
+
+-- You can also define named constructors. These work the same as regular
+-- constructors, except they have an identifier attached to them:
+impl ctor Person::kevin ()
+    .name = "Kevin"
+    .country = 'Germany'
+    .salary = null
+end
+
+-- Invoke these constructors like this:
+const person = Person::kevin!()
+
+-- Classes can define constructors inside their own declaration, but you are
+-- free to create new constructors outside with impl.
+#endregion
+
+#region Operator overloading
+-- Many operators in Judith can be overloaded. This is done with the "oper"
+-- keyword, that has a function-like syntax (as overloaded operators are just
+-- functions). Some operators are methods while others are functions (i.e. take
+-- both operands as parameters).
+
+-- Binary "+", "-", "*", "/":
+-- These four operands take two values of any type and return a new value of any type.
+-- We take a fraction to the left and a number to the right, and the result will be
+-- a fraction.
+-- Note that we can use the "symm" keyword to mean that this operation is symmetric,
+-- meaning that we can write a number at the left and a fraction at the right, and
+-- the compiler has the freedom to rearrange both operands to fit this operation.
+symm oper + (const a: Fraction, const b: Num) : Fraction
+    return {
+        num: a + (b * den),
+        den: den,
+    }
+end
+
+-- Unary "-", "~":
+-- This time we only take a single argument. As such, it cannot be symmetric.
+oper - (a: Vec3)
+    return Vec3!(-a.x, -a.y, -a.z)
+end
+
+-- Value equals: "==" and "!=":
+-- Overloading "==" will implicitly overload "!=" with not (==). Overloading "!="
+-- is still allowed, so the user can write a more efficient method to compare
+-- negative.
+symm oper == (a, b: Vec3)
+    return a.x == b.x and a.y == b.y and a.z == b.z
+end
+
+-- Comparison: "<", "<=", ">", ">=":
+-- Overloading just one of these operators is enough, although more of them can
+-- be overloaded to refine and / or optimize their behavior:
+symm oper < (a, b: Vec3)
+    return a.mod < b.mod
+end
+-- By overloading this, "<=" gets automatically implemented as (a < b) or (a == b),
+-- ">" gets implemented as not (a < b) and ">=" gets implemented as
+-- (not (a < b)) or (a == b).
+
+-- Indexing operator: "[]"
+-- This operator is defined as a method:
+class SomeCollection
+    --...
+
+    oper [] (a, b: Int) -- can be called as coll[5, 10]
+        return .arr[(a * .width) + b]
+    end
+end
+
+-- ## Nullable
+-- Operators can be defined with nullable or non-nullable types (or both).
+-- Regular nullability rules apply: T can be assigned to T?, but T? cannot be
+-- assigned to T. T and T? are different types so both overloads can be defined.
+
+-- ## These operators CANNOT be overloaded
+-- Reference equals: "===" and "!==".
+-- Call: ().
+-- Object constructor: {}.
+-- Logical operators: "and" and "or".
+-- Range: ".."
+#endregion
+
+#region Templates
+-- TODO: Maybe replace with generics. Judith aims to minimize the opportunities
+-- to misuse features and, honestly, I'm not sure a high-level language needs
+-- stuff like numeric template parameters.
+
+-- Templates are the way Judith implements generics.
+
+-- This template requires a type parameter:
+template<_T: typename>
+typedef struct NamedValue<_T>
+    name: String,
+    value: _T,
+end
+
+const val = NamedValue<I32> {
+    name: "Int32 value",
+    value: 73i32,
+}
+
+-- Note that, because we don't have any information about _T, we cannot do any
+-- operations with it. It's effectively treated as "unknown".
+impl func NamedValue<_T>::increase_by (b: _T)
+    .value += b -- compile error: type "_T" doesn't define '+'.
+end
+
+-- using trules, templates can add constraints to template parameters, to allow
+-- them to have some information about them.
+template<_Col, _T: typename>
+trule<_Col is IEnumerable<_T>>
+func print_all (collection: _Col)
+    -- we can iterate collection because we know _Col implements IEnumerable<_T>
+    for val in collection do
+        Console::log(val)
+    end
+end
+
+-- template parameters can be of the following kinds:
+template<_T: typename> -- _T is a valid Type identifier.
+template<_n: Num> -- _n is a compile-time constant of the given type.
+
+-- Other available trules are:
+-- _T has an instance method with the given signature:
+<trule func _T.instance_func(Num, Num) => Void>
+-- _T has a static method with the given signature:
+<trule func _T::static_func(String) => String>
+-- _T overloads operator:
+trule<oper _T / _T> -- Operator "/" can have _T at left and _T at right.
+-- _T is of a given type:
+<trule _T is String | Num>
+-- _T is of a given type, which is also a template parameter:
+<trule _T is _K>
+
+-- Templates in Judith feature specialization. This feature allows developers to
+-- implement specific cases of a template to give them a behavior different from
+-- the original template.
+
+-- This is a regular template with a literal template parameter.
+template<_T typename, _n: _T>
+trule<oper _T / _T>
+func divide_by_n (m: _T)
+    return m / _n
+end
+
+-- We can define a custom implementation for _n = 0 that throws an exception:
+template<_T typename> -- In this case, the template keyword only takes parameters
+                      -- that aren't defined by the function. _n is defined as 0
+func divide_by_n<_T, 0> (m: _T)
+    throw !("Trying to divide by zero!") -- note: when ! is used after throw, it implies "Exception!()".
+end
+
+-- Now, calling divide_by_n with any parameter other than 0 will call the template
+-- function we defined in the first snippet, while calling it with n = 0 will
+-- call the specialized version implemented in the second one.
+divide_by_n<3>(9) -- = 3
+divide_by_n<0>(9) -- throws Exception: "Trying to divide by zero!".
+#endregion
+
+#endregion User-defined types
+
+#region How does "if" evaluate tests?
+-- The "if" expression accepts any value as its test. Every value will evaluate
+-- to 'true' unless the value is 'false', 'null' or 'undefined'.
+const zero: Num = 0
+const empty_str: String = ""
+const kw_false: Bool = false
+const kw_null: String? = null
+const obj: Object = {}
+
+if zero => Console::log("Zero!") -- true, 0 passes the test.
+if empty_str => Console::log("Empty string!") -- true, "" passes the test.
+if kw_false => Console::log("Empty string!") -- false, false fails the test.
+if kw_null => Console::log("Empty string!") -- false, null fails the test.
+if obj.a => Console::log("Empty string!") -- false, obj.a is "undefined" and that
+                                          -- fails the test.
+
+-- Nullable boolean:
+-- A special situation occurs with Bool?. In this case, the user may use the value
+-- to test for null or to test for false. If this comparison is not explicit, the
+-- compiler will emit a warning:
+const val: Bool? = false
+
+if val then end -- WARNING: Use "val == false" or "val === null".
+#endregion
+
+#region Destructuring
+-- Destructuring is a feature that allows the developer to unpack values from
+-- collections and types that own members. Destructuring uses the ellipsis
+-- operator (...), not to be confused with the Range operator (..).
+
+-- There's two ways to destructure values: by content or by member:
+
+-- # Content destructuring, indexed with []:
+-- Content destructuring assigns values contained in an enumerable collection,
+-- in whichever order that collection enumerates them. A type is a enumerable
+-- collection if it implements the IEnumerable interface.
+const countries = ['Japan', 'China', 'South Korea', 'Taiwan']
+const [ japan, china ] = ...countries -- The first two elements of the array are
+                                      -- assigned to variables "japan" and "china".
+
+-- # Member destructuring, indexed with {}:
+-- Member destructuring assigns values contained in member fields of a type.
+-- Unlike content destructuring, this is resolved at compile time.
+const person = Person{
+    name: "Kevin",
+    age: 39,
+    country: 'Germany',
+}
+
+const { name, age } = ...person -- The members Person.name and Person.age are
+                                -- assigned to name and age.
+
+-- Locals created by member destructuring do not need to use the original
+-- member's name.
+const { name => person_name } = ...person
+
+-- It is a compile-time error to destructure a member that doesn't exist.
+const { name, city } = ...person -- ERROR: Person.city doesn't exist.
+const { name } = ...2 -- ERROR: Num.name doesn't exist.
+
+-- Note that methods are members and, as such, can be destructured too:
+-- (some code implementing an extension method "get_nth_birthday(Num)" to Person)
+const { name, get_nth_birthday } = ...person -- correct.
+get_nth_birthday(80) -- calls person.get_nth_birthday.
+-- Note that destructured methods remain bound to the instance of the class they
+-- were destructured from.
+
+#endregion Destructuring
+
+#region User-defined collections
+------------------------------
+-- USER-DEFINED COLLECTIONS --
+------------------------------
+-- A collection is any type that implements the IEnumerable<T> interface. This
+-- interface declares a single method: get_enumerator () : IEnumerator<T>.
+-- IEnumerator<T> is an object created to enumerate and declares three methods
+-- to this end: get_current() : T, impure next () : Bool and
+-- impure reset () : Void.
+-- IEnumerable<T> and IEnumerator<T> are also what make generators work.
+-- Implementing IEnumerable<T> allows a type to be content destructured and to be
+-- used in foreach loops.
+
+#endregion
+
+#region 'hid' keyword: Hidden elements
+-- 'hid' allows declarations inside a file to be hidden from the outside. These
+-- elements cannot be seen nor accessed from anywhere other than the file they
+-- are in:
+hid func do_some_work (a, b: Num)
+    -- statements
+end
+-- This function can be used as normal within the file, but will not be visible
+-- to any 
+#endregion
+
+#region Directives
+-- Directives are a special subset of Judith. They act as a small extension that
+-- can be used for multiple purposes:
+
+-- #region, #endregion
+-- These two directives allow the IDE to create foldable regions in the file:
+
+#region Some types
+typedef Some1 = Num
+typedef Some2 = Num
+typedef Some3 = Num
+#endregion
+
+-- #def, #undef
+-- These directives are used to define new flags within the file. Keep in mind
+-- that flags can be defined by the compiler's configuration, and these apply to
+-- every file.
+#define EXTENSIVE_LOG
+#undef EXTENSIVE_LOG
+
+-- #if, #elsif, #endif
+-- These two directives are used for conditional compiling. The text within the
+-- #if block will be discarded if the if flag is not defined.
+
+#if DEBUG_BUILD -- this block is eliminated from the code if DEBUG_BUILD is not defined.
+    Console::log(f"Element count: {.elements}")
+#endif
+
+-- #nowarn
+-- "nowarn" is a directive that suppresses warnings in a single line.
+-- "nowarn" can be preceded by a list of error codes indicating the warning to
+-- suppress:
+
+typedef struct Num #nowarn -- Supresses all warnings in this line.
+end
+
+typedef struct Num #nowarn JuD:3455 -- Suppressed warning "JuD:3455" "Do not
+                                    -- shadow primitive type identifiers."
+end
+
+-- You can use ">" to include a comment explaining why you suppressed warnings:
+typedef struct Num #nowarn JuD:3455 > I want to troll people with this useless struct.
+end
+
+-- If "#nowarn" appears in an empty line, then it will apply to the next line:
+#nowarn > YOLO -- here the "nowarn" is applied to the next line defining "Num".
+typedef Num = Byte
+
+-- #using
+-- "using" is a directive that allows you to create an alias for a type:
+#using SB = StringBuilder
+const sb: SB = SB!("My StringBuilder") -- "SB" will be expanded to "StringBuilder".
+-- This is not the same as a typedef alias, as "SB" is not a new type that exists
+-- in the program, but instead just a shortcut that can only be used in the file.
+-- For example, if "sb" was exposed to other files, other files would see its
+-- type as "StringBuilder", not "SB".
+
+-- #pragma
+-- "pragma" is a special directive that different tools in the toolchain can
+-- use freely. For example, a linter can define a pragma called "err" for a
+-- functionality that linter includes. Meaningless pragmas are simply ignored.
+#pragma err -- If some tool defines "err", something will happen. If no one does,
+            -- then this line is ignored.
+
+#endregion
+
+#region Other notes
+-- You can get the size of a type, as an int, with sizeof() operator:
+const size_of_string: Int = sizeof(String)
+-- sizeof() in a reference type returns the size of the object, not the pointer,
+-- as the pointer's size is always equal to sizeof(Int), because Int is an alias
+-- for the native integer size of the target architecture (usually I64).
+-- Note that due to byte alignment requirements, the size of a non-primitive
+-- type cannot be determined at compile time and will vary depending on which
+-- platform the program is running in.
+const size_of_custom_type = sizeof(Person)
+
+-- Use nameof() to get the name of an identifier as a string literal:
+nameof(Person) -- equivalent to string "Person".
+-- Note that nameof() only returns the identifier:
+nameof(Person.name) -- equivalent to string "name".
+-- You can use qnameof() to get the name with all the qualifiers you choose:
+qnameof(Person.name) -- equivalent to string "Person.name".
+qnameof(my_proj::hr::Person.name) -- equivalent to string "my_proj::hr::Person.name".
+#endregion
+
+#region How source code works
+-- see spec/node-flow.md
+#endregion
+
+#region Sections TODO
+-- async, await, asynchronous programming.
+-- events
+-- function type syntax: (Int, String) => Void
+
+#endregion
