@@ -16,9 +16,10 @@ public class SymbolTableJsonConverter : JsonConverter<SymbolTable> {
         }
 
         var obj = new JObject {
-            ["OuterTable"] = value.OuterTable?.TableSymbol.FullyQualifiedName, // Store OuterTable as a string
-            ["TableSymbol"] = JToken.FromObject(value.TableSymbol, serializer),
+            ["OuterTable"] = value.OuterTable?.Qualifier, // Store OuterTable as a string
+            ["TableSymbol"] = value.TableSymbol != null ? JToken.FromObject(value.TableSymbol, serializer) : null,
             ["InnerTables"] = JToken.FromObject(value.InnerTables, serializer),
+            ["AnonymousInnerTables"] = JToken.FromObject(value.AnonymousInnerTables, serializer),
             ["Symbols"] = JToken.FromObject(value.Symbols, serializer)
         };
 

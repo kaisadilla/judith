@@ -58,6 +58,9 @@ static std::string constant (Chunk& chunk, size_t constIndex) {
             byte* strStart = strval + sizeof(ui64);
             return '"' + std::string((char*)strStart, strlen) + '"';
         }
+        case ConstantType::BOOL: {
+            return "<bool-not-implemented>";
+        }
         default:
             return "<unknown-type>";
     }
@@ -76,6 +79,8 @@ static std::string constTypeStr (byte type) {
             return "UNSIGNED_INT_64";
         case ConstantType::STRING_ASCII:
             return "STRING_ASCII";
+        case ConstantType::BOOL:
+            return "BOOL";
         default:
             return "<unknown-type>";
     }
@@ -218,9 +223,17 @@ static size_t disassembleInstruction (std::ostringstream& str, Chunk& chunk, siz
         return simpleInstruction(str, chunk, "F_MUL", index);
     case OpCode::F_DIV:
         return simpleInstruction(str, chunk, "F_DIV", index);
+    case OpCode::F_GT:
+        return simpleInstruction(str, chunk, "F_GT", index);
+    case OpCode::F_GE:
+        return simpleInstruction(str, chunk, "F_GE", index);
+    case OpCode::F_LT:
+        return simpleInstruction(str, chunk, "F_LT", index);
+    case OpCode::F_LE:
+        return simpleInstruction(str, chunk, "F_LE", index);
+
     case OpCode::I_NEG:
         return simpleInstruction(str, chunk, "I_NEG", index);
-
     case OpCode::I_ADD:
         return simpleInstruction(str, chunk, "I_ADD", index);
     case OpCode::I_ADD_CHECKED:
@@ -237,6 +250,19 @@ static size_t disassembleInstruction (std::ostringstream& str, Chunk& chunk, siz
         return simpleInstruction(str, chunk, "I_DIV", index);
     case OpCode::I_DIV_CHECKED:
         return simpleInstruction(str, chunk, "I_DIV_CHECKED", index);
+    case OpCode::I_GT:
+        return simpleInstruction(str, chunk, "I_GT", index);
+    case OpCode::I_GE:
+        return simpleInstruction(str, chunk, "I_GE", index);
+    case OpCode::I_LT:
+        return simpleInstruction(str, chunk, "I_LT", index);
+    case OpCode::I_LE:
+        return simpleInstruction(str, chunk, "I_LE", index);
+
+    case OpCode::EQ:
+        return simpleInstruction(str, chunk, "EQ", index);
+    case OpCode::NEQ:
+        return simpleInstruction(str, chunk, "NEQ", index);
 
     case OpCode::STORE_0:
         return simpleInstruction(str, chunk, "STORE_0", index);

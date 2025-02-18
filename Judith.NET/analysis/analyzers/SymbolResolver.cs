@@ -1,4 +1,5 @@
-﻿using Judith.NET.analysis.syntax;
+﻿using Judith.NET.analysis.binder;
+using Judith.NET.analysis.syntax;
 using Judith.NET.message;
 using System;
 using System.Collections.Generic;
@@ -53,6 +54,29 @@ public class SymbolResolver : SyntaxVisitor {
         Visit(node.Body);
 
         if (node.ReturnTypeAnnotation != null) Visit(node.ReturnTypeAnnotation);
+        _currentTable = innerTable.OuterTable!;
+    }
+
+    public override void Visit (IfExpression node) {
+        if (_cmp.Binder.TryGetBoundNode(node, out BoundIfExpression? boundIfExpr) == false) {
+            ThrowUnboundNode(node);
+        }
+
+        Visit(node.Test);
+
+        _currentTable = boundIfExpr.ConsequentScope;
+        Visit(node.Consequent);
+
+        if (node.Alternate != null) {
+            if (boundIfExpr.AlternateScope == null) throw new Exception(
+                "AlternateScope shouldn't be null."
+            );
+
+            _currentTable = boundIfExpr.AlternateScope;
+            Visit(node.Alternate);
+        }
+
+        _currentTable = _currentTable.OuterTable!;
     }
 
     public override void Visit (IdentifierExpression node) {
@@ -96,5 +120,10 @@ public class SymbolResolver : SyntaxVisitor {
             $"Inner table '{name}' in " +
             $"'{_currentTable.TableSymbol.FullyQualifiedName}' should exist."
         );
+    }
+
+    [DoesNotReturn]
+    private void ThrowUnboundNode (SyntaxNode node) {
+        throw new Exception($"Node '{node}' should be bound!");
     }
 }

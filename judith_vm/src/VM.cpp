@@ -5,11 +5,25 @@
 #define READ_U16() (*(ip++) | (*(ip++) << 8)) // TODO: Check that unsigned usage is implemented properly.
 #define READ_I32() (*(ip++) | (*(ip++) << 8) | (*(ip++) << 16) | (*(ip++) << 24))
 
-#define BINARY_OP(op) \
+#define F_BINARY_OP(op) \
     do { \
         f64 b = popValue().asFloat64; \
         f64 a = popValue().asFloat64; \
         pushValue({ .asFloat64 = (a op b) }); \
+    } while (false)
+
+#define F_BOOLEAN_OP(op) \
+    do { \
+        f64 b = popValue().asFloat64; \
+        f64 a = popValue().asFloat64; \
+        pushValue({ .asBool = (a op b) }); \
+    } while (false)
+
+#define I_BOOLEAN_OP(op) \
+    do { \
+        f64 b = popValue().asInt64; \
+        f64 a = popValue().asInt64; \
+        pushValue({ .asBool = (a op b) }); \
     } while (false)
 
 VM::~VM() {
@@ -86,22 +100,42 @@ InterpretResult VM::interpret (const Chunk& chunk) {
             break;
 
         case OpCode::F_ADD:
-            BINARY_OP(+);
+            F_BINARY_OP(+);
 
             break;
 
         case OpCode::F_SUB:
-            BINARY_OP(-);
+            F_BINARY_OP(-);
 
             break;
 
         case OpCode::F_MUL:
-            BINARY_OP(*);
+            F_BINARY_OP(*);
 
             break;
 
         case OpCode::F_DIV:
-            BINARY_OP(/);
+            F_BINARY_OP(/);
+
+            break;
+
+        case OpCode::F_GT:
+            F_BOOLEAN_OP(>);
+
+            break;
+
+        case OpCode::F_GE:
+            F_BOOLEAN_OP(>=);
+
+            break;
+
+        case OpCode::F_LT:
+            F_BOOLEAN_OP(<);
+
+            break;
+
+        case OpCode::F_LE:
+            F_BOOLEAN_OP(<=);
 
             break;
 
@@ -115,6 +149,26 @@ InterpretResult VM::interpret (const Chunk& chunk) {
             break;
 
         case OpCode::I_DIV:
+            break;
+
+        case OpCode::I_GT:
+            break;
+
+        case OpCode::I_GE:
+            break;
+
+        case OpCode::I_LT:
+            break;
+
+        case OpCode::I_LE:
+            break;
+
+        case OpCode::EQ:
+            I_BOOLEAN_OP(==);
+            break;
+
+        case OpCode::NEQ:
+            I_BOOLEAN_OP(!=);
             break;
 
         case OpCode::STORE_0:
@@ -192,4 +246,4 @@ InterpretResult VM::interpret (const Chunk& chunk) {
 
 #undef READ_BYTE
 #undef READ_I32
-#undef BINARY_OP
+#undef F_BINARY_OP

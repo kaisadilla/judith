@@ -33,18 +33,36 @@ public class SymbolTableBuilder : SyntaxVisitor {
         string name = node.Identifier.Name;
 
         var symbol = _currentTable.AddSymbol(SymbolKind.Function, name);
-        _cmp.Binder.BindFunctionDefinition(node, symbol);
+        var scope = _currentTable.CreateInnerTable(ScopeKind.FunctionBlock, symbol);
+        _cmp.Binder.BindFunctionDefinition(node, symbol, scope);
 
-        if (_currentTable.TryGetInnerTable(name, out var innerTable) == false) {
-            throw new Exception(
-                $"Inner table '{name}' in " +
-                $"'{_currentTable.TableSymbol.FullyQualifiedName}' should exist."
-            );
-        }
-
-        _currentTable = innerTable;
+        _currentTable = scope;
         Visit(node.Parameters);
         Visit(node.Body);
+        _currentTable = _currentTable.OuterTable!; // If this is null, something is wrong in CreateAnonymousInnerTable().
+    }
+
+    public override void Visit (IfExpression node) {
+        Visit(node.Test);
+
+        var consequentScope = _currentTable.CreateAnonymousInnerTable(ScopeKind.IfBlock);
+        SymbolTable? alternateScope = null;
+
+        if (node.Alternate != null) {
+            alternateScope = _currentTable.CreateAnonymousInnerTable(ScopeKind.ElseBlock);
+        }
+
+        _cmp.Binder.BindIfExpression(node, consequentScope, alternateScope);
+
+        _currentTable = consequentScope;
+        Visit(node.Consequent);
+
+        if (node.Alternate != null) {
+            _currentTable = alternateScope!;
+            Visit(node.Alternate);
+        }
+
+        _currentTable = _currentTable.OuterTable!;
     }
 
     public override void Visit (LocalDeclarator node) {

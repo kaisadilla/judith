@@ -51,5 +51,6 @@ namespace ConstantType {
         FLOAT_64,
         UNSIGNED_INT_64,
         STRING_ASCII,
+        BOOL,
     };
 }

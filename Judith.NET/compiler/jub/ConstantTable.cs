@@ -17,6 +17,7 @@ public enum ConstantType : byte {
     Float64,
     UnsignedInt64,
     StringASCII,
+    Bool,
 }
 
 public class ConstantTable {

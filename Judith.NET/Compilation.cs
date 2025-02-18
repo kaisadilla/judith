@@ -38,6 +38,7 @@ public class Compilation {
         foreach (var cu in Units) {
             symbolTableBuilder.Analyze(cu);
         }
+        if (Messages.HasErrors) return;
 
         // Resolves which symbol each identifier is referring to.
         SymbolResolver symbolResolver = new(this);
@@ -45,6 +46,7 @@ public class Compilation {
             symbolResolver.Analyze(cu);
         }
         Messages.Add(symbolResolver.Messages);
+        if (Messages.HasErrors) return;
 
         // Identifies all nodes that define new types and add said types to
         // the type table.
@@ -52,9 +54,12 @@ public class Compilation {
         foreach (var cu in Units) {
             typeTableBuilder.Analyze(cu);
         }
+        if (Messages.HasErrors) return;
 
         ResolveTypes();
+        if (Messages.HasErrors) return;
         ResolveTypes();
+        if (Messages.HasErrors) return;
 
         //Binder.ResolveIncomplete();
 

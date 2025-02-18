@@ -63,24 +63,46 @@ public class JasmDisassembler {
                 return SimpleInstruction("F_MUL", index);
             case OpCode.FDiv:
                 return SimpleInstruction("F_DIV", index);
+            case OpCode.FGt:
+                return SimpleInstruction("F_GT", index);
+            case OpCode.FGe:
+                return SimpleInstruction("F_GE", index);
+            case OpCode.FLt:
+                return SimpleInstruction("F_LT", index);
+            case OpCode.FLe:
+                return SimpleInstruction("F_LE", index);
+
             case OpCode.INeg:
-                break;
+                return SimpleInstruction("I_NEG", index);
             case OpCode.IAdd:
-                break;
+                return SimpleInstruction("I_ADD", index);
             case OpCode.IAddChecked:
-                break;
+                return SimpleInstruction("I_ADD_CHECKED", index);
             case OpCode.ISub:
-                break;
+                return SimpleInstruction("I_SUB", index);
             case OpCode.ISubChecked:
-                break;
+                return SimpleInstruction("I_SUB_CHECKED", index);
             case OpCode.IMul:
-                break;
+                return SimpleInstruction("I_MUL", index);
             case OpCode.IMulChecked:
-                break;
+                return SimpleInstruction("I_MUL_CHECKED", index);
             case OpCode.IDiv:
-                break;
+                return SimpleInstruction("I_DIV", index);
             case OpCode.IDivChecked:
-                break;
+                return SimpleInstruction("I_DIV_CHECKED", index);
+            case OpCode.IGt:
+                return SimpleInstruction("I_GT", index);
+            case OpCode.IGe:
+                return SimpleInstruction("I_GE", index);
+            case OpCode.ILt:
+                return SimpleInstruction("I_LT", index);
+            case OpCode.ILe:
+                return SimpleInstruction("I_LE", index);
+
+            case OpCode.Eq:
+                return SimpleInstruction("EQ", index);
+            case OpCode.Neq:
+                return SimpleInstruction("NEQ", index);
 
             case OpCode.Store0:
                 return SimpleInstruction("STORE_0", index);
@@ -170,7 +192,7 @@ public class JasmDisassembler {
         var constType = _chunk.Code[index + 1];
 
         Dump += IdStr(name) + " ";
-        Dump += HexIntegerStr(constType) + " ; " + (ConstantType)constType;
+        Dump += HexByteStr(constType) + " ; " + (ConstantType)constType;
 
         return index + 2;
     }

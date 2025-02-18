@@ -150,17 +150,23 @@ public class JubCompiler : SyntaxVisitor {
                 _Instr(OpCode.FDiv);
                 return;
             case OperatorKind.Equals:
-                break;
+                _Instr(OpCode.Eq);
+                return;
             case OperatorKind.NotEquals:
-                break;
+                _Instr(OpCode.Neq);
+                return;
             case OperatorKind.LessThan:
-                break;
+                _Instr(OpCode.FLt);
+                return;
             case OperatorKind.LessThanOrEqualTo:
-                break;
+                _Instr(OpCode.FLe);
+                return;
             case OperatorKind.GreaterThan:
-                break;
+                _Instr(OpCode.FGt);
+                return;
             case OperatorKind.GreaterThanOrEqualTo:
-                break;
+                _Instr(OpCode.FGe);
+                return;
             case OperatorKind.LogicalAnd:
                 break;
             case OperatorKind.LogicalOr:
@@ -214,7 +220,7 @@ public class JubCompiler : SyntaxVisitor {
             _currentFunc.Chunk.WriteByte((byte)ConstantType.StringASCII, node.Expression.Line);
         }
         else {
-            throw new NotImplementedException("Cannot print given type!");
+            _currentFunc.Chunk.WriteByte((byte)ConstantType.Bool, node.Expression.Line);
         }
     }
 

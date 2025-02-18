@@ -71,9 +71,25 @@ public enum OpCode : byte {
     /// </summary>
     FDiv,
     /// <summary>
+    /// F_GT | F_GREATER | Push 1 if top-1 &gt; top as f64.
+    /// </summary>
+    FGt,
+    /// <summary>
+    /// F_GE | F_GREATER_EQUAL | Push 1 if top-1 &gt;= top as f64.
+    /// </summary>
+    FGe,
+    /// <summary>
+    /// F_LT | F_LESS | Push 1 if top-1 &lt; top as f64.
+    /// </summary>
+    FLt,
+    /// <summary>
+    /// F_LE | F_LESS_EQUAL | Push 1 if top-1 &lt;= top as f64.
+    /// </summary>
+    FLe,
+
+    /// <summary>
     /// I_NEG | INTEGER_NEGATE | Negates the value (as i64) at the top of the stack.
     /// </summary>
-    /// 
     INeg,
     IAdd,
     IAddChecked,
@@ -83,6 +99,19 @@ public enum OpCode : byte {
     IMulChecked,
     IDiv,
     IDivChecked,
+    IGt,
+    IGe,
+    ILt,
+    ILe,
+
+    /// <summary>
+    /// EQ | EQUAL | Push 1 if top two values are equal, or 0 if not.
+    /// </summary>
+    Eq,
+    /// <summary>
+    /// NEQ | NOT_EQUAL | Push 0 if top two values are equal, or 1 if not.
+    /// </summary>
+    Neq,
 
     Store0,
     Store1,

@@ -16,7 +16,7 @@ public class SymbolJsonConverter : JsonConverter<Symbol> {
         }
 
         var obj = new JObject {
-            ["Table"] = value.Table.TableSymbol.FullyQualifiedName,
+            ["Table"] = value.Table.Qualifier,
             ["Kind"] = JToken.FromObject(value.Kind, serializer),
             ["Name"] = JToken.FromObject(value.Name, serializer),
             ["FullyQualifiedName"] = JToken.FromObject(value.FullyQualifiedName, serializer),

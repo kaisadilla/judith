@@ -1,11 +1,14 @@
-﻿using System;
+﻿using Newtonsoft.Json.Converters;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace Judith.NET.message;
 
+[JsonConverter(typeof(StringEnumConverter))]
 public enum MessageCode {
     // 1xxx - Syntax-related errors
     UnexpectedCharacter = 1_000,

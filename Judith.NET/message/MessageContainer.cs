@@ -11,6 +11,8 @@ public class MessageContainer {
     public List<CompilerMessage> Warnings { get; init; } = new();
     public List<CompilerMessage> Errors { get; init; } = new();
 
+    public bool HasErrors => Errors.Count > 0;
+
     public void Add (CompilerMessage message) {
         switch (message.Kind) {
             case MessageKind.Information:

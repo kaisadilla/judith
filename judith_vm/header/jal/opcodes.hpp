@@ -21,8 +21,12 @@ namespace OpCode {
         F_SUB,
         F_MUL,
         F_DIV,
-        I_NEG,
+        F_GT,
+        F_GE,
+        F_LT,
+        F_LE,
 
+        I_NEG,
         I_ADD,
         I_ADD_CHECKED,
         I_SUB,
@@ -31,6 +35,13 @@ namespace OpCode {
         I_MUL_CHECKED,
         I_DIV,
         I_DIV_CHECKED,
+        I_GT,
+        I_GE,
+        I_LT,
+        I_LE,
+
+        EQ,
+        NEQ,
 
         STORE_0,
         STORE_1,

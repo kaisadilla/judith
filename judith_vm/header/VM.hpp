@@ -100,6 +100,9 @@ public:
         case ConstantType::STRING_ASCII:
             std::cout << value.asStringPtr->string;
             break;
+        case ConstantType::BOOL:
+            std::cout << (value.asBool == false ? "false" : "true");
+            break;
         default:
             std::cout << "Error: unknown type.";
         }

@@ -47,13 +47,13 @@ public class Binder {
     }
 
     public BoundFunctionDefinition BindFunctionDefinition (
-        FunctionDefinition funcDef, Symbol symbol
+        FunctionDefinition funcDef, Symbol symbol, SymbolTable scope
     ) {
         if (TryGetBoundNode(funcDef, out BoundFunctionDefinition? boundFuncDef)) {
             return boundFuncDef;
         }
 
-        boundFuncDef = new(funcDef, symbol);
+        boundFuncDef = new(funcDef, symbol, scope);
         BoundNodes[funcDef] = boundFuncDef;
 
         ResolveFunction(boundFuncDef);
@@ -92,6 +92,19 @@ public class Binder {
         }
 
         return boundLocalDeclStmt;
+    }
+
+    public BoundIfExpression BindIfExpression (
+        IfExpression ifExpr, SymbolTable consequentScope, SymbolTable? alternateScope
+    ) {
+        if (TryGetBoundNode(ifExpr, out BoundIfExpression? boundIfExpr)) {
+            return boundIfExpr;
+        }
+
+        boundIfExpr = new(ifExpr, consequentScope, alternateScope);
+        BoundNodes[ifExpr] = boundIfExpr;
+
+        return boundIfExpr;
     }
 
     public BoundAssignmentExpression BindAssignmentExpression (

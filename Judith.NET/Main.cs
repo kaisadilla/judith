@@ -21,13 +21,13 @@ Lexer lexer = new(src);
 lexer.Tokenize();
 messages.Add(lexer.Messages);
 // PrintTokens();
-AbortIfError();
+if (ShouldAbort()) return;
 
 Parser parser = new(lexer.Tokens);
 parser.Parse();
 messages.Add(parser.Messages);
 // PrintAST();
-AbortIfError();
+if (ShouldAbort()) return;
 
 CompilerUnitBuilder cub = new(parser.Nodes);
 cub.BuildUnit();
@@ -38,7 +38,7 @@ cmp.Analyze();
 messages.Add(cmp.Messages);
 
 GenerateDebugFiles();
-AbortIfError();
+if (ShouldAbort()) return;
 
 JubCompiler compiler = new(cmp);
 compiler.Compile();
@@ -70,33 +70,13 @@ void PrintErrors () {
     }
 }
 
-void AbortIfError () {
-    if (messages.Errors.Count > 0) {
+bool ShouldAbort () {
+    if (messages.HasErrors) {
         Console.WriteLine("Errors found - Compilation aborted.");
         PrintErrors();
-        return;
+        return true;
     }
-}
-
-void PrintTokens () {
-    foreach (var token in lexer.Tokens!) {
-        Console.WriteLine(token);
-    }
-    Console.WriteLine();
-
-    PrintErrors();
-}
-
-void PrintAst () {
-    Console.WriteLine();
-    Console.WriteLine("=== AST ===");
-    //Console.WriteLine(astJson);
-    foreach (var node in parser.Nodes!) {
-        Console.WriteLine(node);
-    }
-
-    Console.WriteLine();
-    PrintErrors();
+    return false;
 }
 
 void GenerateDebugFiles () {
@@ -108,6 +88,9 @@ void GenerateDebugFiles () {
 
     string binderJson = JsonConvert.SerializeObject(cmp.Binder, Formatting.Indented);
     File.WriteAllText(AppContext.BaseDirectory + "/res/test.binder.json", binderJson);
+
+    string tokensJson = JsonConvert.SerializeObject(lexer.Tokens, Formatting.Indented);
+    File.WriteAllText(AppContext.BaseDirectory + "/res/test.tokens.json", tokensJson);
 
     string astJson = JsonConvert.SerializeObject(cu, Formatting.Indented);
     File.WriteAllText(AppContext.BaseDirectory + "/res/test.ast.json", astJson);

@@ -120,7 +120,7 @@ public class NativeFeatures {
     }
 
     public class TypeCollection {
-        public TypeInfo F32 { get; init; } = TypeInfo.UnresolvedType;
+        public TypeInfo F32 { get; init; } = TypeInfo.UnresolvedType ;
         public TypeInfo F64 { get; init; } = TypeInfo.UnresolvedType;
 
         public TypeInfo I8 { get; init; } = TypeInfo.UnresolvedType;

@@ -1,27 +1,36 @@
 ﻿using Judith.NET.diagnostics.serialization;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
+using Newtonsoft.Json.Converters;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Reflection;
-using System.Security.Claims;
-using System.Text;
-using System.Threading.Tasks;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Judith.NET.analysis;
 
+[JsonConverter(typeof(StringEnumConverter))]
+public enum ScopeKind {
+    Global,
+    Namespace,
+    FunctionBlock,
+    IfBlock,
+    ElseBlock,
+}
+
 [JsonConverter(typeof(SymbolTableJsonConverter))]
 public class SymbolTable {
+    /// <summary>
+    /// The kind of node that creates the scope represented by this table.
+    /// </summary>
+    public ScopeKind ScopeKind { get; private init; }
     /// <summary>
     /// The table that contains this table, if any.
     /// </summary>
     public SymbolTable? OuterTable { get; private set; }
     /// <summary>
-    /// The symbol that represents this table.
+    /// The symbol that represents this table, if any. This will be defined for
+    /// named scopes (such as a scope created by a function), but will remain
+    /// undefined for anonymous scopes (such as a scope created by an if
+    /// expression).
     /// </summary>
-    public Symbol TableSymbol;
+    public Symbol? TableSymbol;
     /// <summary>
     /// The symbol tables that are children to this one. For example, the symbol
     /// table for "std::collections" is a child of the symbol table for "std".
@@ -29,6 +38,11 @@ public class SymbolTable {
     /// "std::collections" is indexed by the key "collections".
     /// </summary>
     public Dictionary<string, SymbolTable> InnerTables { get; private set; } = new();
+    /// <summary>
+    /// Symbol tables created by anonymous scopes, such as the body of an "if"
+    /// expression.
+    /// </summary>
+    public List<SymbolTable> AnonymousInnerTables { get; private set; } = new();
     /// <summary>
     /// The symbols contained directly in this table (i.e. not contained in
     /// children tables). This collection also includes the Symbols that define
@@ -42,9 +56,20 @@ public class SymbolTable {
     /// <summary>
     /// Returns true if this is the global table.
     /// </summary>
+    [JsonIgnore]
     public bool IsGlobalTable => OuterTable == null;
 
-    public SymbolTable (SymbolTable? outerTable, Symbol tableSymbol) {
+    [JsonIgnore]
+    public string Qualifier {
+        get {
+            if (TableSymbol != null) return TableSymbol.FullyQualifiedName;
+            else if (OuterTable != null) return OuterTable.Qualifier + "/<anonymous-scope>";
+            else return "<anonymous-scope>";
+        }
+    }
+
+    public SymbolTable (ScopeKind scopeKind, SymbolTable? outerTable, Symbol? tableSymbol) {
+        ScopeKind = scopeKind;
         OuterTable = outerTable;
         TableSymbol = tableSymbol;
     }
@@ -54,9 +79,24 @@ public class SymbolTable {
     /// will be "global" and it won't have any parent.
     /// </summary>
     public static SymbolTable CreateGlobalTable () {
-        SymbolTable tbl = new(null, null!);
+        SymbolTable tbl = new(ScopeKind.Global, null, null);
         tbl.TableSymbol = new(tbl, SymbolKind.Module, "", "");
 
+        return tbl;
+    }
+
+    public SymbolTable CreateInnerTable (ScopeKind scopeKind, Symbol symbol) {
+        SymbolTable tbl = new(scopeKind, this, null);
+        tbl.TableSymbol = symbol;
+
+        InnerTables[symbol.Name] = tbl;
+        return tbl;
+    }
+
+    public SymbolTable CreateAnonymousInnerTable (ScopeKind scopeKind) {
+        SymbolTable tbl = new(scopeKind, this, null);
+
+        AnonymousInnerTables.Add(tbl);
         return tbl;
     }
 
@@ -123,45 +163,18 @@ public class SymbolTable {
     /// that name already exists in this table (but not its parents or children).
     /// Returns the symbol that has been created.
     /// </summary>
-    /// <param name="kind">The kind of symbol to create.</param>
+    /// <param name="scopeKind">The kind of scope to create..</param>
+    /// <param name="symbolKind">The kind of symbol to create.</param>
     /// <param name="name">The unqualified name of the symbol.</param>
-    public Symbol AddSymbol (SymbolKind kind, string name) {
+    public Symbol AddSymbol (SymbolKind symbolKind, string name) {
         if (Symbols.ContainsKey(name)) {
             throw new Exception($"'{name}' is already defined in this table.");
         }
 
-        Symbol symbol = new(this, kind, name, QualifyName(name));
-
-        switch (kind) {
-            case SymbolKind.Module:
-            case SymbolKind.NativeType:
-            case SymbolKind.StructType:
-            case SymbolKind.InterfaceType:
-            case SymbolKind.Class:
-            case SymbolKind.Namespace:
-            case SymbolKind.MemberFunction:
-            case SymbolKind.Function:
-                CreateInnerTable(kind, name);
-                break;
-            case SymbolKind.AliasType:
-            case SymbolKind.UnionType:
-            case SymbolKind.SetType:
-            case SymbolKind.MemberField:
-            case SymbolKind.Local:
-            default:
-                break;
-        }
-
-
+        Symbol symbol = new(this, symbolKind, name, QualifyName(name));
         Symbols[name] = symbol;
+
         return symbol;
-    }
-
-    public void CreateInnerTable (SymbolKind kind, string name) {
-        SymbolTable tbl = new(this, null!);
-        tbl.TableSymbol = new(tbl, kind, name, QualifyName(name));
-
-        InnerTables[name] = tbl;
     }
 
     /// <summary>
@@ -170,6 +183,6 @@ public class SymbolTable {
     /// <param name="name">An unqualified name.</param>
     public string QualifyName (string name) {
         if (IsGlobalTable) return name;
-        else return TableSymbol.FullyQualifiedName + "/" + name;
+        else return Qualifier + "/" + name;
     }
 }
