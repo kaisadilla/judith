@@ -155,7 +155,12 @@ public class JubCompiler : SyntaxVisitor {
 
     public override void Visit (BinaryExpression node) {
         if (node.Kind == SyntaxKind.LogicalBinaryExpression) {
-            CompileLogicalBinaryExpression(node);
+            if (node.Operator.OperatorKind == OperatorKind.LogicalAnd) {
+                CompileAndBinaryExpression(node);
+            }
+            else {
+                CompileOrBinaryExpression(node);
+            }
         }
         else {
             CompileRegularBinaryExpression(node);
@@ -207,45 +212,37 @@ public class JubCompiler : SyntaxVisitor {
         }
     }
 
-    private void CompileLogicalBinaryExpression (BinaryExpression node) {
+    private void CompileAndBinaryExpression (BinaryExpression node) {
         RequireFunction();
 
+        // When an expression evaluates to false, it'll store a JFalseK here
+        // that will jump to the "set to false" line.
         List<int> jumpsToPatch = new();
-        // TODO: Simplify as CompileNestedLogicalBinaryExpression is basically a duplicate.
-        if (node.Left.Kind == SyntaxKind.LogicalBinaryExpression) {
-            var binaryExpr = CastOrThrow<BinaryExpression>(node.Left);
-            if (binaryExpr.Operator.Kind == node.Operator.Kind) {
-                CompileNestedLogicalBinaryExpression(binaryExpr, jumpsToPatch);
-            }
-            else {
-                Visit(node.Left);
-            }
-        }
-        else {
-            Visit(node.Left);
-        }
 
-        var code = node.Operator.OperatorKind switch {
-            OperatorKind.LogicalAnd => OpCode.JFalse,
-            _ => OpCode.JTrue,
-        };
-        jumpsToPatch.Add(EmitJump(code, node.Operator.Line));
+        CompileNestedOrBinaryExpression(node, OperatorKind.LogicalAnd, jumpsToPatch);
 
-        Visit(node.Right);
-        var rightJump = EmitJump(OpCode.Jmp, node.Operator.Line);
-
-        foreach (var jump in jumpsToPatch) PatchJump(jump);
-        _currentFunc.Chunk.WriteInstruction(OpCode.Const0, node.Operator.Line);
-        PatchJump(rightJump);
+        PatchJumps(jumpsToPatch); // All failed expressions jump to set to false.
     }
 
-    private void CompileNestedLogicalBinaryExpression (
-        BinaryExpression expr, List<int> jumpList
+    private void CompileOrBinaryExpression (BinaryExpression node) {
+        RequireFunction();
+
+        // When an expression evaluates to true, it'll store a JTrueK here
+        // that will jump to after the "set to false" line.
+        List<int> jumpsToPatch = new();
+
+        CompileNestedOrBinaryExpression(node, OperatorKind.LogicalOr, jumpsToPatch);
+
+        PatchJumps(jumpsToPatch); // All JTrueK jump to here, to skip set to false.
+    }
+
+    private void CompileNestedOrBinaryExpression (
+        BinaryExpression expr, OperatorKind op, List<int> jumpList
     ) {
         if (expr.Left.Kind == SyntaxKind.LogicalBinaryExpression) {
             var binaryExpr = CastOrThrow<BinaryExpression>(expr.Left);
-            if (binaryExpr.Operator.Kind == expr.Operator.Kind) {
-                CompileNestedLogicalBinaryExpression(binaryExpr, jumpList);
+            if (binaryExpr.Operator.OperatorKind == op) {
+                CompileNestedOrBinaryExpression(binaryExpr, op, jumpList);
             }
             else {
                 Visit(expr.Left);
@@ -255,11 +252,12 @@ public class JubCompiler : SyntaxVisitor {
             Visit(expr.Left);
         }
 
-        var code = expr.Operator.OperatorKind switch {
-            OperatorKind.LogicalAnd => OpCode.JFalse,
-            _ => OpCode.JTrue,
-        };
-        jumpList.Add(EmitJump(code, expr.Operator.Line));
+        if (op == OperatorKind.LogicalAnd) {
+            jumpList.Add(EmitJump(OpCode.JFalseK, expr.Line));
+        }
+        else { // OperatorKind.LogicalOr
+            jumpList.Add(EmitJump(OpCode.JTrueK, expr.Line));
+        }
 
         Visit(expr.Right);
     }
@@ -424,6 +422,10 @@ public class JubCompiler : SyntaxVisitor {
         }
 
         _currentFunc.Chunk.Code[offsetByte] = (byte)((sbyte)jumpOffset);
+    }
+
+    private void PatchJumps (IEnumerable<int> offsets) {
+        foreach (var o in offsets) PatchJump(o);
     }
 
     #region Requires

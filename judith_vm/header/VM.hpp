@@ -77,7 +77,7 @@ public:
             throw std::exception("Trying to access an invalid stack position!");
         }
 #endif
-        return *stackTop;
+        return *(stackTop - 1);
     }
 
     /// <summary>
@@ -119,7 +119,8 @@ public:
             std::cout << value.asStringPtr->string;
             break;
         case ConstantType::BOOL:
-            std::cout << (value.asInt64 == 0 ? "false" : "true");
+            std::cout << value.asFloat64;
+            //std::cout << (value.asInt64 == 0 ? "false" : "true");
             break;
         default:
             std::cout << "Error: unknown type.";

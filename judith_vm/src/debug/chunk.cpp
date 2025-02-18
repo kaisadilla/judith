@@ -334,11 +334,23 @@ static size_t disassembleInstruction (std::ostringstream& str, Chunk& chunk, siz
     case OpCode::JTRUE_L:
         return u32Instruction(str, chunk, "JTRUE_L", index);
 
+    case OpCode::JTRUE_K:
+        return byteInstruction(str, chunk, "JTRUE_K", index);
+
+    case OpCode::JTRUE_K_L:
+        return u32Instruction(str, chunk, "JTRUE_K_L", index);
+
     case OpCode::JFALSE:
         return byteInstruction(str, chunk, "JFALSE", index);
 
     case OpCode::JFALSE_L:
         return u32Instruction(str, chunk, "JFALSE_L", index);
+
+    case OpCode::JFALSE_K:
+        return byteInstruction(str, chunk, "JFALSE_K", index);
+
+    case OpCode::JFALSE_K_L:
+        return u32Instruction(str, chunk, "JFALSE_K_L", index);
 
     case OpCode::PRINT:
         return printInstruction(str, chunk, "PRINT", index);

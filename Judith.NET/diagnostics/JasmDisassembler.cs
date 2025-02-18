@@ -142,10 +142,18 @@ public class JasmDisassembler {
                 return JumpInstruction("JTRUE", index);
             case OpCode.JTrueLong:
                 return JumpLongInstruction("JTRUE_L", index);
+            case OpCode.JTrueK:
+                return JumpInstruction("JTRUE_C", index);
+            case OpCode.JTrueKLong:
+                return JumpLongInstruction("JTRUE_C_L", index);
             case OpCode.JFalse:
                 return JumpInstruction("JFALSE", index);
             case OpCode.JFalseLong:
                 return JumpLongInstruction("JFALSE_L", index);
+            case OpCode.JFalseK:
+                return JumpInstruction("JFALSE_C", index);
+            case OpCode.JFalseKLong:
+                return JumpLongInstruction("JFALSE_C_L", index);
 
             case OpCode.Print:
                 return PrintInstruction("PRINT", index);

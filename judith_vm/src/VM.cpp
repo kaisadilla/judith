@@ -253,10 +253,33 @@ InterpretResult VM::interpret (const Chunk& chunk) {
             break;
         }
 
+        case OpCode::JTRUE_K: {
+            byte offset = READ_BYTE();
+            if (peekValue().asInt64) {
+                ip += offset;
+            }
+            else {
+                popValue();
+            }
+            break;
+        }
+
         case OpCode::JFALSE: {
             byte offset = READ_BYTE();
             if (popValue().asInt64 == 0) {
                 ip += offset;
+            }
+
+            break;
+        }
+
+        case OpCode::JFALSE_K: {
+            byte offset = READ_BYTE();
+            if (peekValue().asInt64 == 0) {
+                ip += offset;
+            }
+            else {
+                popValue();
             }
 
             break;

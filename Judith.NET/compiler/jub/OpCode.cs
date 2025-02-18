@@ -138,21 +138,38 @@ public enum OpCode : byte {
     /// </summary>
     JmpLong,
     /// <summary>
-    /// JTRUE | JUMP_TRUE | Jump to $a if top != 0.
+    /// JTRUE | JUMP_TRUE | Jump to $a if top != 0. Consume top.
     /// </summary>
     JTrue,
     /// <summary>
-    /// JTRUE_L | JUMP_TRUE_LONG | Jump to $a if top != 0.
+    /// JTRUE_L | JUMP_TRUE_LONG | Jump to $a if top != 0. Consume top.
     /// </summary>
     JTrueLong,
     /// <summary>
-    /// JFALSE | JUMP_FALSE | Jump to $a if top != 0.
+    /// JTRUE_C | JUMP_TRUE_KEEPIF | Jump to $a offset if top != 0.
+    /// </summary>
+    JTrueK,
+    /// <summary>
+    /// JTRUE_C_L | JUMP_TRUE_KEEPIF_LONG | Jump to $a offset if top != 0, consume otherwise.
+    /// </summary>
+    JTrueKLong,
+    /// <summary>
+    /// JFALSE | JUMP_FALSE | Jump to $a if top != 0. Consume top, consume otherwise.
     /// </summary>
     JFalse,
     /// <summary>
-    /// JFALSE_L | JUMP_FALSE_LONG | Jump to $a if top != 0.
+    /// JFALSE_L | JUMP_FALSE_LONG | Jump to $a if top != 0. Consume top.
     /// </summary>
     JFalseLong,
+    /// <summary>
+    /// JFALSE_C | JUMP_FALSE_KEEPIF | Jump to $a offset if top != 0, consume otherwise.
+    /// </summary>
+    JFalseK,
+    /// <summary>
+    /// JFALSE_C_L | JUMP_FALSE_KEEPIF_LONG | Jump to $a offset if top != 0, consume otherwise.
+    /// </summary>
+    JFalseKLong,
 
     Print,
+    InternalFunc,
 }

@@ -63,8 +63,12 @@ namespace OpCode {
         JMP_L,
         JTRUE,
         JTRUE_L,
+        JTRUE_K,
+        JTRUE_K_L,
         JFALSE,
         JFALSE_L,
+        JFALSE_K,
+        JFALSE_K_L,
 
         PRINT,
     };
