@@ -1,12 +1,3 @@
-# About Judith
-
-Judith is a WIP statically-typed high-level programming language that compiles to JASM (Judith Assembly). JASM is interpreted by the JuVM (Judith Virtual Machine).
-
-Judith is a personal project started in February 2024, and is a work in progress.
-
-A (very) informal specification of the language can be found in [.info/spec.jud](.info/spec.jud).
-
-# What is Judith?
 Nothing, as I've literally just started it.
 
 That aside, Judith is a high-level, statically-typed programming language that draws inspiration from Rust, TypeScript, Lua and C#.
@@ -27,7 +18,3 @@ Finally, Judith aims to do away with some of the legacy features most programmin
 - `goto`? No high-level programmer should ever need to use that.
 - Allowing `null` everyone? Nope! If you want `null` to be a valid value, then you explicitly state so in the local's type.
 - Casts and implicit conversions? I've never seen a worse design in modern languages. "Cast" can mean anything from transforming a child class into its parent type to transforming one class into another because someone decided that it makes sense. Well, we don't do that here. Judith features a syntax for upcasting (when you transform a child type into a parent type) and downcasting (when you try to transform a parent type into a child type). The rest is done explicitly via constructors, because that's what casting between two unrelated types is. As a bonus, I got rid of the ugly `((IPerson)employee).get_birthday()` C-like syntax every other language chose to keep and replaced it with a far more concise `employee:IPerson.get_birthday()`. No need to use two (!) set of parentheses when you aren't even grouping anything.
-- Testing exists (yes, really!). This isn't 1985, we write tests for the code we write. Judith aims to explicitly integrate features that facilitate testing into the language.
-
-# Judith's design philosophy.
-Read [.info/design-philosophy.jud](.info/design-philosophy.jud) for a very long and boring look into my views on programming languages and how these shape Judith's design.

@@ -133,17 +133,39 @@ end
 -- intrinsic type.
 #endregion
 
-#region Mutability
-----------------
--- MUTABILITY --
-----------------
+#region Locals and types
+----------------------
+-- LOCALS AND TYPES --
+----------------------
+-- Locals can be mutable or immutable.
+const name = "Kevin" -- immutable local, cannot be reassigned.
+name = "Steve" -- error: cannot assign to name after initialization.
+var name = "Kevin" -- mutable local, can be reassigned.
+name = "Steve" -- ok
 
-const immutable_var: String = "My string"
-immutable_var = "Another string" -- error
+-- Every local in Judith has a type, and only values of that type can be
+-- assigned to it.
+var name: String = "Kevin" -- local of type String.
+name = 3 -- error: number cannot be assigned to local of type String.
 
-var mutable_var: Num = 11
-mutable_var = 17 -- valid
-mutable_var = "Car" -- error
+-- Even though locals always have a type in Judith, that type doesn't have to
+-- be explicitly written down when it can be inferred from context:
+var score = 12 -- "score" is of type Num, because it's been initialized with a Num.
+score = "Kevin" -- error, score was inferred to be a Num.
+
+-- null and undefined
+-- 'null' and 'undefined' are special values.
+
+-- 'null' represents the abscence of a value, and can ONLY be used in locals
+-- with a nullable type. The nullable version of a type T is denoted as T?
+var name: String = null -- error, String is not nullable.
+var name: String? = null -- ok
+var name = null -- error, type cannot be inferred.
+
+-- 'undefined' is a special value that represents that the value being accessed
+-- doesn't exist (for example, accessing a field in an object that hasn't been
+-- defined). 'undefined' cannot be assigned to anything, but can be used to test
+-- if values are equal to it.
 #endregion
 
 #region Primitives
@@ -270,9 +292,28 @@ const integer: Int = float:?Int -- valid assignment, we are casting float to Int
 5 >> 2 -- right shift
 5 >>> 2 -- zero-fill right shift
 
-not is_enabled -- boolean negation
-is_enabled and is_allowed -- boolean and
-is_enabled or is_allowed -- boolean or
+-- Logical operations:
+-- Logical operations work in terms of "truthy" and "falsey" values. "falsey"
+-- values are 'false', '0', 'null' and 'undefined'; while all other values,
+-- including empty strings and arrays, are "truthy" (empty strings and empty
+-- arrays are still objects, why would anyone expect them to count as false??)
+
+not is_enabled -- boolean negation: returns 'true' if the value is falsey and
+               -- false otherwise.
+is_enabled and is_allowed -- boolean and: returns the first value if it's falsey,
+                          -- or the second value if it's truthy.
+is_enabled or is_allowed -- boolean or: returns the first value if it's truthy,
+                         -- or the second value if it's falsey.
+
+show_author and f" (by: {name})" -- if "show_author" is true, then the result of
+                                 -- this operation is the string.
+
+product.name or "<unknown product>" -- if "product.name" is truthy, then the
+                                    -- result of this operation is the name, else
+                                    -- the result of this is the unknown product
+                                    -- string.
+
+-- Like in other languages, "and" and "or" short-circuit.
 
 5 == 2 -- equals (only for comparable types)
 5 != 2 -- not equals (only for comparable types)
@@ -527,41 +568,6 @@ const b = gen.next() -- equals 1
 for const i in gen do -- will loop for 2, 3, 4, 5, 6, 7, 8, 9.
     -- statements
 end
-#endregion
-
-#region Locals and types
-----------------------
--- LOCALS AND TYPES --
-----------------------
--- Locals can be mutable or immutable.
-const name = "Kevin" -- immutable local, cannot be reassigned.
-name = "Steve" -- error: cannot assign to name after initialization.
-var name = "Kevin" -- mutable local, can be reassigned.
-name = "Steve" -- ok
-
--- Every local in Judith has a type, and only values of that type can be
--- assigned to it.
-var name: String = "Kevin" -- local of type String.
-name = 3 -- error: number cannot be assigned to local of type String.
-
--- Even though locals always have a type in Judith, that type doesn't have to
--- be explicitly written down when it can be inferred from context:
-var score = 12 -- "score" is of type Num, because it's been initialized with a Num.
-score = "Kevin" -- error, score was inferred to be a Num.
-
--- null and undefined
--- 'null' and 'undefined' are special values.
-
--- 'null' represents the abscence of a value, and can ONLY be used in locals
--- with a nullable type. The nullable version of a type T is denoted as T?
-var name: String = null -- error, String is not nullable.
-var name: String? = null -- ok
-var name = null -- error, type cannot be inferred.
-
--- 'undefined' is a special value that represents that the value being accessed
--- doesn't exist (for example, accessing a field in an object that hasn't been
--- defined). 'undefined' cannot be assigned to anything, but can be used to test
--- if values are equal to it.
 #endregion
 
 #region Field shadowing
@@ -1294,14 +1300,14 @@ divide_by_n<0>(9) -- throws Exception: "Trying to divide by zero!".
 
 #region How does "if" evaluate tests?
 -- The "if" expression accepts any value as its test. Every value will evaluate
--- to 'true' unless the value is 'false', 'null' or 'undefined'.
+-- to 'true' unless the value is 'false', '0', 'null' or 'undefined' (falsey).
 const zero: Num = 0
 const empty_str: String = ""
 const kw_false: Bool = false
 const kw_null: String? = null
 const obj: Object = {}
 
-if zero => Console::log("Zero!") -- true, 0 passes the test.
+if zero => Console::log("Zero!") -- false, 0 doesn't pass the test.
 if empty_str => Console::log("Empty string!") -- true, "" passes the test.
 if kw_false => Console::log("Empty string!") -- false, false fails the test.
 if kw_null => Console::log("Empty string!") -- false, null fails the test.
