@@ -2,21 +2,24 @@
 #include <iomanip>
 #include <format>
 
-#include "debug/chunk.hpp"
-#include "Chunk.hpp"
+#include "debug/disassembly.hpp"
+#include "executable/ConstantType.hpp"
+#include "executable/Chunk.hpp"
+#include "executable/Block.hpp"
 #include "jal/opcodes.hpp"
 #include "Value.hpp"
 
+void disassembleChunk (std::ostringstream& str, Chunk& chunk);
 size_t disassembleInstruction (std::ostringstream& str, Chunk& chunk, size_t index);
 
 #pragma region Formatters
-static std::string hexByteStr (byte val) {
+static std::string hexIntStr (i64 val) {
     std::ostringstream str;
     str << "0x" << std::setw(4) << std::right << std::setfill('0') << std::hex << (int)val;
     return str.str();
 }
 
-static std::string hexIntegerStr (i64 val) {
+static std::string hexIntLongStr (i64 val) {
     std::ostringstream str;
     str << "0x" << std::setw(8) << std::setfill('0') << std::hex << val;
     return str.str();
@@ -92,7 +95,7 @@ static std::string constTypeStr (byte type) {
 #pragma region Disassembly functions
 
 static size_t unknownInstruction (std::ostringstream& str, size_t index) {
-    str << hexByteStr(index);
+    str << hexIntStr(index);
     str << " <Unknown>";
     return index + 1;
 }
@@ -110,7 +113,7 @@ static size_t byteInstruction (std::ostringstream& str, Chunk& chunk, const char
 
     byte val = chunk.code[index + 1];
 
-    str << idStr(name) << " " << hexByteStr(val) << " ";
+    str << idStr(name) << " " << hexIntStr(val) << " ";
 
     return index + 2;
 }
@@ -124,7 +127,7 @@ static size_t u16Instruction (std::ostringstream& str, Chunk& chunk, const char*
     i32 val = chunk.code[index + 1]
         + (chunk.code[index + 2] << 8);
 
-    str << idStr(name) << " " << hexIntegerStr(val) << " ";
+    str << idStr(name) << " " << hexIntLongStr(val) << " ";
 
     return index + 3;
 }
@@ -140,7 +143,7 @@ static size_t u32Instruction (std::ostringstream& str, Chunk& chunk, const char*
         + (chunk.code[index + 3] << 16)
         + (chunk.code[index + 4] << 24);
 
-    str << idStr(name) << " " << hexIntegerStr(val) << " ";
+    str << idStr(name) << " " << hexIntLongStr(val) << " ";
 
     return index + 5;
 }
@@ -153,7 +156,7 @@ static size_t constantInstruction (std::ostringstream& str, Chunk& chunk, const 
 
     byte constIndex = chunk.code[index + 1];
 
-    str << idStr(name) << " " << hexByteStr(constIndex) << " ; " << constant(chunk, constIndex);
+    str << idStr(name) << " " << hexIntStr(constIndex) << " ; " << constant(chunk, constIndex);
 
     return index + 2;
 }
@@ -169,7 +172,36 @@ static size_t constantLongInstruction (std::ostringstream& str, Chunk& chunk, co
         + (chunk.code[index + 2] << 16)
         + (chunk.code[index + 2] << 24);
 
-    str << idStr(name) << " " << hexIntegerStr(constIndex) << " ; " << constant(chunk, constIndex);
+    str << idStr(name) << " " << hexIntLongStr(constIndex) << " ; " << constant(chunk, constIndex);
+
+    return index + 5;
+}
+
+static size_t jumpInstruction (std::ostringstream& str, Chunk& chunk, const char* name, size_t index) {
+    if (index + 1 >= chunk.size) {
+        std::cerr << "Jump instruction at index " << index << " overflows the code array.";
+        return index + 2;
+    }
+
+    sbyte val = (sbyte)chunk.code[index + 1];
+
+    str << idStr(name) << " " << hexIntStr(val) << " ; " << hexIntStr(index + val + 2);
+
+    return index + 2;
+}
+
+static size_t jumpLongInstruction (std::ostringstream& str, Chunk& chunk, const char* name, size_t index) {
+    if (index + 2 >= chunk.size) {
+        std::cerr << "JumpLong instruction at index " << index << " overflows the code array.";
+        return index + 5;
+    }
+
+    i32 val = chunk.code[index + 1]
+        + (chunk.code[index + 2] << 8)
+        + (chunk.code[index + 3] << 16)
+        + (chunk.code[index + 4] << 24);
+
+    str << idStr(name) << " " << hexIntStr(val) << " ; " << hexIntStr(index + val + 4);
 
     return index + 5;
 }
@@ -182,22 +214,30 @@ static size_t printInstruction (std::ostringstream& str, Chunk& chunk, const cha
 
     byte constType = chunk.code[index + 1];
 
-    str << idStr(name) << " " << hexByteStr(constType) << " ; " << constTypeStr(constType);
+    str << idStr(name) << " " << hexIntStr(constType) << " ; " << constTypeStr(constType);
 
     return index + 2;
 }
 #pragma endregion
 
-std::string disassembleChunk(Chunk& chunk) {
+std::string disassembleBlock(Block& block) {
     std::ostringstream str;
 
+    for (size_t i = 0; i < block.functionCount; i++) {
+        str << "== FUNCTION #" << i << " ==\n";
+        disassembleChunk(str, block.functions[i].chunk);
+    }
+
+    return str.str();
+}
+
+static void disassembleChunk (std::ostringstream& str, Chunk& chunk) {
     size_t index = 0;
     while (index < chunk.size) {
         index = disassembleInstruction(str, chunk, index);
         str << "\n";
     }
-
-    return str.str();
+    str << "\n";
 }
 
 static size_t disassembleInstruction (std::ostringstream& str, Chunk& chunk, size_t index) {
@@ -206,7 +246,7 @@ static size_t disassembleInstruction (std::ostringstream& str, Chunk& chunk, siz
     if (chunk.containsLines) {
         str << "Line " << std::setw(5) << std::left << chunk.lines[index] << std::setw(0) << " | ";
     }
-    str << hexByteStr(index) << " ";
+    str << hexIntStr(index) << " ";
 
     switch (opCode) {
     case OpCode::NOOP:
@@ -322,35 +362,37 @@ static size_t disassembleInstruction (std::ostringstream& str, Chunk& chunk, siz
     case OpCode::LOAD_L:
         return u16Instruction(str, chunk, "LOAD_L", index);
 
+
     case OpCode::JMP:
-        return byteInstruction(str, chunk, "JMP", index);
+        return jumpInstruction(str, chunk, "JMP", index);
 
     case OpCode::JMP_L:
-        return u32Instruction(str, chunk, "JMP_L", index);
+        return jumpLongInstruction(str, chunk, "JMP_L", index);
 
     case OpCode::JTRUE:
-        return byteInstruction(str, chunk, "JTRUE", index);
+        return jumpInstruction(str, chunk, "JTRUE", index);
 
     case OpCode::JTRUE_L:
-        return u32Instruction(str, chunk, "JTRUE_L", index);
+        return jumpLongInstruction(str, chunk, "JTRUE_L", index);
 
     case OpCode::JTRUE_K:
-        return byteInstruction(str, chunk, "JTRUE_K", index);
+        return jumpInstruction(str, chunk, "JTRUE_K", index);
 
     case OpCode::JTRUE_K_L:
-        return u32Instruction(str, chunk, "JTRUE_K_L", index);
+        return jumpLongInstruction(str, chunk, "JTRUE_K_L", index);
 
     case OpCode::JFALSE:
-        return byteInstruction(str, chunk, "JFALSE", index);
+        return jumpInstruction(str, chunk, "JFALSE", index);
 
     case OpCode::JFALSE_L:
-        return u32Instruction(str, chunk, "JFALSE_L", index);
+        return jumpLongInstruction(str, chunk, "JFALSE_L", index);
 
     case OpCode::JFALSE_K:
-        return byteInstruction(str, chunk, "JFALSE_K", index);
+        return jumpInstruction(str, chunk, "JFALSE_K", index);
 
     case OpCode::JFALSE_K_L:
-        return u32Instruction(str, chunk, "JFALSE_K_L", index);
+        return jumpLongInstruction(str, chunk, "JFALSE_K_L", index);
+
 
     case OpCode::PRINT:
         return printInstruction(str, chunk, "PRINT", index);

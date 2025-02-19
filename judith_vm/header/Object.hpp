@@ -29,6 +29,16 @@ struct StringObject {
     }
 };
 
+struct FunctionObject {
+    Object object;
+    std::string name;
+    u_ptr<Chunk> chunk; // TODO: Chunk.
+
+    FunctionObject (std::string name, u_ptr<Chunk> chunk)
+        : name(std::move(name)), chunk(std::move(chunk))
+    {}
+};
+
 struct InstanceObject {
     Object object;
     void* fieldTable;

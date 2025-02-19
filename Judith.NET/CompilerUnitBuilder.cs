@@ -9,11 +9,13 @@ using System.Threading.Tasks;
 namespace Judith.NET;
 
 public class CompilerUnitBuilder {
+    private string _fileName;
     private List<SyntaxNode> _nodes;
 
     public CompilerUnit? CompilerUnit { get; private set; } = null;
 
-    public CompilerUnitBuilder (List<SyntaxNode> nodes) {
+    public CompilerUnitBuilder (string fileName, List<SyntaxNode> nodes) {
+        _fileName = fileName;
         _nodes = nodes;
     }
 
@@ -23,7 +25,14 @@ public class CompilerUnitBuilder {
         List<SyntaxNode> implicitFunctionNodes = new();
 
         foreach (var node in _nodes) {
-            implicitFunctionNodes.Add(node);
+            switch (node.Kind) {
+                case SyntaxKind.FunctionDefinition:
+                    topLevelItems.Add(CastOrThrow<FunctionDefinition>(node));
+                    break;
+                default:
+                    implicitFunctionNodes.Add(node);
+                    break;
+            }
         }
         ParameterList parameters = new([
             new Parameter(
@@ -47,6 +56,12 @@ public class CompilerUnitBuilder {
             body
         );
 
-        CompilerUnit = new(topLevelItems, implicitFunc);
+        CompilerUnit = new(_fileName, topLevelItems, implicitFunc);
+    }
+
+    private T CastOrThrow<T> (SyntaxNode node) where T : SyntaxNode {
+        if (node is T tNode) return tNode;
+
+        throw new($"Syntax node of kind '{node.Kind}' doesn't have expected type.");
     }
 }

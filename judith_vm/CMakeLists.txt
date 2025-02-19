@@ -34,9 +34,9 @@ add_executable(
 	${SRC_FILES}
 	${HEADER_FILES}
 	"header/root.hpp" "header/types.hpp"
-	"header/VM.hpp" "header/Chunk.hpp"
-	"src/VM.cpp" "src/Chunk.cpp" "src/Value.cpp"
- "src/ChunkReader.cpp" "src/utils.cpp" "src/utils/Buffer.cpp" "src/debug/chunk.cpp" "header/_flags.h")
+	"header/VM.hpp" "header/executable/Chunk.hpp"
+	"src/VM.cpp" "src/executable/Chunk.cpp" "src/Value.cpp"
+ "src/BlockReader.cpp" "src/utils.cpp" "src/utils/Buffer.cpp" "src/debug/disassembly.cpp" "header/_flags.h")
 
 target_link_libraries(${APP_NAME} PRIVATE unordered_dense)
 

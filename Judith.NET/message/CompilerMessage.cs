@@ -251,6 +251,16 @@ public class CompilerMessage {
             );
         }
 
+        public static CompilerMessage ArgumentExpected (int line) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.Parser,
+                (int)MessageCode.ArgumentExpected,
+                $"Argument expected.",
+                line
+            );
+        }
+
         public static CompilerMessage HidableItemExpected (int line) {
             return new(
                 MessageKind.Error,

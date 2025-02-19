@@ -743,7 +743,23 @@ public class Parser {
             return true;
         }
 
-        return TryConsumeMemberAccessExpression(out expr);
+        return TryConsumeCallExpression(out expr);
+    }
+
+    // "(" arglist? ")"
+    private bool TryConsumeCallExpression ([NotNullWhen(true)] out Expression? expr) {
+        if (TryConsumeMemberAccessExpression(out Expression? leftExpr) == false) {
+            expr = null;
+            return false;
+        }
+
+        if (TryConsumeArgumentList(out ArgumentList? argList) == false) {
+            expr = leftExpr;
+            return true;
+        }
+
+        expr = SF.CallExpression(leftExpr, argList);
+        return true;
     }
 
     private bool TryConsumeMemberAccessExpression ([NotNullWhen(true)] out Expression? expr) {
@@ -1085,6 +1101,42 @@ public class Parser {
         }
 
         matchCase = SF.MatchCase(elseToken, tests, consequent);
+        return true;
+    }
+
+    private bool TryConsumeArgumentList ([NotNullWhen(true)] out ArgumentList? argList) {
+        if (TryConsume(TokenKind.LeftParen, out Token? leftParenToken) == false) {
+            argList = null;
+            return false;
+        }
+
+        List<Argument> arguments = new();
+        if (Check(TokenKind.RightParen) == false) {
+            do {
+                if (TryConsumeArgument(out Argument? argument) == false) {
+                    throw Error(CompilerMessage.Parser.ArgumentExpected(Peek().Line));
+                }
+
+                arguments.Add(argument);
+            }
+            while (Match(TokenKind.Comma) && Peek().Kind != TokenKind.RightParen);
+        }
+
+        if (TryConsume(TokenKind.RightParen, out Token? rightParenToken) == false) {
+            throw Error(CompilerMessage.Parser.RightParenExpected(Peek().Line));
+        }
+
+        argList = SF.ArgumentList(leftParenToken, arguments, rightParenToken);
+        return true;
+    }
+
+    private bool TryConsumeArgument ([NotNullWhen(true)] out Argument? argument) {
+        if (TryConsumeExpression(out Expression? expr) == false) {
+            argument = null;
+            return false;
+        }
+
+        argument = SF.Argument(expr);
         return true;
     }
 

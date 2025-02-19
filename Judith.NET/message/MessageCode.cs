@@ -32,6 +32,7 @@ public enum MessageCode {
     DoExpected,
     EndExpected,
     ParameterExpected,
+    ArgumentExpected,
     HidableItemExpected,
     LocalDeclaratorExpected,
     LocalDeclaratorListExpected,

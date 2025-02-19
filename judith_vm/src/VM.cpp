@@ -32,7 +32,7 @@ VM::~VM() {
 }
 
 InterpretResult VM::interpret (const Chunk& chunk) {
-    byte* ip = chunk.code;
+    byte* ip = chunk.code.get();
 
     while (true) {
 #ifdef DEBUG_DUMP_STACK
@@ -43,7 +43,7 @@ InterpretResult VM::interpret (const Chunk& chunk) {
         std::cout << "]" << std::endl;
 #endif
 #ifdef DEBUG_CHECK_STACK_UNDERFLOW
-        if (ip < chunk.code) {
+        if (ip < chunk.code.get()) {
             throw std::exception("Trying to access an invalid stack position!");
         }
 #endif

@@ -2,6 +2,6 @@
 
 #include "root.hpp"
 
-class Block {
+struct Block;
 
-};
+Block readBlock ();

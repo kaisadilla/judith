@@ -1,7 +1,8 @@
 #pragma once
 
 #include "root.hpp"
-#include "Chunk.hpp"
+#include "executable/Chunk.hpp"
+#include "executable/ConstantType.hpp"
 #include "Value.hpp"
 #include "Object.hpp"
 #include <ankerl/unordered_dense.h>

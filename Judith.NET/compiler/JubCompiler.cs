@@ -1,4 +1,5 @@
-﻿using Judith.NET.analysis.binder;
+﻿using Judith.NET.analysis;
+using Judith.NET.analysis.binder;
 using Judith.NET.analysis.syntax;
 using Judith.NET.compiler.jub;
 using System;
@@ -15,41 +16,74 @@ public class JubCompiler : SyntaxVisitor {
     const int MAX_LOCALS = ushort.MaxValue + 1;
 
     private Compilation _cmp;
-    private BinaryFunction? _currentFunc = null;
-    private LocalManager? _localManager = null;
+    private LocalBlock? _localBlock = null;
 
-    public BinaryFile Bin { get; private init; } = new();
+    /// <summary>
+    /// A stack containing all the functions we are currently inside of. When
+    /// we enter a new function, we place it at the top of the stack. When we
+    /// exit it, that function is popped and the previous one becomes the current
+    /// function once again.
+    /// </summary>
+    private Stack<BinaryFunction> _functions = new();
+
+    public List<BinaryFile> Bins { get; private init; } = new();
+
+    /// <summary>
+    /// The current function, if we are inside one.
+    /// </summary>
+    private BinaryFunction? CurrentFunc => _functions.Count == 0
+        ? null
+        : _functions.Peek();
+
+    private BinaryFile CurrentBin => Bins[0];
 
     public JubCompiler (Compilation cmp) {
         _cmp = cmp;
     }
 
     public void Compile () {
-        _currentFunc = new();
-        _localManager = new(MAX_LOCALS);
-
-        Visit(_cmp.Units[0]);
-
-        Bin.Functions.Add(_currentFunc);
-        Bin.EntryPoint = Bin.Functions.Count - 1;
-        _currentFunc = null;
-        _localManager = null;
-    }
-    
-    private void BeginScope () {
-        RequireFunction();
-
-        _localManager.ScopeDepth++;
+        foreach (var unit in _cmp.Units) {
+            Visit(unit);
+        }
     }
 
-    private void EndScope () {
+    private void BeginFunction (string name) {
+        if (CurrentFunc != null) {
+            throw new NotImplementedException("Inner functions are not implemented!");
+        }
+
+        _localBlock = new(MAX_LOCALS);
+        _functions.Push(new(CurrentBin, name));
+    }
+
+    private void EndFunction () {
         RequireFunction();
 
-        _localManager.ScopeDepth--;
+        CurrentBin.Functions.Add(CurrentFunc);
+
+        _functions.Pop();
+        _localBlock = null;
     }
 
     public override void Visit (CompilerUnit node) {
-        if (node.ImplicitFunction != null) Visit(node.ImplicitFunction);
+        Bins.Add(new(node.FileName));
+
+        if (node.ImplicitFunction != null) {
+            CurrentBin.HasImplicitFunction = true;
+
+            Visit(node.ImplicitFunction);
+        }
+
+        foreach (var item in node.TopLevelItems) {
+            Visit(item);
+        }
+    }
+
+    public override void Visit (FunctionDefinition node) {
+        BeginFunction(node.Identifier.Name);
+        Visit(node.Parameters);
+        Visit(node.Body);
+        EndFunction();
     }
 
     public override void Visit (LocalDeclarationStatement node) {
@@ -61,24 +95,29 @@ public class JubCompiler : SyntaxVisitor {
 
         string localName = node.DeclaratorList.Declarators[0].Identifier.Name;
         // Check if a local with this name is already declared.
-        if (_localManager.IsLocalDeclared(localName)) {
+        if (_localBlock.IsLocalDeclared(localName)) {
             throw new NotImplementedException("Local shadowing not yet implemented.");
         }
 
-        int addr = _localManager.AddLocal(localName);
+        int addr = _localBlock.AddLocal(localName);
 
         if (node.Initializer == null) return;
 
         Visit(node.Initializer);
         EmitStore(addr, node.Initializer.Line);
-        _localManager.MarkInitialized(addr);
+        _localBlock.MarkInitialized(addr);
     }
 
     public override void Visit (IfExpression node) {
+        RequireFunction();
+
         Visit(node.Test);
 
         var thenJump = EmitJump(OpCode.JFalse, node.Test.Line);
+
+        _localBlock.BeginScope();
         Visit(node.Consequent);
+        _localBlock.EndScope();
 
         int elseJump = -1;
         if (node.Alternate != null) {
@@ -88,7 +127,10 @@ public class JubCompiler : SyntaxVisitor {
         PatchJump(thenJump);
 
         if (node.Alternate != null) {
+            _localBlock.BeginScope();
             Visit(node.Alternate);
+            _localBlock.EndScope();
+
             PatchJump(elseJump);
         }
     }
@@ -97,77 +139,47 @@ public class JubCompiler : SyntaxVisitor {
         RequireFunction();
 
         // Store where this loop ends.
-        var loopStart = _currentFunc.Chunk.Index;
+        var loopStart = CurrentFunc.Chunk.Index;
         // Check condition
         Visit(node.Test);
         // Prepare a jump to skip the body if the test fails.
         var falseJump = EmitJump(OpCode.JFalse, node.Test.Line);
+
         // Compile the body.
+        _localBlock.BeginScope();
         Visit(node.Body);
+        _localBlock.EndScope();
+
         // Emit a jump back to the start of the loop.
         EmitJumpBack(OpCode.Jmp, loopStart, node.Test.Line);
         // Point the skip body jump here.
         PatchJump(falseJump);
     }
 
-    public override void Visit (LiteralExpression node) {
-        RequireFunction();
-    
-        if (_cmp.Binder.TryGetBoundNode(node, out BoundLiteralExpression? boundNode) == false) {
-            ThrowUnboundNode(node);
-        }
-
-        // TODO: When type alias desugaring is added, this compares directly to
-        // F64, F32, I64, I32, etc.
-        if (boundNode.Type == _cmp.Native.Types.Num) {
-            int index = Bin.ConstantTable.WriteFloat64(boundNode.Value.AsFloat);
-
-            if (index <= byte.MaxValue) {
-                _currentFunc.Chunk.WriteInstruction(OpCode.Const, node.Line);
-                _currentFunc.Chunk.WriteByte((byte)index, node.Line);
-            }
-            else {
-                _currentFunc.Chunk.WriteInstruction(OpCode.ConstLong, node.Line);
-                _currentFunc.Chunk.WriteInt32(index, node.Line);
-            }
-        }
-        else if (boundNode.Type == _cmp.Native.Types.Bool) {
-            if (boundNode.Value.AsBoolean == true) {
-                _currentFunc.Chunk.WriteInstruction(OpCode.IConst1, node.Line);
-            }
-            else {
-                _currentFunc.Chunk.WriteInstruction(OpCode.Const0, node.Line);
-            }
-        }
-        else if (boundNode.Type == _cmp.Native.Types.String) {
-            int index = Bin.ConstantTable.WriteStringASCII(boundNode.Value.AsString!);
-
-            if (index <= byte.MaxValue) {
-                _currentFunc.Chunk.WriteInstruction(OpCode.ConstStr, node.Line);
-                _currentFunc.Chunk.WriteByte((byte)index, node.Line);
-            }
-            else {
-                _currentFunc.Chunk.WriteInstruction(OpCode.ConstStrLong, node.Line);
-                _currentFunc.Chunk.WriteInt32(index, node.Line);
-            }
-        }
-    }
-
-    public override void Visit (IdentifierExpression node) {
-        RequireFunction();
-
-        if (_localManager.TryGetLocalAddr(node.Identifier.Name, out int addr) == false) {
-            throw new Exception("Local not found");
-        }
-
-        EmitLoad(addr, node.Line);
-    }
-
     public override void Visit (ReturnStatement node) {
         RequireFunction();
         // TODO: Compile expression.
 
-        _currentFunc.Chunk.WriteInstruction(OpCode.Ret, node.Line);
+        CurrentFunc.Chunk.WriteInstruction(OpCode.Ret, node.Line);
+    }
+
+    public override void Visit (AssignmentExpression node) {
+        RequireFunction();
+
+        if (node.Left.Kind != SyntaxKind.IdentifierExpression) {
+            throw new Exception("Can't assign to that."); // TODO: Compile error.
+        }
+        if (node.Left is not IdentifierExpression idExpr) {
+            throw new Exception("Invalid type.");
+        }
+
+        Visit(node.Right);
+
+        if (_localBlock.TryGetLocalAddr(idExpr.Identifier.Name, out int addr) == false) {
+            throw new Exception("Local not found");
+        }
+
+        EmitStore(addr, node.Line);
     }
 
     public override void Visit (BinaryExpression node) {
@@ -184,27 +196,72 @@ public class JubCompiler : SyntaxVisitor {
         }
     }
 
-    public override void Visit (AssignmentExpression node) {
+    public override void Visit (IdentifierExpression node) {
         RequireFunction();
 
-        if (node.Left.Kind != SyntaxKind.IdentifierExpression) {
-            throw new Exception("Can't assign to that."); // TODO: Compile error.
-        }
-        if (node.Left is not IdentifierExpression idExpr) {
-            throw new Exception("Invalid type.");
-        }
-
-        Visit(node.Right);
-
-        if (_localManager.TryGetLocalAddr(idExpr.Identifier.Name, out int addr) == false) {
+        if (_localBlock.TryGetLocalAddr(node.Identifier.Name, out int addr) == false) {
             throw new Exception("Local not found");
         }
 
-        EmitStore(addr, node.Line);
+        EmitLoad(addr, node.Line);
+    }
+
+    public override void Visit (LiteralExpression node) {
+        RequireFunction();
+
+        if (_cmp.Binder.TryGetBoundNode(node, out BoundLiteralExpression? boundNode) == false) {
+            ThrowUnboundNode(node);
+        }
+
+        // TODO: When type alias desugaring is added, this compares directly to
+        // F64, F32, I64, I32, etc.
+        if (boundNode.Type == _cmp.Native.Types.Num) {
+            int index = CurrentBin.ConstantTable.WriteFloat64(boundNode.Value.AsFloat);
+
+            if (index <= byte.MaxValue) {
+                CurrentFunc.Chunk.WriteInstruction(OpCode.Const, node.Line);
+                CurrentFunc.Chunk.WriteByte((byte)index, node.Line);
+            }
+            else {
+                CurrentFunc.Chunk.WriteInstruction(OpCode.ConstLong, node.Line);
+                CurrentFunc.Chunk.WriteInt32(index, node.Line);
+            }
+        }
+        else if (boundNode.Type == _cmp.Native.Types.Bool) {
+            if (boundNode.Value.AsBoolean == true) {
+                CurrentFunc.Chunk.WriteInstruction(OpCode.IConst1, node.Line);
+            }
+            else {
+                CurrentFunc.Chunk.WriteInstruction(OpCode.Const0, node.Line);
+            }
+        }
+        else if (boundNode.Type == _cmp.Native.Types.String) {
+            int index = CurrentBin.ConstantTable.WriteStringASCII(boundNode.Value.AsString!);
+
+            if (index <= byte.MaxValue) {
+                CurrentFunc.Chunk.WriteInstruction(OpCode.ConstStr, node.Line);
+                CurrentFunc.Chunk.WriteByte((byte)index, node.Line);
+            }
+            else {
+                CurrentFunc.Chunk.WriteInstruction(OpCode.ConstStrLong, node.Line);
+                CurrentFunc.Chunk.WriteInt32(index, node.Line);
+            }
+        }
     }
 
     public override void Visit (EqualsValueClause node) {
         Visit(node.Value);
+    }
+
+    public override void Visit (Parameter node) {
+        RequireFunction();
+
+        int addr = _localBlock.AddLocal(node.Declarator.Identifier.Name);
+        _localBlock.MarkInitialized(addr);
+
+        CurrentFunc.Parameters.Add(
+            new(CurrentBin, TypeInfo.UnresolvedType, node.Declarator.Identifier.Name)
+        ); // TODO: Bind parameters and resolve their types. UnresolvedType is just a placeholder.
     }
 
     public override void Visit (P_PrintStatement node) {
@@ -216,16 +273,16 @@ public class JubCompiler : SyntaxVisitor {
             ThrowUnboundNode(node.Expression);
         }
 
-        _currentFunc.Chunk.WriteInstruction(OpCode.Print, node.Line);
+        CurrentFunc.Chunk.WriteInstruction(OpCode.Print, node.Line);
 
         if (boundExpr.Type == _cmp.Native.Types.Num) {
-            _currentFunc.Chunk.WriteByte((byte)ConstantType.Float64, node.Expression.Line);
+            CurrentFunc.Chunk.WriteByte((byte)ConstantType.Float64, node.Expression.Line);
         }
         else if (boundExpr.Type == _cmp.Native.Types.String) {
-            _currentFunc.Chunk.WriteByte((byte)ConstantType.StringASCII, node.Expression.Line);
+            CurrentFunc.Chunk.WriteByte((byte)ConstantType.StringASCII, node.Expression.Line);
         }
         else {
-            _currentFunc.Chunk.WriteByte((byte)ConstantType.Bool, node.Expression.Line);
+            CurrentFunc.Chunk.WriteByte((byte)ConstantType.Bool, node.Expression.Line);
         }
     }
 
@@ -327,7 +384,7 @@ public class JubCompiler : SyntaxVisitor {
         );
 
         void _Instr (OpCode opCode) {
-            _currentFunc.Chunk.WriteInstruction(opCode, node.Operator.Line);
+            CurrentFunc.Chunk.WriteInstruction(opCode, node.Operator.Line);
         }
     }
 
@@ -348,23 +405,23 @@ public class JubCompiler : SyntaxVisitor {
         RequireFunction();
 
         if (addr == 0) {
-            _currentFunc.Chunk.WriteInstruction(OpCode.Store0, line);
+            CurrentFunc.Chunk.WriteInstruction(OpCode.Store0, line);
         }
         else if (addr == 1) {
-            _currentFunc.Chunk.WriteInstruction(OpCode.Store1, line);
+            CurrentFunc.Chunk.WriteInstruction(OpCode.Store1, line);
         }
         else if (addr == 2) {
-            _currentFunc.Chunk.WriteInstruction(OpCode.Store2, line);
+            CurrentFunc.Chunk.WriteInstruction(OpCode.Store2, line);
         }
         else if (addr == 3) {
-            _currentFunc.Chunk.WriteInstruction(OpCode.Store3, line);
+            CurrentFunc.Chunk.WriteInstruction(OpCode.Store3, line);
         }
         else if (addr == 4) {
-            _currentFunc.Chunk.WriteInstruction(OpCode.Store4, line);
+            CurrentFunc.Chunk.WriteInstruction(OpCode.Store4, line);
         }
         else if (addr <= byte.MaxValue) {
-            _currentFunc.Chunk.WriteInstruction(OpCode.Store, line);
-            _currentFunc.Chunk.WriteByte((byte)addr, line);
+            CurrentFunc.Chunk.WriteInstruction(OpCode.Store, line);
+            CurrentFunc.Chunk.WriteByte((byte)addr, line);
         }
         else {
             throw new NotImplementedException("VM does not yet support locals beyond 255");
@@ -382,23 +439,23 @@ public class JubCompiler : SyntaxVisitor {
         RequireFunction();
 
         if (addr == 0) {
-            _currentFunc.Chunk.WriteInstruction(OpCode.Load0, line);
+            CurrentFunc.Chunk.WriteInstruction(OpCode.Load0, line);
         }
         else if (addr == 1) {
-            _currentFunc.Chunk.WriteInstruction(OpCode.Load1, line);
+            CurrentFunc.Chunk.WriteInstruction(OpCode.Load1, line);
         }
         else if (addr == 2) {
-            _currentFunc.Chunk.WriteInstruction(OpCode.Load2, line);
+            CurrentFunc.Chunk.WriteInstruction(OpCode.Load2, line);
         }
         else if (addr == 3) {
-            _currentFunc.Chunk.WriteInstruction(OpCode.Load3, line);
+            CurrentFunc.Chunk.WriteInstruction(OpCode.Load3, line);
         }
         else if (addr == 4) {
-            _currentFunc.Chunk.WriteInstruction(OpCode.Load4, line);
+            CurrentFunc.Chunk.WriteInstruction(OpCode.Load4, line);
         }
         else if (addr <= byte.MaxValue) {
-            _currentFunc.Chunk.WriteInstruction(OpCode.Load, line);
-            _currentFunc.Chunk.WriteByte((byte)addr, line);
+            CurrentFunc.Chunk.WriteInstruction(OpCode.Load, line);
+            CurrentFunc.Chunk.WriteByte((byte)addr, line);
         }
         else {
             throw new NotImplementedException("VM does not yet support locals beyond 255");
@@ -417,10 +474,10 @@ public class JubCompiler : SyntaxVisitor {
     private int EmitJump (OpCode code, int line) {
         RequireFunction();
 
-        _currentFunc.Chunk.WriteInstruction(code, line);
-        _currentFunc.Chunk.WriteByte(0, line);
+        CurrentFunc.Chunk.WriteInstruction(code, line);
+        CurrentFunc.Chunk.WriteByte(0, line);
 
-        return _currentFunc.Chunk.Index;
+        return CurrentFunc.Chunk.Index;
     }
 
     /// <summary>
@@ -431,26 +488,29 @@ public class JubCompiler : SyntaxVisitor {
     private void PatchJump (int indexByte) {
         RequireFunction();
 
-        int offset = _currentFunc.Chunk.Index - indexByte;
+        int offset = CurrentFunc.Chunk.Index - indexByte;
 
-        if (offset < sbyte.MinValue || offset > sbyte.MaxValue) {
+        if (offset >= sbyte.MinValue || offset <= sbyte.MaxValue) {
+            CurrentFunc.Chunk.Code[indexByte] = (byte)((sbyte)offset);
+        }
+        else {
             throw new NotImplementedException("Long jumps are not implemented");
         }
-
-        _currentFunc.Chunk.Code[indexByte] = (byte)((sbyte)offset);
     }
 
     private void EmitJumpBack (OpCode code, int targetIndex, int line) {
         RequireFunction();
 
-        int offset = targetIndex - (_currentFunc.Chunk.Index + 2); // + 2 for the two bytes added by this jump.
+        int offset = targetIndex - (CurrentFunc.Chunk.Index + 2); // + 2 for the two bytes added by this jump.
 
-        if (offset < sbyte.MinValue || offset > sbyte.MaxValue) {
+        CurrentFunc.Chunk.WriteInstruction(code, line);
+
+        if (offset >= sbyte.MinValue || offset <= sbyte.MaxValue) {
+            CurrentFunc.Chunk.WriteSByte((sbyte)offset, line);
+        }
+        else {
             throw new NotImplementedException("Long jumps are not implemented");
         }
-
-        _currentFunc.Chunk.WriteInstruction(code, line);
-        _currentFunc.Chunk.WriteSByte((sbyte)offset, line);
     }
 
     private void PatchJumps (IEnumerable<int> offsets) {
@@ -460,13 +520,13 @@ public class JubCompiler : SyntaxVisitor {
     #region Requires
     /// <summary>
     /// Checks that the current context is that of a function, asserting that
-    /// _currentFunction and _localManager exist.
+    /// CurrentFunc and _localManager exist.
     /// </summary>
     /// <exception cref="Exception"></exception>
-    [MemberNotNull(nameof(_currentFunc))]
-    [MemberNotNull(nameof(_localManager))]
+    [MemberNotNull(nameof(CurrentFunc))]
+    [MemberNotNull(nameof(_localBlock))]
     private void RequireFunction () {
-        if (_currentFunc == null || _localManager == null) {
+        if (CurrentFunc == null || _localBlock == null) {
             throw new Exception(
                 "This node can only be compiled in the context of a function."
             );

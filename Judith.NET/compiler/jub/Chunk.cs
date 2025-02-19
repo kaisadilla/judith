@@ -8,7 +8,7 @@ namespace Judith.NET.compiler.jub;
 
 public class Chunk {
     public List<byte> Code { get; private set; } = new();
-    public List<int> CodeLines { get; private set; } = new();
+    public List<int> Lines { get; private set; } = new();
 
     /// <summary>
     /// Returns the index where the next byte will be at. This is equal to
@@ -23,12 +23,12 @@ public class Chunk {
 
     public void WriteSByte (sbyte i8, int line) {
         Code.Add(unchecked((byte)i8));
-        CodeLines.Add(line);
+        Lines.Add(line);
     }
 
     public void WriteByte (byte ui8, int line) {
         Code.Add(ui8);
-        CodeLines.Add(line);
+        Lines.Add(line);
     }
 
     public void WriteUint16 (ushort u16, int line) {
@@ -43,8 +43,15 @@ public class Chunk {
         WriteByte((byte)((i32 >> 24) & 0xff), line);
     }
 
+    public void ExpandByte (int index, IEnumerable<byte> values, int line) {
+        Code.InsertRange(index, values);
+
+        IEnumerable<int> lines = values.Select(v => line);
+        Lines.InsertRange(index, lines);
+    }
+
     public void WriteInstruction (OpCode opCode, int line) {
         Code.Add((byte)opCode);
-        CodeLines.Add(line);
+        Lines.Add(line);
     }
 }

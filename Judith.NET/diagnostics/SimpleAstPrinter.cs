@@ -25,8 +25,8 @@ public class SimpleAstPrinter : SyntaxVisitor<List<string>> {
 
         txt.Add("compiler_unit {");
         txt.Add("    top_level_items: [");
-        foreach (var str in topLevelItems) {
-            txt.Add("        " + str);
+        foreach (var strArray in topLevelItems) {
+            AddNewline(txt, strArray, 2);
         }
         txt.Add("    ],");
         if (implicitFunc == null) {
@@ -144,7 +144,12 @@ public class SimpleAstPrinter : SyntaxVisitor<List<string>> {
     }
 
     public override List<string> Visit (ExpressionStatement node) {
-        return Visit(node.Expression);
+        List<string> txt = [""];
+        
+        AddInline(txt, Visit(node.Expression), 1);
+        txt[^1] += ";";
+
+        return txt;
     }
 
     public override List<string> Visit (IfExpression node) {
@@ -260,6 +265,15 @@ public class SimpleAstPrinter : SyntaxVisitor<List<string>> {
         return txt;
     }
 
+    public override List<string>? Visit (CallExpression node) {
+        List<string> txt = [""];
+
+        AddInline(txt, Visit(node.Callee), 1);
+        AddInline(txt, Visit(node.Arguments), 0);
+
+        return txt;
+    }
+
     public override List<string> Visit (AccessExpression node) {
         List<string> txt = ["("];
 
@@ -368,6 +382,27 @@ public class SimpleAstPrinter : SyntaxVisitor<List<string>> {
         if (node.DefaultValue != null) {
             AddInline(txt, Visit(node.DefaultValue), 1);
         }
+
+        return txt;
+    }
+
+    public override List<string> Visit (ArgumentList node) {
+        List<string> txt = ["("];
+
+        foreach (var arg in node.Arguments) {
+            AddInline(txt, Visit(arg), 1);
+            txt[^1] += ", ";
+        }
+
+        txt[^1] += ")";
+
+        return txt;
+    }
+
+    public override List<string> Visit (Argument node) {
+        List<string> txt = [""];
+
+        AddInline(txt, Visit(node.Expression), 1);
 
         return txt;
     }

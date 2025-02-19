@@ -7,17 +7,22 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.compiler;
 
-public class LocalManager {
-    record Local (string Name, int depth) {
+/// <summary>
+/// Offers a dynamic representation of how locals evolve within a block. This
+/// object allows adding locals, entering inner scopes (that will deallocate
+/// locals on exit), checking if locals exist and are declared, etc.
+/// </summary>
+public class LocalBlock {
+    record Local (string Name, int Depth) {
         public readonly string Name = Name;
-        public readonly int Depth = depth;
+        public readonly int Depth = Depth;
         public bool Initialized = false;
     }
 
     /// <summary>
     /// The maximum amount of locals that can exist in the list at once.
     /// </summary>
-    private int _maxLocals;
+    private int _localLimit;
 
     /// <summary>
     /// The locals currently in scope.
@@ -25,14 +30,15 @@ public class LocalManager {
     private List<Local> _locals = new();
 
     /// <summary>
-    /// The amount of locals currently held by this manager.
+    /// The maximum amount of locals that may exist at the same time in this
+    /// scope.
     /// </summary>
-    public int LocalCount => _locals.Count;
+    public int MaxLocals = 0;
 
     public int ScopeDepth { get; set; } = 0;
 
-    public LocalManager (int maxLocals) {
-        _maxLocals = maxLocals;
+    public LocalBlock (int maxLocals) {
+        _localLimit = maxLocals;
     }
 
     /// <summary>
@@ -41,12 +47,15 @@ public class LocalManager {
     /// <param name="name">The name of the local.</param>
     /// <returns>The local slot the local will be in.</returns>
     public int AddLocal (string name) {
-        if (_locals.Count >= _maxLocals) {
+        if (_locals.Count >= _localLimit) {
             throw new Exception("Too many locals."); // TODO: Compile error.
         }
 
         Local local = new(name, ScopeDepth);
         _locals.Add(local);
+
+        MaxLocals = Math.Max(MaxLocals, _locals.Count);
+
         return _locals.Count - 1;
     }
 
@@ -90,5 +99,19 @@ public class LocalManager {
     // checked for in the analysis step.
     public void MarkInitialized (int addr) {
         _locals[addr].Initialized = true;
+    }
+
+    public void BeginScope () {
+        ScopeDepth++;
+    }
+
+    public void EndScope () {
+        ScopeDepth--;
+
+        for (int i =  _locals.Count - 1; i >= 0; i--) {
+            if (_locals[i].Depth > ScopeDepth) {
+                _locals.RemoveAt(i);
+            }
+        }
     }
 }

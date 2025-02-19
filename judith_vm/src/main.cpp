@@ -2,22 +2,23 @@
 //
 
 #include "main.hpp"
-#include "debug/chunk.hpp"
-#include <Chunk.hpp>
-#include <ChunkReader.hpp>
+#include "debug/disassembly.hpp"
+#include <executable/Block.hpp>
+#include <executable/Function.hpp>
+#include <BlockReader.hpp>
 #include <VM.hpp>
 
 int main () {
-    Chunk chunk = readChunk();
+    Block block = readBlock();
 
     std::cout << "\n\n===== DISASSEMBLE =====" << std::endl;
-    std::string dump = disassembleChunk(chunk);
+    std::string dump = disassembleBlock(block);
     std::cout << dump << std::endl;
 
     std::cout << "\n\n===== EXECUTION =====" << std::endl;
 
-    VM vm;
-    vm.interpret(chunk);
+    //VM vm;
+    //vm.interpret(block.functions[0].chunk);
 
     //getchar();
     return 0;

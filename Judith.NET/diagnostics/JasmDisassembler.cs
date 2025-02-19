@@ -30,7 +30,7 @@ public class JasmDisassembler {
 
     private int DisassembleInstruction (int index) {
         OpCode opCode = (OpCode)_chunk.Code[index];
-        Dump += $"Line {_chunk.CodeLines[index],-5} | {HexByteStr(index)} ";
+        Dump += $"Line {_chunk.Lines[index],-5} | {HexByteStr(index)} ";
 
         switch (opCode) {
             case OpCode.NoOp:

@@ -47,8 +47,6 @@ public enum SyntaxKind
 
     ExpressionStatement,
 
-    GroupExpression,
-
     SingleFieldDeclarationExpression,
     MultipleFieldDeclarationExpression,
 
@@ -58,12 +56,16 @@ public enum SyntaxKind
     LoopExpression,
     WhileExpression,
     ForeachExpression,
+    JumpTableExpression,
 
+    // Other expressions
     AssignmentExpression,
     LogicalBinaryExpression,
     BinaryExpression,
     LeftUnaryExpression,
+    CallExpression,
     AccessExpression,
+    GroupExpression,
     IdentifierExpression,
     LiteralExpression,
 
@@ -75,6 +77,8 @@ public enum SyntaxKind
     MatchCase,
     Parameter,
     ParameterList,
+    ArgumentList,
+    Argument,
     TypeAnnotation,
     LocalDeclaratorList,
     LocalDeclarator,

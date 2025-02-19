@@ -108,7 +108,7 @@ local_decl_stmt         > ( "const" | "var" ) impl_local_declarator ( "," local_
 return_stmt             > "return" ( expression )?
                         ;
 
-yield_stmt              > "yield" ( expression )?
+yield_stmt              > "yield" expression
                         ;
 
 break_stmt              > "break" ( NUMBER )?
@@ -155,7 +155,10 @@ assignment_expr         > access_expr "=" logical_expr
                         | logical_expr
                         ;
 
-logical_expr            > boolean_expr ( ( "and" | "or" ) boolean_expr )* -- The choice to give "and" and "or" the same precedence is deliberate.
+or_logical_expr         > boolean_expr ( "or" boolean_expr )*
+                        ;
+
+and_logical_expr        > boolean_expr ( "and" boolean_expr )*
                         ;
 
 boolean_expr            > addition_expr ( ( "==" | "!=" | "===" | "!==" | "<" | "<=" | ">" | ">=" ) addition_expr)*
@@ -178,11 +181,14 @@ call_expr               > access_expr ( "(" arg_list? ")" )?
                         | access_expr
                         ;
 
-access_expr             > template_identifier_expr? (( "." | "::" ) template_identifier_expr)*
-                        | primary_expr
+access_expr             > cast_expr? ( ( "." | "::" ) cast_expr )+
+                        | cast_expr
                         ;
 
-template_identifier_expr> identifier_expr ( "<" template_arg_list ">" )?
+cast_expr               > template_identifier_expr ( ( ":" | ":?" ) template_identifier_expr )*
+                        ;
+
+template_identifier_expr> primary_expr ( "<" template_arg_list ">" )?
                         ;
 
 primary_expr            > identifier_expr

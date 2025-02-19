@@ -5,21 +5,18 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace Judith.NET.analysis.syntax;
-public static class SyntaxFactory
-{
-    public static FunctionDefinition FunctionDefinition(
+public static class SyntaxFactory {
+    public static FunctionDefinition FunctionDefinition (
         Token? hidToken,
         Token funcToken,
         Identifier name,
         ParameterList parameters,
         TypeAnnotation? returnType,
         Statement body
-    )
-    {
+    ) {
         var funcItem = new FunctionDefinition(
             false, hidToken != null, name, parameters, returnType, body
-        )
-        {
+        ) {
             HidToken = hidToken,
             FuncToken = funcToken,
         };
@@ -29,28 +26,23 @@ public static class SyntaxFactory
         return funcItem;
     }
 
-    public static BlockStatement BlockStatement(
+    public static BlockStatement BlockStatement (
         Token? openingToken, List<SyntaxNode> statements, Token closingToken
-    )
-    {
-        var blockStmt = new BlockStatement(statements)
-        {
+    ) {
+        var blockStmt = new BlockStatement(statements) {
             OpeningToken = openingToken,
             ClosingToken = closingToken,
         };
 
-        if (openingToken != null)
-        {
+        if (openingToken != null) {
             blockStmt.SetSpan(new(openingToken.Start, closingToken.End));
             blockStmt.SetLine(openingToken.Line);
         }
-        else if (statements.Count > 0)
-        {
+        else if (statements.Count > 0) {
             blockStmt.SetSpan(new(statements[0].Span.Start, closingToken.End));
             blockStmt.SetLine(statements[0].Line);
         }
-        else
-        {
+        else {
             blockStmt.SetSpan(new(closingToken.Start, closingToken.End));
             blockStmt.SetLine(closingToken.Line);
         }
@@ -58,12 +50,10 @@ public static class SyntaxFactory
         return blockStmt;
     }
 
-    public static ArrowStatement ArrowStatement(
+    public static ArrowStatement ArrowStatement (
         Token arrowToken, Statement statement
-    )
-    {
-        var arrowStmt = new ArrowStatement(statement)
-        {
+    ) {
+        var arrowStmt = new ArrowStatement(statement) {
             ArrowToken = arrowToken,
         };
         arrowStmt.SetSpan(new(arrowToken.Start, statement.Span.End));
@@ -72,14 +62,12 @@ public static class SyntaxFactory
         return arrowStmt;
     }
 
-    public static LocalDeclarationStatement LocalDeclarationStatement(
+    public static LocalDeclarationStatement LocalDeclarationStatement (
         Token declarationToken,
         LocalDeclaratorList declaratorList,
         EqualsValueClause? initializer
-    )
-    {
-        var localDeclStmt = new LocalDeclarationStatement(declaratorList, initializer)
-        {
+    ) {
+        var localDeclStmt = new LocalDeclarationStatement(declaratorList, initializer) {
             DeclaratorToken = declarationToken,
         };
 
@@ -90,12 +78,10 @@ public static class SyntaxFactory
         return localDeclStmt;
     }
 
-    public static ReturnStatement ReturnStatement(
+    public static ReturnStatement ReturnStatement (
         Token returnToken, Expression? expression
-    )
-    {
-        var returnStmt = new ReturnStatement(expression)
-        {
+    ) {
+        var returnStmt = new ReturnStatement(expression) {
             ReturnToken = returnToken,
         };
         returnStmt.SetSpan(new(returnToken.Start, expression?.Span.End ?? returnToken.End));
@@ -104,12 +90,10 @@ public static class SyntaxFactory
         return returnStmt;
     }
 
-    public static YieldStatement YieldStatement(
+    public static YieldStatement YieldStatement (
         Token yieldToken, Expression expression
-    )
-    {
-        var yieldStmt = new YieldStatement(expression)
-        {
+    ) {
+        var yieldStmt = new YieldStatement(expression) {
             YieldToken = yieldToken,
         };
         yieldStmt.SetSpan(new(yieldToken.Start, expression.Span.End));
@@ -118,8 +102,7 @@ public static class SyntaxFactory
         return yieldStmt;
     }
 
-    public static ExpressionStatement ExpressionStatement(Expression expr)
-    {
+    public static ExpressionStatement ExpressionStatement (Expression expr) {
         var exprStmt = new ExpressionStatement(expr);
         exprStmt.SetSpan(expr.Span);
         exprStmt.SetLine(expr.Line);
@@ -127,12 +110,10 @@ public static class SyntaxFactory
         return exprStmt;
     }
 
-    public static IfExpression IfExpression(
+    public static IfExpression IfExpression (
         Token ifToken, Expression test, Statement consequent
-    )
-    {
-        var ifExpr = new IfExpression(test, consequent, null)
-        {
+    ) {
+        var ifExpr = new IfExpression(test, consequent, null) {
             IfToken = ifToken,
             ElseToken = null,
         };
@@ -142,16 +123,14 @@ public static class SyntaxFactory
         return ifExpr;
     }
 
-    public static IfExpression IfExpression(
+    public static IfExpression IfExpression (
         Token ifToken,
         Expression test,
         Statement consequent,
         Token elseToken,
         Statement alternate
-    )
-    {
-        var ifExpr = new IfExpression(test, consequent, alternate)
-        {
+    ) {
+        var ifExpr = new IfExpression(test, consequent, alternate) {
             IfToken = ifToken,
             ElseToken = elseToken,
         };
@@ -161,16 +140,14 @@ public static class SyntaxFactory
         return ifExpr;
     }
 
-    public static MatchExpression MatchExpression(
+    public static MatchExpression MatchExpression (
         Token matchToken,
         Expression discriminant,
         Token doToken,
         List<MatchCase> cases,
         Token endToken
-    )
-    {
-        var matchExpr = new MatchExpression(discriminant, cases)
-        {
+    ) {
+        var matchExpr = new MatchExpression(discriminant, cases) {
             MatchToken = matchToken,
             DoToken = doToken,
             EndToken = endToken,
@@ -181,10 +158,8 @@ public static class SyntaxFactory
         return matchExpr;
     }
 
-    public static LoopExpression LoopExpression(Token loopToken, Statement body)
-    {
-        var loopExpr = new LoopExpression(body)
-        {
+    public static LoopExpression LoopExpression (Token loopToken, Statement body) {
+        var loopExpr = new LoopExpression(body) {
             LoopToken = loopToken,
         };
         loopExpr.SetSpan(new(loopToken.Start, body.Span.End));
@@ -193,12 +168,10 @@ public static class SyntaxFactory
         return loopExpr;
     }
 
-    public static WhileExpression WhileExpression(
+    public static WhileExpression WhileExpression (
         Token whileToken, Expression test, Statement body
-    )
-    {
-        var whileExpr = new WhileExpression(test, body)
-        {
+    ) {
+        var whileExpr = new WhileExpression(test, body) {
             WhileToken = whileToken,
         };
         whileExpr.SetSpan(new(whileToken.Start, body.Span.End));
@@ -207,16 +180,14 @@ public static class SyntaxFactory
         return whileExpr;
     }
 
-    public static ForeachExpression ForeachExpression(
+    public static ForeachExpression ForeachExpression (
         Token foreachToken,
         List<LocalDeclarator> declarators,
         Token inToken,
         Expression enumerable,
         Statement body
-    )
-    {
-        var foreachExpr = new ForeachExpression(declarators, enumerable, body)
-        {
+    ) {
+        var foreachExpr = new ForeachExpression(declarators, enumerable, body) {
             ForeachToken = foreachToken,
             InToken = inToken,
         };
@@ -226,10 +197,9 @@ public static class SyntaxFactory
         return foreachExpr;
     }
 
-    public static AssignmentExpression AssignmentExpression(
+    public static AssignmentExpression AssignmentExpression (
         Expression left, Operator op, Expression right
-    )
-    {
+    ) {
         var assignExpr = new AssignmentExpression(left, op, right);
         assignExpr.SetSpan(new(assignExpr.Left.Span.Start, assignExpr.Right.Span.End));
         assignExpr.SetLine(assignExpr.Left.Line);
@@ -237,10 +207,9 @@ public static class SyntaxFactory
         return assignExpr;
     }
 
-    public static BinaryExpression BinaryExpression(
+    public static BinaryExpression BinaryExpression (
         Expression left, Operator op, Expression right
-    )
-    {
+    ) {
         var binaryExpr = new BinaryExpression(op, left, right);
         binaryExpr.SetSpan(new(left.Span.Start, right.Span.End));
         binaryExpr.SetLine(binaryExpr.Left.Line);
@@ -248,10 +217,9 @@ public static class SyntaxFactory
         return binaryExpr;
     }
 
-    public static LeftUnaryExpression LeftUnaryExpression(
+    public static LeftUnaryExpression LeftUnaryExpression (
         Operator op, Expression expr
-    )
-    {
+    ) {
         var unaryExpr = new LeftUnaryExpression(op, expr);
         unaryExpr.SetSpan(new(op.Span.Start, expr.Span.End));
         unaryExpr.SetLine(unaryExpr.Operator.Line);
@@ -259,10 +227,19 @@ public static class SyntaxFactory
         return unaryExpr;
     }
 
-    public static AccessExpression AccessExpression(
+    public static CallExpression CallExpression (
+        Expression callee, ArgumentList argList
+    ) {
+        var callExpr = new CallExpression(callee, argList);
+        callExpr.SetSpan(new(callee.Span.Start, argList.Span.End));
+        callExpr.SetLine(callee.Line);
+
+        return callExpr;
+    }
+
+    public static AccessExpression AccessExpression (
         Expression leftExpr, Operator op, Expression rightExpr
-    )
-    {
+    ) {
         var accessExpr = new AccessExpression(leftExpr, op, rightExpr);
         accessExpr.SetSpan(new(leftExpr.Span.Start, rightExpr.Span.End));
         accessExpr.SetLine(leftExpr.Line);
@@ -270,12 +247,10 @@ public static class SyntaxFactory
         return accessExpr;
     }
 
-    public static GroupExpression GroupExpression(
+    public static GroupExpression GroupExpression (
         Token leftParen, Expression expr, Token rightParen
-    )
-    {
-        var groupExpr = new GroupExpression(expr)
-        {
+    ) {
+        var groupExpr = new GroupExpression(expr) {
             LeftParenthesisToken = leftParen,
             RightParenthesisToken = rightParen,
         };
@@ -285,8 +260,7 @@ public static class SyntaxFactory
         return groupExpr;
     }
 
-    public static IdentifierExpression IdentifierExpression(Identifier identifier)
-    {
+    public static IdentifierExpression IdentifierExpression (Identifier identifier) {
         var idExpr = new IdentifierExpression(identifier);
         idExpr.SetSpan(identifier.Span);
         idExpr.SetLine(identifier.Line);
@@ -294,8 +268,7 @@ public static class SyntaxFactory
         return idExpr;
     }
 
-    public static LiteralExpression LiteralExpression(Literal literal)
-    {
+    public static LiteralExpression LiteralExpression (Literal literal) {
         var litExpr = new LiteralExpression(literal);
         litExpr.SetSpan(literal.Span);
         litExpr.SetLine(literal.Line);
@@ -303,8 +276,7 @@ public static class SyntaxFactory
         return litExpr;
     }
 
-    public static Identifier Identifier(Token rawToken)
-    {
+    public static Identifier Identifier (Token rawToken) {
         var id = new Identifier(rawToken);
         id.SetSpan(new(rawToken.Start, rawToken.End));
         id.SetLine(rawToken.Line);
@@ -312,8 +284,7 @@ public static class SyntaxFactory
         return id;
     }
 
-    public static Literal Literal(Token rawToken)
-    {
+    public static Literal Literal (Token rawToken) {
         var lit = new Literal(rawToken);
         lit.SetSpan(new(rawToken.Start, rawToken.End));
         lit.SetLine(rawToken.Line);
@@ -321,15 +292,13 @@ public static class SyntaxFactory
         return lit;
     }
 
-    public static LocalDeclaratorList LocalDeclaratorList(
+    public static LocalDeclaratorList LocalDeclaratorList (
         Token? declaratorKindOpeningToken,
         LocalDeclaratorKind declaratorKind,
         List<LocalDeclarator> declarators,
         Token? declaratorKindClosingToken
-    )
-    {
-        var localDeclaratorList = new LocalDeclaratorList(declaratorKind, declarators)
-        {
+    ) {
+        var localDeclaratorList = new LocalDeclaratorList(declaratorKind, declarators) {
             DeclaratorKindOpeningToken = declaratorKindOpeningToken,
             DeclaratorKindClosingToken = declaratorKindClosingToken,
         };
@@ -342,15 +311,13 @@ public static class SyntaxFactory
         return localDeclaratorList;
     }
 
-    public static LocalDeclarator LocalDeclarator(
+    public static LocalDeclarator LocalDeclarator (
         Token? fieldKindToken,
         Identifier identifier,
         LocalKind localKind,
         TypeAnnotation? type
-    )
-    {
-        var localDeclarator = new LocalDeclarator(identifier, localKind, type)
-        {
+    ) {
+        var localDeclarator = new LocalDeclarator(identifier, localKind, type) {
             FieldKindToken = fieldKindToken,
         };
 
@@ -362,12 +329,10 @@ public static class SyntaxFactory
         return localDeclarator;
     }
 
-    public static EqualsValueClause EqualsValueClause(
+    public static EqualsValueClause EqualsValueClause (
         Token equalsToken, Expression value
-    )
-    {
-        var clause = new EqualsValueClause(value)
-        {
+    ) {
+        var clause = new EqualsValueClause(value) {
             EqualsToken = equalsToken
         };
         clause.SetSpan(new(clause.EqualsToken.Start, clause.Value.Span.End));
@@ -376,12 +341,10 @@ public static class SyntaxFactory
         return clause;
     }
 
-    public static TypeAnnotation TypeAnnotation(
+    public static TypeAnnotation TypeAnnotation (
         Token colonToken, Identifier identifier
-    )
-    {
-        var typeAnnotation = new TypeAnnotation(identifier)
-        {
+    ) {
+        var typeAnnotation = new TypeAnnotation(identifier) {
             ColonToken = colonToken
         };
         typeAnnotation.SetSpan(new(colonToken.Start, identifier.Span.End));
@@ -390,10 +353,8 @@ public static class SyntaxFactory
         return typeAnnotation;
     }
 
-    public static Operator Operator(Token rawToken, OperatorKind operatorKind)
-    {
-        var op = new Operator(operatorKind)
-        {
+    public static Operator Operator (Token rawToken, OperatorKind operatorKind) {
+        var op = new Operator(operatorKind) {
             RawToken = rawToken,
         };
         op.SetSpan(new(rawToken.Start, rawToken.End));
@@ -402,12 +363,10 @@ public static class SyntaxFactory
         return op;
     }
 
-    public static ParameterList ParameterList(
+    public static ParameterList ParameterList (
         Token leftParenToken, List<Parameter> parameters, Token rightParenToken
-    )
-    {
-        var paramList = new ParameterList(parameters)
-        {
+    ) {
+        var paramList = new ParameterList(parameters) {
             LeftParenthesisToken = leftParenToken,
             RightParenthesisToken = rightParenToken,
         };
@@ -417,11 +376,10 @@ public static class SyntaxFactory
         return paramList;
     }
 
-    public static Parameter Parameter(
+    public static Parameter Parameter (
         LocalDeclarator declarator,
         EqualsValueClause? defaultValue
-    )
-    {
+    ) {
         var parameter = new Parameter(declarator, defaultValue);
 
         int end = defaultValue?.Span.End ?? declarator.Span.End;
@@ -431,21 +389,39 @@ public static class SyntaxFactory
         return parameter;
     }
 
-    public static MatchCase MatchCase(
+    public static ArgumentList ArgumentList (
+        Token leftParenToken, List<Argument> arguments, Token rightParenToken
+    ) {
+        var argList = new ArgumentList(arguments) {
+            LeftParenthesisToken = leftParenToken,
+            RightParenthesisToken = rightParenToken,
+        };
+        argList.SetSpan(new(leftParenToken.Start, rightParenToken.End));
+        argList.SetLine(leftParenToken.Line);
+
+        return argList;
+    }
+
+    public static Argument Argument (Expression expr) {
+        var argument = new Argument(expr);
+
+        argument.SetSpan(new(expr.Span.Start, expr.Span.End));
+        argument.SetLine(expr.Line);
+
+        return argument;
+    }
+
+    public static MatchCase MatchCase (
         Token? elseToken, List<Expression> tests, Statement consequent
-    )
-    {
-        var matchCase = new MatchCase(tests, consequent, tests.Count == 0)
-        {
+    ) {
+        var matchCase = new MatchCase(tests, consequent, tests.Count == 0) {
             ElseToken = elseToken,
         };
-        if (elseToken is null)
-        {
+        if (elseToken is null) {
             matchCase.SetSpan(new(tests[0].Span.Start, consequent.Span.End));
             matchCase.SetLine(matchCase.Tests[0].Line);
         }
-        else
-        {
+        else {
             matchCase.SetSpan(new(elseToken.Start, consequent.Span.End));
             matchCase.SetLine(elseToken.Line);
         }
@@ -454,10 +430,8 @@ public static class SyntaxFactory
     }
 
     #region Debug statements
-    public static P_PrintStatement PrivPrintStmt(Token p_printToken, Expression expr)
-    {
-        var p_printStmt = new P_PrintStatement(expr)
-        {
+    public static P_PrintStatement PrivPrintStmt (Token p_printToken, Expression expr) {
+        var p_printStmt = new P_PrintStatement(expr) {
             P_PrintToken = p_printToken,
         };
         p_printStmt.SetSpan(new(p_printToken.Start, expr.Span.End));

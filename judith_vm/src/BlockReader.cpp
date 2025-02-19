@@ -1,6 +1,9 @@
-#include "ChunkReader.hpp"
+#include "BlockReader.hpp"
 #include "utils.hpp"
 #include <utils/Buffer.hpp>
+#include "executable/Block.hpp"
+#include "executable/Function.hpp"
+#include "executable/ConstantType.hpp"
 
 #define CHECK_SIZE(n) \
     do { \
@@ -8,6 +11,24 @@
             throw std::runtime_error("Constant overflows the file!"); \
         } \
     } while(false)
+
+void readConstantTable (
+    Buffer& reader,
+    size_t bufferSize,
+    u_ptr<byte[]>&constantTable,
+    size_t & constantCount,
+    u_ptr<void* []>&constants,
+    u_ptr<byte[]>&constantTypes
+);
+
+void readFunctionTable (
+    Buffer& reader,
+    size_t bufferSize,
+    const u_ptr<void* []>&constants,
+    const u_ptr<byte[]>&constantTypes,
+    Function*& functions,
+    size_t & functionCount
+);
 
 bool isMagicNumberCorrect (byte* magicNumbers) {
     return magicNumbers[0] == 'A'
@@ -24,7 +45,7 @@ bool isMagicNumberCorrect (byte* magicNumbers) {
         && magicNumbers[11] == 'H';
 }
 
-Chunk readChunk() {
+Block readBlock() {
     constexpr size_t MAGIC_NUMBER_COUNT = 12;
 
     auto buffer = readBinaryFile("res/test.jbin");
@@ -44,7 +65,44 @@ Chunk readChunk() {
     reader.readUInt8(); // discard major_version
     reader.readUInt8(); // discard minor_version
 
-    ui32 constantCount = reader.readUInt32_LE(); // constant_count
+    u_ptr<byte[]> constantTable;
+    size_t constantCount;
+    u_ptr<void*[]> constants;
+    u_ptr<byte[]> constantTypes;
+
+    // Read constant table and output it to the variables above.
+    readConstantTable(
+        reader, bufferSize, constantTable, constantCount, constants, constantTypes
+    );
+
+    bool hasImplicitFunc = reader.readBool(); // has_implicit
+
+    Function* functions;
+    size_t functionCount;
+
+    readFunctionTable(
+        reader, bufferSize, constants, constantTypes, functions, functionCount
+    );
+
+    return Block(
+        std::move(constantTable),
+        constantCount,
+        std::move(constants),
+        std::move(constantTypes),
+        functions,
+        functionCount
+    );
+}
+
+void readConstantTable (
+    Buffer& reader,
+    size_t bufferSize,
+    u_ptr<byte[]>& constantTable,
+    size_t& constantCount,
+    u_ptr<void*[]>& constants,
+    u_ptr<byte[]>& constantTypes
+) {
+    constantCount = (size_t)reader.readUInt32_LE(); // constant_count
 
     std::vector<byte> alignedConstantVector;
     std::vector<size_t> cIndices;
@@ -108,17 +166,17 @@ Chunk readChunk() {
     }
 
     // Create a persistent array for the table.
-    byte* constantTable = new byte[alignedConstantVector.size()];
+    constantTable = make_u<byte[]>(alignedConstantVector.size());
     // Copy the constant table there.
-    std::copy(alignedConstantVector.begin(), alignedConstantVector.end(), constantTable);
+    std::copy(alignedConstantVector.begin(), alignedConstantVector.end(), constantTable.get());
 
     // Create a persistent array for the types.
-    byte* constantTypes = new byte[cTypes.size()];
-    std::copy(cTypes.begin(), cTypes.end(), constantTypes);
+    constantTypes = make_u<byte[]>(cTypes.size());
+    std::copy(cTypes.begin(), cTypes.end(), constantTypes.get());
 
     // This array will map each index in the file's constant table to an address
     // within constantTable, so values can be looked up directly.
-    void** constants = new void* [cIndices.size()];
+    constants = make_u<void* []>(cIndices.size());
 
     for (size_t i = 0; i < cIndices.size(); i++) {
         // The element #i in the file's constant table is at constantTable[index].
@@ -126,36 +184,58 @@ Chunk readChunk() {
         // the address of constantTable[index] becomes the pointer to the value.
         constants[i] = (void*)(&constantTable[index]);
     }
+}
 
-    reader.readUInt32_LE(); // Discard function_count, right now we only accept one function.
+void readFunctionTable (
+    Buffer& reader,
+    size_t bufferSize,
+    const u_ptr<void* []>& constants,
+    const u_ptr<byte[]>& constantTypes,
+    Function*& functions,
+    size_t& functionCount
+) {
+    functionCount = (size_t)reader.readUInt32_LE(); // function_count
+    functions = (Function*)std::malloc(functionCount * sizeof(Function));
 
-    ui32 size = reader.readUInt32_LE();
-    byte* code = new byte[size];
-    
-    for (int i = 0; i < size; i++) {
-        code[i] = reader.readUInt8();
-    }
+    for (int f = 0; f < functionCount; f++) {
+        reader.readUInt32_LE(); // discard function:name
+        size_t paramCount = (size_t)reader.readUInt16_LE(); // param_count
 
-    bool containsLines = reader.readBool();
-    i32* lines = nullptr;
-    if (containsLines) {
-        lines = new i32[size];
+        for (int p = 0; p < paramCount; p++) {
+            reader.readUInt32_LE(); // discard param:name
+        }
+
+        reader.readUInt16_LE(); // discard max_locals
+        reader.readUInt16_LE(); // discard max_stack
+
+        // Read chunk:
+
+        size_t size = (size_t)reader.readUInt32_LE(); // code_bloc
+        u_ptr<byte[]> code = make_u<byte[]>(size);
 
         for (int i = 0; i < size; i++) {
-            lines[i] = reader.readInt32_LE();
+            code[i] = reader.readUInt8(); // code
         }
+
+        bool containsLines = reader.readBool(); // has_lines
+        u_ptr<i32[]> lines = nullptr;
+
+        if (containsLines) {
+            lines = make_u<i32[]>(size);
+
+            for (int i = 0; i < size; i++) {
+                lines[i] = reader.readInt32_LE(); // lines
+            }
+        }
+
+        // TODO: Check this.
+        new (&functions[f]) Function(Chunk(
+            constants.get(),
+            constantTypes.get(),
+            size,
+            std::move(code),
+            containsLines,
+            std::move(lines)
+        ));
     }
-
-    reader.readInt32_LE(); // discard entry_point - we assume the only function is.
-
-    return Chunk(
-        constantTable,
-        constantCount,
-        constants,
-        constantTypes,
-        size,
-        code,
-        containsLines,
-        lines
-    );
 }

@@ -25,7 +25,7 @@ messages.Add(parser.Messages);
 // PrintAST();
 if (ShouldAbort()) return;
 
-CompilerUnitBuilder cub = new(parser.Nodes);
+CompilerUnitBuilder cub = new("test", parser.Nodes);
 cub.BuildUnit();
 CompilerUnit cu = cub.CompilerUnit;
 
@@ -39,21 +39,29 @@ if (ShouldAbort()) return;
 JubCompiler compiler = new(cmp);
 compiler.Compile();
 
-Console.WriteLine("=== BIN DISASSEMBLY ===");
-Console.WriteLine();
-Console.WriteLine($"Functions ({compiler.Bin.Functions.Count}):");
-for (int i = 0; i < compiler.Bin.Functions.Count; i++) {
-    Console.WriteLine($"=== # {i:X4}");
+Console.WriteLine("=== BIN DISASSEMBLIES ===");
+Console.WriteLine("");
+for (int binIndex = 0; binIndex < compiler.Bins.Count; binIndex++) {
+    var bin = compiler.Bins[binIndex];
+    Console.WriteLine($"== {bin.Name}.jbin ==");
 
-    JasmDisassembler disassembler = new(compiler.Bin, compiler.Bin.Functions[i].Chunk);
-    disassembler.Disassemble();
+    Console.WriteLine();
+    Console.WriteLine($"Functions ({bin.Functions.Count}):");
+    for (int i = 0; i < bin.Functions.Count; i++) {
+        Console.WriteLine($"=== # {i:X4} ({bin.Functions[i].Name})");
 
-    Console.WriteLine(disassembler.Dump);
+        JasmDisassembler disassembler = new(bin, bin.Functions[i].Chunk);
+        disassembler.Disassemble();
+
+        Console.WriteLine(disassembler.Dump);
+        Console.WriteLine("");
+    }
+
     Console.WriteLine("");
-}
 
-JuxBuilder builder = new(AppContext.BaseDirectory + "/res/");
-builder.BuildBinary("test.jbin", compiler.Bin);
+    JuxBuilder builder = new(AppContext.BaseDirectory + "/res/");
+    builder.BuildBinary($"{bin.Name}.jbin", bin);
+}
 
 
 

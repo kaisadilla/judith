@@ -11,7 +11,8 @@ public class Parameter : SyntaxNode {
     public EqualsValueClause? DefaultValue { get; private init; }
 
     public Parameter (LocalDeclarator declarator, EqualsValueClause? defaultValue)
-        : base(SyntaxKind.Parameter) {
+        : base(SyntaxKind.Parameter)
+    {
         Declarator = declarator;
         DefaultValue = defaultValue;
 
