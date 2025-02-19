@@ -87,7 +87,7 @@ const squared = Math::pow(Math::PI, 2)
 -- libraries to compile a program.
 #endregion
 
-#endregion
+#endregion Modularization
 
 #region Enumerate
 -- Enumerate is a feature used to generate integer symbols automatically.
@@ -376,7 +376,7 @@ const json_content: String = """
 -- CONTROL STRUCTURES --
 ------------------------
 
--- if block
+-- ## IF
 if element == 'Water' then
     -- statements
 elsif element == 'Earth' then
@@ -386,7 +386,7 @@ end
 if element == 'Water' => my_func()
 else => my_other_func()
 
--- Match
+-- ## MATCH
 -- Match is syntactic sugar for an if-else block. It's similar to switches in
 -- other languages.
 
@@ -408,17 +408,18 @@ match country do
     end
 end
 
--- while loop
-while i < 32 do
-    -- statements
-end
-
+-- ## LOOP
 -- infinite loop, can only be stopped with "break"
 loop
     -- statements
 end
 
--- foreach loops:
+-- ## WHILE
+while i < 32 do
+    -- statements
+end
+
+-- ## FOREACH:
 -- foreach loops execute once for each item in a list. More technically, it
 -- traverses an iterable object.
 
@@ -480,7 +481,7 @@ const name: String = match id do
     default => "Unknown" -- if id didn't match any previous value, returns "Unknown".
 end
 
--- When
+-- ## WHEN
 -- 'when' is a a syntactic sugar for 'if' for one-liners:
 print("Number is big!") when i > 1_000_000
 -- is equivalent to
@@ -497,6 +498,30 @@ for i in 0..15 do
 
     Console::log(f"Completed cycle for i = {i}.")
 end
+
+-- ## JUMPTABLE
+-- "jumptable" is the equivalent to C "switch" statement:
+jumptable name do -- the jumptable "do" forms a single, shared scope.
+    case "Christian": -- each case is the entry point for a given value
+    case "Jennifer": -- this means that a new entry point doesn't stop the
+                     -- previous value from executing.
+    case "Alice":
+        Console::log("You are fired.") -- "Christian", "Jennifer" and "Alice"
+                                       -- will make it here.
+        break -- break exits the block as normal, so the next Console::log won't
+              -- be reached by these three.
+    case "Kevin":
+        Console::log("You are promoted and...")
+        -- there's nothing here, so "Kevin" will jump into "Sylvia"'s section
+    case "Sylvia":
+        Console::log("Your work day has been reduced!") -- Both "Kevin" and
+                                                        -- "Sylvia" make it here.
+        goto "Alice" -- "Kevin" and "Sylvia" jump back to "Alice"'s section
+                     -- and get fired anyway :(
+end
+-- The main reason "jumptable" is not named "switch" is to discourage developers
+-- from using it over "match". Jumptables are a niche feature that is seldom
+-- needed to express logic concisely.
 
 #endregion
 
@@ -1660,27 +1685,4 @@ qnameof(my_proj::hr::Person.name) -- equivalent to string "my_proj::hr::Person.n
 -- events
 -- function type syntax: (Int, String) => Void
 
--- # Jumptable
--- "jumptable" is the equivalent to C "switch" statement:
-jumptable name do -- the jumptable "do" forms a single, shared scope.
-    case "Christian": -- each case is the entry point for a given value
-    case "Jennifer": -- this means that a new entry point doesn't stop the previous
-                     -- value from executing.
-    case "Alice":
-        Console::log("You are fired.") -- "Christian", "Jennifer" and "Alice" will
-                                       -- make it here.
-        break -- break exits the block as normal, so the next Console::log won't
-              -- be reached by these three.
-    case "Kevin":
-        Console::log("You are promoted and...")
-        -- there's nothing here, so "Kevin" will jump into "Sylvia"'s section
-    case "Sylvia":
-        Console::log("Your work day has been reduced!") -- Both "Kevin" and "Sylvia"
-                                                        -- make it here.
-        goto "Alice" -- "Kevin" and "Sylvia" jump back to "Alice"'s section
-                     -- and get fired anyway :(
-end
--- The main reason "jumptable" is not named "switch" is to discourage developers
--- from using it over "match". Jumptables are a niche feature that is very
--- rarely to concisely express logic.
 #endregion
