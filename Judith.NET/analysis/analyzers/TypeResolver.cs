@@ -18,9 +18,11 @@ public class TypeResolver : SyntaxVisitor {
     public MessageContainer Messages { get; private set; } = new();
 
     private Compilation _cmp;
+    private ScopeResolver _scope;
 
-    public TypeResolver (Compilation program) {
-        _cmp = program;
+    public TypeResolver (Compilation cmp) {
+        _cmp = cmp;
+        _scope = new(_cmp.Binder, _cmp.SymbolTable);
     }
 
     public void Analyze (CompilerUnit unit) {
@@ -44,7 +46,33 @@ public class TypeResolver : SyntaxVisitor {
         _cmp.Binder.BindLocalDeclarationStatement(node);
     }
 
-    // if, match, loop, while, foreach
+    public override void Visit (IfExpression node) {
+        var boundIfExpr = GetBoundNodeOrThrow<BoundIfExpression>(node);
+
+        Visit(node.Test);
+
+        _scope.BeginScope(boundIfExpr.ConsequentScope);
+        Visit(node.Consequent);
+
+        if (node.Alternate != null) {
+            if (boundIfExpr.AlternateScope == null) throw new Exception(
+                "AlternateScope shouldn't be null."
+            );
+
+            _scope.BeginScope(boundIfExpr.AlternateScope);
+            Visit(node.Alternate);
+        }
+
+        _scope.EndScope();
+    }
+
+    public override void Visit (WhileExpression node) {
+        Visit(node.Test);
+
+        _scope.BeginScope(node);
+        Visit(node.Body);
+        _scope.EndScope();
+    }
 
     public override void Visit (AssignmentExpression node) {
         Visit(node.Left);
@@ -86,8 +114,12 @@ public class TypeResolver : SyntaxVisitor {
         Visit(node.Value);
     }
 
-    [DoesNotReturn]
-    private Exception ExShouldBeBound (string name) {
-        throw new Exception($"Identifier '{name}' should be bound.");
+
+    private T GetBoundNodeOrThrow<T> (SyntaxNode node) where T : BoundNode {
+        if (_cmp.Binder.TryGetBoundNode(node, out T? boundNode) == false) {
+            throw new($"Node '{node}' should be bound!");
+        }
+
+        return boundNode;
     }
 }

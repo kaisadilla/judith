@@ -28,6 +28,9 @@ See? You don't need to adapt to how Judith likes Strings to be formatted - inste
 ### Implementation details are not the developer's concern
 These are our concern, not theirs. Judith is a high-level language, it can afford to sacrifice some performance from time to time to make the developer's job easier. For example, all types are nullable in the exact same way: you add an `?` to their type (`Person?`, `Num?`), you check for nullability (`my_person !== null`, `my_num !== null`), you use them as non-null when nullability has been discarded. Under the hood, null in reference types and null in value types are implemented differently, but that's not the developer's problem. All they can see is that both behave in the exact same way in his code.
 
+### Novelty budget has to be spent wisely.
+When Judith does something different, it does so for a reason. Otherwise, Judith sticks to names and conventions developers already know. Did I have to choose `+` to concatenate Strings? No. But what do I win from using a new operator for it and forcing everyone to learn a new way to concatenate strings? Did I have to make my `while` block have the same name and structure as all other languages? Nope, but what do I win from changing it? Judith is not here to make you lose time. If Judith does something different, it's because there's a real benefit to doing it differently.
+
 ### Get rid of legacy features
 Why does C# have a `switch` statement that looks and works exactly like C's? You are not writing C. C's `switch` is a very thin abstraction over assembly. Even C# devs think that isn't right for their language, which is why they made it a compile-error not to `break` from non-empty sections of the bloc... well, at this point, why have a C-like `switch` at all?
 
@@ -88,7 +91,11 @@ end
 ```
 This eliminates the risk of unexpected `null`s by making it a compile error to introduce one into a context that doesn't account for it. It also helps reduce lower cognitive complexity as that's one (important) value the writer and the reader of the code alike don't have to care about.
 
-## Prefer simplicity
+
+## Cognitive complexity is important: prefer simplicity.
+### Less is more
+I like syntactic sugar. A lot. And Judith has a lot of it - I take pride of that in other sections of this document, but things should still have one obviously right way to do them. Every syntactic sugary feature I've added to Judith exists because it makes code easier to read and understand. No feature is added just to save two keystrokes at the expense of having to learn a new way to do things, nor to give developers more "freedom". Developers don't need freedom, they need tools.
+
 ### Composition over inheritance
 Judith doesn't feature inheritance at all. Instead, Judith is designed around composing types. Judith features three complex types: `struct`, which stores data, `interface`, which defines behavior and `class`, which holds state and manages said state. You can implement shared behavior for multiple types by implementing an interface for each of these classes. You can specialize a `struct` by adding another `struct` to it. You can extend a `class` by having its "ancestor" be a member field of the new class. You can group types that don't share any specific behavior by creating a union type. You can extend a type's behavior with extension functions and constructors. You can define types as aliases, unions, literals and sets of literals.
 

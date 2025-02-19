@@ -2,6 +2,7 @@
 #include "jal/opcodes.hpp"
 
 #define READ_BYTE() (*(ip++))
+#define READ_SBYTE() ((sbyte)*(ip++))
 #define READ_U16() (*(ip++) | (*(ip++) << 8)) // TODO: Check that unsigned usage is implemented properly.
 #define READ_I32() (*(ip++) | (*(ip++) << 8) | (*(ip++) << 16) | (*(ip++) << 24))
 
@@ -241,12 +242,12 @@ InterpretResult VM::interpret (const Chunk& chunk) {
             break;
 
         case OpCode::JMP: {
-            ip += READ_BYTE();
+            ip += READ_SBYTE();
             break;
         }
 
         case OpCode::JTRUE: {
-            byte offset = READ_BYTE();
+            sbyte offset = READ_SBYTE();
             if (popValue().asInt64) {
                 ip += offset;
             }
@@ -254,7 +255,7 @@ InterpretResult VM::interpret (const Chunk& chunk) {
         }
 
         case OpCode::JTRUE_K: {
-            byte offset = READ_BYTE();
+            sbyte offset = READ_SBYTE();
             if (peekValue().asInt64) {
                 ip += offset;
             }
@@ -265,7 +266,7 @@ InterpretResult VM::interpret (const Chunk& chunk) {
         }
 
         case OpCode::JFALSE: {
-            byte offset = READ_BYTE();
+            sbyte offset = READ_SBYTE();
             if (popValue().asInt64 == 0) {
                 ip += offset;
             }
@@ -274,7 +275,7 @@ InterpretResult VM::interpret (const Chunk& chunk) {
         }
 
         case OpCode::JFALSE_K: {
-            byte offset = READ_BYTE();
+            sbyte offset = READ_SBYTE();
             if (peekValue().asInt64 == 0) {
                 ip += offset;
             }
@@ -286,7 +287,7 @@ InterpretResult VM::interpret (const Chunk& chunk) {
         }
 
         default:
-            std::cerr << "[ERROR] UNKNOWN OPCODE: " << std::hex << instruction
+            std::cerr << "[ERROR] UNKNOWN OPCODE: " << std::hex << (int)instruction
                 << std::dec << std::endl;
             break;
         }

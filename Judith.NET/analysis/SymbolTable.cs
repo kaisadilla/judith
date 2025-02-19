@@ -11,6 +11,7 @@ public enum ScopeKind {
     Namespace,
     FunctionBlock,
     IfBlock,
+    WhileBlock,
     ElseBlock,
 }
 

@@ -93,6 +93,23 @@ public class JubCompiler : SyntaxVisitor {
         }
     }
 
+    public override void Visit (WhileExpression node) {
+        RequireFunction();
+
+        // Store where this loop ends.
+        var loopStart = _currentFunc.Chunk.Index;
+        // Check condition
+        Visit(node.Test);
+        // Prepare a jump to skip the body if the test fails.
+        var falseJump = EmitJump(OpCode.JFalse, node.Test.Line);
+        // Compile the body.
+        Visit(node.Body);
+        // Emit a jump back to the start of the loop.
+        EmitJumpBack(OpCode.Jmp, loopStart, node.Test.Line);
+        // Point the skip body jump here.
+        PatchJump(falseJump);
+    }
+
     public override void Visit (LiteralExpression node) {
         RequireFunction();
     
@@ -403,24 +420,37 @@ public class JubCompiler : SyntaxVisitor {
         _currentFunc.Chunk.WriteInstruction(code, line);
         _currentFunc.Chunk.WriteByte(0, line);
 
-        return _currentFunc.Chunk.Code.Count - 1;
+        return _currentFunc.Chunk.Index;
     }
 
     /// <summary>
     /// Patches the jump byte at the offset given so it points to the current
     /// instruction.
     /// </summary>
-    /// <param name="offsetByte">The byte that stores the jump offset.</param>
-    private void PatchJump (int offsetByte) {
+    /// <param name="indexByte">The byte that stores the jump offset.</param>
+    private void PatchJump (int indexByte) {
         RequireFunction();
 
-        int jumpOffset = _currentFunc.Chunk.Code.Count - offsetByte - 1;
+        int offset = _currentFunc.Chunk.Index - indexByte;
 
-        if (jumpOffset < sbyte.MinValue || jumpOffset > sbyte.MaxValue) {
+        if (offset < sbyte.MinValue || offset > sbyte.MaxValue) {
             throw new NotImplementedException("Long jumps are not implemented");
         }
 
-        _currentFunc.Chunk.Code[offsetByte] = (byte)((sbyte)jumpOffset);
+        _currentFunc.Chunk.Code[indexByte] = (byte)((sbyte)offset);
+    }
+
+    private void EmitJumpBack (OpCode code, int targetIndex, int line) {
+        RequireFunction();
+
+        int offset = targetIndex - (_currentFunc.Chunk.Index + 2); // + 2 for the two bytes added by this jump.
+
+        if (offset < sbyte.MinValue || offset > sbyte.MaxValue) {
+            throw new NotImplementedException("Long jumps are not implemented");
+        }
+
+        _currentFunc.Chunk.WriteInstruction(code, line);
+        _currentFunc.Chunk.WriteSByte((sbyte)offset, line);
     }
 
     private void PatchJumps (IEnumerable<int> offsets) {

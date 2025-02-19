@@ -1,3 +1,20 @@
+
+var a = 1
+var b = 1
+
+var i = 0
+while i < 100 do
+    __p_print b
+
+    const temp = a + b
+    a = b
+    b = temp
+
+    i = i + 1
+end
+
+return
+
 --const val1: Num = 11
 --const val7 = 11
 --const val2 = 7 * 3
@@ -30,23 +47,21 @@
 -- __p_print d
 -- __p_print c > -5
 
-__p_print "first" and "second"
-__p_print "first" or "second"
-
-__p_print 1 and 3 and 5 + 7 and 9
-__p_print 10 or 20 or 30
-__p_print 100 and 200 or 300 and 400
-__p_print false or 9 * 3
-__p_print true or 9 * 3
-__p_print false and 9 * 3
-__p_print true and 9 * 3
-
-if 3 > 5 then
-    __p_print "This is impossible!"
-else
-    __p_print "This always prints!"
-end
-
-__p_print "This can be printed."
-
-return
+--__p_print "first" and "second"
+--__p_print "first" or "second"
+--
+--__p_print 1 and 3 and 5 + 7 and 9
+--__p_print 10 or 20 or 30
+--__p_print 100 and 200 or 300 and 400
+--__p_print false or 9 * 3
+--__p_print true or 9 * 3
+--__p_print false and 9 * 3
+--__p_print true and 9 * 3
+--
+--if 3 > 5 then
+--    __p_print "This is impossible!"
+--else
+--    __p_print "This always prints!"
+--end
+--
+--__p_print "This can be printed."

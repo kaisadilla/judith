@@ -14,11 +14,11 @@ namespace Judith.NET.analysis.analyzers;
 public class SymbolTableBuilder : SyntaxVisitor {
     private Compilation _cmp;
 
-    private SymbolTable _currentTable;
+    private ScopeResolver _scope;
 
-    public SymbolTableBuilder (Compilation program) {
-        _cmp = program;
-        _currentTable = program.SymbolTable;
+    public SymbolTableBuilder (Compilation cmp) {
+        _cmp = cmp;
+        _scope = new(_cmp.Binder, _cmp.SymbolTable);
     }
 
     public void Analyze (CompilerUnit unit) {
@@ -32,41 +32,53 @@ public class SymbolTableBuilder : SyntaxVisitor {
     public override void Visit (FunctionDefinition node) {
         string name = node.Identifier.Name;
 
-        var symbol = _currentTable.AddSymbol(SymbolKind.Function, name);
-        var scope = _currentTable.CreateInnerTable(ScopeKind.FunctionBlock, symbol);
+        var symbol = _scope.Current.AddSymbol(SymbolKind.Function, name);
+        var scope = _scope.Current.CreateInnerTable(ScopeKind.FunctionBlock, symbol);
         _cmp.Binder.BindFunctionDefinition(node, symbol, scope);
 
-        _currentTable = scope;
+        _scope.BeginScope(scope);
         Visit(node.Parameters);
         Visit(node.Body);
-        _currentTable = _currentTable.OuterTable!; // If this is null, something is wrong in CreateAnonymousInnerTable().
+        _scope.EndScope(); // If this fails, something is wrong in CreateAnonymousInnerTable().
     }
 
     public override void Visit (IfExpression node) {
         Visit(node.Test);
 
-        var consequentScope = _currentTable.CreateAnonymousInnerTable(ScopeKind.IfBlock);
+        var consequentScope = _scope.Current.CreateAnonymousInnerTable(ScopeKind.IfBlock);
         SymbolTable? alternateScope = null;
 
         if (node.Alternate != null) {
-            alternateScope = _currentTable.CreateAnonymousInnerTable(ScopeKind.ElseBlock);
+            alternateScope = _scope.Current.CreateAnonymousInnerTable(ScopeKind.ElseBlock);
         }
 
         _cmp.Binder.BindIfExpression(node, consequentScope, alternateScope);
 
-        _currentTable = consequentScope;
+        _scope.BeginScope(consequentScope);
         Visit(node.Consequent);
 
         if (node.Alternate != null) {
-            _currentTable = alternateScope!;
+            _scope.BeginScope(alternateScope!);
             Visit(node.Alternate);
         }
 
-        _currentTable = _currentTable.OuterTable!;
+        _scope.EndScope();
+    }
+
+    public override void Visit (WhileExpression node) {
+        Visit(node.Test);
+
+        var bodyScope = _scope.Current.CreateAnonymousInnerTable(ScopeKind.WhileBlock);
+        
+        _cmp.Binder.BindWhileExpression(node, bodyScope);
+
+        _scope.BeginScope(bodyScope);
+        Visit(node.Body);
+        _scope.EndScope();
     }
 
     public override void Visit (LocalDeclarator node) {
-        var symbol = _currentTable.AddSymbol(SymbolKind.Local, node.Identifier.Name);
+        var symbol = _scope.Current.AddSymbol(SymbolKind.Local, node.Identifier.Name);
         _cmp.Binder.BindLocalDeclarator(node, symbol);
     }
 }

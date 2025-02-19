@@ -8,10 +8,12 @@ using System.Threading.Tasks;
 namespace Judith.NET.analysis.analyzers;
 
 public class TypeTableBuilder : SyntaxVisitor {
-    private Compilation _program;
+    private Compilation _cmp;
+    private ScopeResolver _scope;
 
-    public TypeTableBuilder (Compilation program) {
-        _program = program;
+    public TypeTableBuilder (Compilation cmp) {
+        _cmp = cmp;
+        _scope = new(_cmp.Binder, _cmp.SymbolTable);
     }
 
     public void Analyze (CompilerUnit unit) {

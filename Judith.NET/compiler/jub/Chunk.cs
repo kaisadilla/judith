@@ -10,6 +10,17 @@ public class Chunk {
     public List<byte> Code { get; private set; } = new();
     public List<int> CodeLines { get; private set; } = new();
 
+    /// <summary>
+    /// Returns the index where the next byte will be at. This is equal to
+    /// Code.Count.
+    /// </summary>
+    public int NextIndex => Code.Count;
+    /// <summary>
+    /// Returns the index of the last byte in the code bloc. This is equal to
+    /// Code.Count - 1.
+    /// </summary>
+    public int Index => Code.Count - 1;
+
     public void WriteSByte (sbyte i8, int line) {
         Code.Add(unchecked((byte)i8));
         CodeLines.Add(line);

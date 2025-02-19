@@ -19,12 +19,12 @@ public class SymbolResolver : SyntaxVisitor {
 
     private Compilation _cmp;
 
-    private SymbolTable _currentTable;
+    private ScopeResolver _scope;
 
-    public SymbolResolver (Compilation program) {
-        _cmp = program;
+    public SymbolResolver (Compilation cmp) {
+        _cmp = cmp;
 
-        _currentTable = program.SymbolTable;
+        _scope = new(_cmp.Binder, _cmp.SymbolTable);
     }
 
     public void Analyze (CompilerUnit unit) {
@@ -36,35 +36,22 @@ public class SymbolResolver : SyntaxVisitor {
     }
 
     public override void Visit (FunctionDefinition node) {
-        string name = node.Identifier.Name;
+        _scope.BeginScope(node);
 
-        if (_currentTable.TryFindSymbol(name, out Symbol? symbol) == false) {
-            throw new Exception(
-                $"Symbol '{name}' in " +
-                $"'{_currentTable.TableSymbol.FullyQualifiedName}' should exist."
-            );
-        }
-
-        if (_currentTable.TryGetInnerTable(name, out var innerTable) == false) {
-            throw ExNameShouldExist(name);
-        }
-
-        _currentTable = innerTable;
         Visit(node.Parameters);
         Visit(node.Body);
 
+        _scope.EndScope();
+
         if (node.ReturnTypeAnnotation != null) Visit(node.ReturnTypeAnnotation);
-        _currentTable = innerTable.OuterTable!;
     }
 
     public override void Visit (IfExpression node) {
-        if (_cmp.Binder.TryGetBoundNode(node, out BoundIfExpression? boundIfExpr) == false) {
-            ThrowUnboundNode(node);
-        }
+        var boundIfExpr = GetBoundNodeOrThrow<BoundIfExpression>(node);
 
         Visit(node.Test);
 
-        _currentTable = boundIfExpr.ConsequentScope;
+        _scope.BeginScope(boundIfExpr.ConsequentScope);
         Visit(node.Consequent);
 
         if (node.Alternate != null) {
@@ -72,17 +59,25 @@ public class SymbolResolver : SyntaxVisitor {
                 "AlternateScope shouldn't be null."
             );
 
-            _currentTable = boundIfExpr.AlternateScope;
+            _scope.BeginScope(boundIfExpr.AlternateScope);
             Visit(node.Alternate);
         }
 
-        _currentTable = _currentTable.OuterTable!;
+        _scope.EndScope();
+    }
+
+    public override void Visit (WhileExpression node) {
+        Visit(node.Test);
+
+        _scope.BeginScope(node);
+        Visit(node.Body);
+        _scope.EndScope();
     }
 
     public override void Visit (IdentifierExpression node) {
         string name = node.Identifier.Name;
 
-        if (_currentTable.TryFindSymbolRecursively(name, out Symbol? symbol) == false) {
+        if (_scope.Current.TryFindSymbolRecursively(name, out Symbol? symbol) == false) {
             Messages.Add(CompilerMessage.Analyzers.NameDoesNotExist(
                 name, node.Identifier.Line
             ));
@@ -92,20 +87,10 @@ public class SymbolResolver : SyntaxVisitor {
         _cmp.Binder.BindIdentifierExpression(node, symbol);
     }
 
-    public override void Visit (LocalDeclarator node) {
-        string name = node.Identifier.Name;
-
-        if (_currentTable.TryFindSymbol(name, out Symbol? symbol) == false) {
-            throw ExNameShouldExist(name);
-        }
-
-        if (node.TypeAnnotation != null) Visit(node.TypeAnnotation);
-    }
-
     public override void Visit (TypeAnnotation node) {
         string name = node.Identifier.Name;
 
-        if (_currentTable.TryFindSymbolRecursively(name, out Symbol? symbol) == false) {
+        if (_scope.Current.TryFindSymbolRecursively(name, out Symbol? symbol) == false) {
             Messages.Add(CompilerMessage.Analyzers.NameDoesNotExist(
                 name, node.Identifier.Line
             ));
@@ -115,15 +100,11 @@ public class SymbolResolver : SyntaxVisitor {
         _cmp.Binder.BindTypeAnnotation(node, symbol);
     }
 
-    private Exception ExNameShouldExist (string name) {
-        return new Exception(
-            $"Inner table '{name}' in " +
-            $"'{_currentTable.TableSymbol.FullyQualifiedName}' should exist."
-        );
-    }
+    private T GetBoundNodeOrThrow<T> (SyntaxNode node) where T : BoundNode {
+        if (_cmp.Binder.TryGetBoundNode(node, out T? boundNode) == false) {
+            throw new($"Node '{node}' should be bound!");
+        }
 
-    [DoesNotReturn]
-    private void ThrowUnboundNode (SyntaxNode node) {
-        throw new Exception($"Node '{node}' should be bound!");
+        return boundNode;
     }
 }

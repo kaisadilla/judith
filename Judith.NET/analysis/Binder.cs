@@ -107,6 +107,19 @@ public class Binder {
         return boundIfExpr;
     }
 
+    public BoundWhileExpression BindWhileExpression (
+        WhileExpression whileExpr, SymbolTable bodyScope
+    ) {
+        if (TryGetBoundNode(whileExpr, out BoundWhileExpression? boundWhileExpr)) {
+            return boundWhileExpr;
+        }
+
+        boundWhileExpr = new(whileExpr, bodyScope);
+        BoundNodes[whileExpr] = boundWhileExpr;
+
+        return boundWhileExpr;
+    }
+
     public BoundAssignmentExpression BindAssignmentExpression (
         AssignmentExpression assignmentExpr
     ) {
