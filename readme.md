@@ -11,7 +11,7 @@ Nothing, as I've literally just started it.
 
 That aside, Judith is a high-level, statically-typed programming language that draws inspiration from Rust, TypeScript, Lua and C#.
 
-Judith takes huge inspiration from the exhaustive and flexible type systems in Rust and TypeScript, that allow developers to use composition effectively in place of inheritance. Judith includes type aliases, TS-like union types, structs as POD types, Interface as functionality-only types and classes for encapsulated machine states. Judith takes a new approach to classes by stripping inheritance out of it (that is, classes cannot have parent classes) and greatly simplifying other aspects of it.
+Judith takes a big inspiration from the exhaustive and flexible type systems in Rust and TypeScript, that allow developers to use composition effectively in place of inheritance. Judith includes type aliases, TS-like union types, structs as POD types, Interface as functionality-only types and classes for encapsulated machine states. Judith takes a new approach to classes by stripping inheritance out of it (that is, classes cannot have parent classes) and greatly simplifying other aspects of it.
 
 Judith takes inspiration from Lua's simplicity, conciseness and syntax. While Judith is very rich in features and syntactic sugar (which is quite the contrary to what Lua offers), these features are not redundant: they've been carefully selected to maximize expressiveness and minimize boilerplate, while not becoming rendundant. Judith has been designed with the ideal that everything should have one obvious correct way to be done. Developers should take decisions about their algorithms, not about how to represent them in the language.
 
@@ -30,4 +30,4 @@ Finally, Judith aims to do away with some of the legacy features most programmin
 - Testing exists (yes, really!). This isn't 1985, we write tests for the code we write. Judith aims to explicitly integrate features that facilitate testing into the language.
 
 # Judith's design philosophy.
-Read [.info/design-philosophy.jud](.info/design-philosophy.jud) for a very long and boring look into my views on programming languages and how these shape Judith's design.
+Read [.info/design-philosophy.jud](.info/design-philosophy.md) for a very long and boring look into my views on programming languages and how these shape Judith's design.

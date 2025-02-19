@@ -1,14 +1,10 @@
-﻿// See https://aka.ms/new-console-template for more information
-using Judith.NET;
-using Judith.NET.analysis;
+﻿using Judith.NET;
 using Judith.NET.analysis.syntax;
 using Judith.NET.builder;
 using Judith.NET.compiler;
-using Judith.NET.compiler.jub;
 using Judith.NET.diagnostics;
 using Judith.NET.message;
 using Newtonsoft.Json;
-using System.Text;
 
 Console.WriteLine("> judith test.judith");
 Console.WriteLine();

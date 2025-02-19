@@ -711,6 +711,100 @@ const boat = Boat!() -- a regular instance of Boat.
 const car = Car!(boat) -- calling a constructor for Car that reads that boat.
 #endregion
 
+#region Type pattern matching
+-- Judith allows developers to refine the type of an object by testing its type:
+const name: String? = "Kevin"
+
+-- Check nullability with "is null" / "is not null":
+if name is not null then
+    Console::log(name) -- name is promoted to "String" inside this scope.
+end
+
+-- Check if an object has a type with "is [Type]":
+const animal: IAnimal = Dog!()
+
+if animal is Dog then
+    animal.woof() -- animal is promoted to "Dog" inside this scope.
+end
+
+-- You can use a match expression to test multiple types:
+match animal do
+    is Dog then
+        animal.woof() -- animal is promoted to "Dog"
+    end
+    is Cat then
+        animal.meow() -- animal is promoted to "Cat"
+    end
+end
+
+-- You can also assign the promoted value to a new local:
+if animal is Cat cat then
+    animal.meow() -- error, here "animal" is still "IAnimal" because its
+                  -- representation as "Cat" has been delegated to local "cat".
+    cat.meow() -- correct.
+end
+
+-- Type can also be refined by discarding possibilities:
+if animal is Cat then
+    animal.meow() -- animal is Cat here.
+else
+    -- animal is guaranteed not to be Cat here.
+    if animal is Cat then
+        -- warning, since animal is NOT Cat, "animal" here is of type "Never".
+    end
+end
+
+-- Judith can make concessions when types are exhaustively checked:
+typedef Id = String | Num
+
+func get_person (id: Id) : Person
+    return get_person_by_string(id) when id is String
+    return get_person_by_num(id) when id is Num
+
+    -- no need to return anything, as Judith recognizes that it's impossible
+    -- to reach this point. In fact, by this point "id" is of type Never.
+    -- This relives the developer from having to write a useless "return null"
+    -- (which would raise a warning), "return default" or
+    -- "throw !("Judith is broken.")".
+end
+
+-- Types can also be tested by their properties:
+struct Animal
+    name: String
+    species: String
+end
+
+struct Dog
+    Animal
+    species: String = "Dog"
+    breed: String
+end
+
+struct Cat
+    Animal
+    species: String = "Cat"
+    breed: String
+    meow: () => Void
+end
+
+const animal: Animal = Cat!()
+
+if animal.species == "Cat" then
+    animal.meow() -- Animal is Cat here because that's the only possibility.
+end
+
+if animal.breed !== undefined then
+    Console::log("Breed: " + animal.breed) -- Animal here is of type
+                                           -- "Dog | Cat".
+    
+    if animal is Rabbit then
+        -- warning: animal here is Never, as only Dog and Cat have "breed"
+        -- property.
+    end
+end
+
+#endregion
+
 #region User-defined types
 ------------------------
 -- USER-DEFINED TYPES --
@@ -1393,6 +1487,84 @@ end
 -- to any 
 #endregion
 
+#region Reflection
+-- Judith supports reflection natively, thanks to the way it is compiled into
+-- JASM. Judith is a statically-typed language and, as such, uses traditional
+-- compiling techniques, like offsets for fields, that remove identifiers and
+-- source code in general from the equation. However, Judith also stores metadata
+-- about the source code associated with its binary files, and that metadata
+-- allows Judith to "become" a dynamically-typed language when needed. This
+-- makes it possible, for example, to access a field by name during runtime.
+
+struct Person
+    name: String
+    age: Num
+end
+
+-- ## Index operator
+-- The index operator can be used on any object with members to retrieve the
+-- value of said member:
+const person = Person!("Kevin", 36) -- regular struct
+person["age"] -- access field "age" via reflection, returns 36.
+
+-- When indexing a field that doesn't exist, a special value is returned:
+-- "undefined". "undefined" is not "null" (as "null" could be a real and valid
+-- value for the field) - instead, "undefined" is a sentinel value that indicates
+-- that whatever is being accessed is not defined at all.
+person["country"] -- doesn't exist, returns "undefined".
+-- undefined cannot be assigned or stored anywhere, it can only be referenced by
+-- reference equals statements:
+const has_country = person["country"] !== undefined -- = false.
+
+-- Member methods can also be accessed via reflection:
+person["get_birthday"]?.() -- will work if person has a "get_birthday" method.
+
+-- Extension methods cannot be indexed as they are not part of the object's
+-- definition:
+impl func Person::print_name () end
+person["print_name"] -- "undefined", as "print_name" is not part of Person.
+
+-- The index operator is resolved at runtime, so any expression that resolves
+-- to a String is valid:
+const field = "age"
+person[field] -- returns 36, which is the value of "person.age".
+
+-- The value of any field returned by indexing is "unknown | undefined", as it's
+-- not possible to determine at compile time the result of the access.
+const val = person[field] -- type "unknown", the developer has to test "val" at
+                          -- runtime to resolve its type and safely access it.
+
+const collective_years_of_experience: Num = 164
+if val is Num then
+    collective_years_of_experience += val -- valid, because 'val' is Num here.
+end
+
+-- Note that indexing a value of type unknown is a valid operation, as indexing
+-- produces "undefined" (a valid value) when indexing members that don't exist:
+if val !== undefined then
+    val["month"] -- valid. "val" doesn't contain "month", so this will safely
+                 -- return "undefined".
+end
+
+-- You cannot, however, index "undefined", as "undefined" cannot have members:
+val["month"] -- compile error, Type "unknown | undefined" cannot be indexed.
+
+-- ## Dynamic objects
+-- [Note: dynamic objects are designed for interoperability with dynamic
+-- languages and services that don't follow type-friendly standards. It should
+-- not be used as a way to bypass the type system.]
+-- Dynamic objects are objects whose members are bound at runtime. Dynamic
+-- objects are available in Judith through the Dynamic type:
+const anything: String = "absolutely"
+const my_obj: Dynamic = {
+    [anything] = "can", -- at runtime, creates a field named "absolutely"
+    go = "here", -- 'go' acts as a string defining this field's key.
+    [7] = 31 -- numbers can also act as keys.
+}
+-- Dynamic objects must be accessed by indexing:
+my_obj.go -- error, "my_obj" doesn't have fields.
+my_obj["go"] -- valid, returns "here".
+
 #region Directives
 -- Directives are a special subset of Judith. They act as a small extension that
 -- can be used for multiple purposes:
@@ -1488,4 +1660,27 @@ qnameof(my_proj::hr::Person.name) -- equivalent to string "my_proj::hr::Person.n
 -- events
 -- function type syntax: (Int, String) => Void
 
+-- # Jumptable
+-- "jumptable" is the equivalent to C "switch" statement:
+jumptable name do -- the jumptable "do" forms a single, shared scope.
+    case "Christian": -- each case is the entry point for a given value
+    case "Jennifer": -- this means that a new entry point doesn't stop the previous
+                     -- value from executing.
+    case "Alice":
+        Console::log("You are fired.") -- "Christian", "Jennifer" and "Alice" will
+                                       -- make it here.
+        break -- break exits the block as normal, so the next Console::log won't
+              -- be reached by these three.
+    case "Kevin":
+        Console::log("You are promoted and...")
+        -- there's nothing here, so "Kevin" will jump into "Sylvia"'s section
+    case "Sylvia":
+        Console::log("Your work day has been reduced!") -- Both "Kevin" and "Sylvia"
+                                                        -- make it here.
+        goto "Alice" -- "Kevin" and "Sylvia" jump back to "Alice"'s section
+                     -- and get fired anyway :(
+end
+-- The main reason "jumptable" is not named "switch" is to discourage developers
+-- from using it over "match". Jumptables are a niche feature that is very
+-- rarely to concisely express logic.
 #endregion

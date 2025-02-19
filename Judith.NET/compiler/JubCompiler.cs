@@ -220,7 +220,6 @@ public class JubCompiler : SyntaxVisitor {
         List<int> jumpsToPatch = new();
 
         CompileNestedOrBinaryExpression(node, OperatorKind.LogicalAnd, jumpsToPatch);
-
         PatchJumps(jumpsToPatch); // All failed expressions jump to set to false.
     }
 
