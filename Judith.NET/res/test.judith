@@ -18,6 +18,8 @@ while i < 100 do
     i = i + 1
 end
 
+__p_print "That's what Fibonacci said."
+
 return
 
 func print_le_sum (const a, b: Num)

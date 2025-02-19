@@ -31,7 +31,9 @@ VM::~VM() {
 
 }
 
-InterpretResult VM::interpret (const Chunk& chunk) {
+InterpretResult VM::interpret (const Block& block) {
+    Chunk& chunk = block.functions[0].chunk;
+
     byte* ip = chunk.code.get();
 
     while (true) {

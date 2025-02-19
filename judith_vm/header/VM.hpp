@@ -1,7 +1,7 @@
 #pragma once
 
 #include "root.hpp"
-#include "executable/Chunk.hpp"
+#include "executable/Block.hpp"
 #include "executable/ConstantType.hpp"
 #include "Value.hpp"
 #include "Object.hpp"
@@ -40,7 +40,7 @@ private:
 public:
     ~VM();
 
-    InterpretResult interpret (const Chunk& chunk);
+    InterpretResult interpret (const Block& block);
 
     inline void resetStack () {
         stackTop = stack;

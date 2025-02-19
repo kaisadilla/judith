@@ -17,8 +17,8 @@ int main () {
 
     std::cout << "\n\n===== EXECUTION =====" << std::endl;
 
-    //VM vm;
-    //vm.interpret(block.functions[0].chunk);
+    VM vm;
+    vm.interpret(block);
 
     //getchar();
     return 0;
