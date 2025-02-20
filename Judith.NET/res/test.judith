@@ -1,6 +1,6 @@
 
+print_le_sum(a, b)
 -- funcname()
--- funcname(a, b)
 -- funcname(a,)
 -- member.access("string",)
 

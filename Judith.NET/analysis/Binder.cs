@@ -46,6 +46,14 @@ public class Binder {
         }
     }
 
+    public T GetBoundNodeOrThrow<T> (SyntaxNode node) where T : BoundNode{
+        if (TryGetBoundNode(node, out T? typedBoundNode) == false) {
+            throw new($"'{node}' should be bound.");
+        }
+
+        return typedBoundNode;
+    }
+
     public BoundFunctionDefinition BindFunctionDefinition (
         FunctionDefinition funcDef, Symbol symbol, SymbolTable scope
     ) {

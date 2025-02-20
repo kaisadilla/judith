@@ -75,5 +75,11 @@ public class Compilation {
             typeResolver.Analyze(cu);
         }
         Messages.Add(typeResolver.Messages);
+
+        BlockTypeResolver blockTypeResolver = new(this);
+        foreach (var cu in Units) {
+            blockTypeResolver.Analyze(cu);
+        }
+        Messages.Add(blockTypeResolver.Messages);
     }
 }
