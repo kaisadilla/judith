@@ -173,6 +173,13 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
         };
     }
 
+    public override object Visit (CallExpression node) {
+        return new {
+            Callee = Visit(node.Callee),
+            Arguments = Visit(node.Arguments),
+        };
+    }
+
     public override object Visit (AccessExpression node) {
         return new {
             Name = nameof(AccessExpression),
@@ -286,6 +293,18 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
             Declarator = Visit(node.Declarator),
             DefaultValue = VisitIfNotNull(node.DefaultValue),
             Semantics = GetBoundOrNull(node),
+        };
+    }
+
+    public override object Visit (ArgumentList node) {
+        return new {
+            Arguments = node.Arguments.Select(a => Visit(a)),
+        };
+    }
+
+    public override object Visit (Argument node) {
+        return new {
+            Expression = Visit(node.Expression),
         };
     }
 

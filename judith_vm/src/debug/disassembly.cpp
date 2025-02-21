@@ -138,7 +138,7 @@ static size_t u32Instruction (std::ostringstream& str, Chunk& chunk, const char*
         return index + 5;
     }
 
-    i32 val = chunk.code[index + 1]
+    ui32 val = chunk.code[index + 1]
         + (chunk.code[index + 2] << 8)
         + (chunk.code[index + 3] << 16)
         + (chunk.code[index + 4] << 24);
@@ -322,77 +322,58 @@ static size_t disassembleInstruction (std::ostringstream& str, Chunk& chunk, siz
 
     case OpCode::STORE_0:
         return simpleInstruction(str, chunk, "STORE_0", index);
-
     case OpCode::STORE_1:
         return simpleInstruction(str, chunk, "STORE_1", index);
-
     case OpCode::STORE_2:
         return simpleInstruction(str, chunk, "STORE_2", index);
-
     case OpCode::STORE_3:
         return simpleInstruction(str, chunk, "STORE_3", index);
-
     case OpCode::STORE_4:
         return simpleInstruction(str, chunk, "STORE_4", index);
-
     case OpCode::STORE:
         return byteInstruction(str, chunk, "STORE", index);
-
     case OpCode::STORE_L:
         return u16Instruction(str, chunk, "STORE_L", index);
 
     case OpCode::LOAD_0:
         return simpleInstruction(str, chunk, "LOAD_0", index);
-
     case OpCode::LOAD_1:
         return simpleInstruction(str, chunk, "LOAD_1", index);
-
     case OpCode::LOAD_2:
         return simpleInstruction(str, chunk, "LOAD_2", index);
-
     case OpCode::LOAD_3:
         return simpleInstruction(str, chunk, "LOAD_3", index);
-
     case OpCode::LOAD_4:
         return simpleInstruction(str, chunk, "LOAD_4", index);
-
     case OpCode::LOAD:
         return byteInstruction(str, chunk, "LOAD", index);
 
     case OpCode::LOAD_L:
         return u16Instruction(str, chunk, "LOAD_L", index);
 
-
     case OpCode::JMP:
         return jumpInstruction(str, chunk, "JMP", index);
-
     case OpCode::JMP_L:
         return jumpLongInstruction(str, chunk, "JMP_L", index);
-
     case OpCode::JTRUE:
         return jumpInstruction(str, chunk, "JTRUE", index);
-
     case OpCode::JTRUE_L:
         return jumpLongInstruction(str, chunk, "JTRUE_L", index);
-
     case OpCode::JTRUE_K:
         return jumpInstruction(str, chunk, "JTRUE_K", index);
-
     case OpCode::JTRUE_K_L:
         return jumpLongInstruction(str, chunk, "JTRUE_K_L", index);
-
     case OpCode::JFALSE:
         return jumpInstruction(str, chunk, "JFALSE", index);
-
     case OpCode::JFALSE_L:
         return jumpLongInstruction(str, chunk, "JFALSE_L", index);
-
     case OpCode::JFALSE_K:
         return jumpInstruction(str, chunk, "JFALSE_K", index);
-
     case OpCode::JFALSE_K_L:
         return jumpLongInstruction(str, chunk, "JFALSE_K_L", index);
 
+    case OpCode::CALL:
+        return u32Instruction(str, chunk, "CALL", index);
 
     case OpCode::PRINT:
         return printInstruction(str, chunk, "PRINT", index);

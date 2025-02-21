@@ -1,11 +1,15 @@
 #pragma once
 
 #include "root.hpp"
+#include "executable/Assembly.hpp"
 #include "executable/Block.hpp"
 #include "executable/ConstantType.hpp"
 #include "Value.hpp"
 #include "Object.hpp"
 #include <ankerl/unordered_dense.h>
+#include <stack>
+
+struct Function;
 
 #define STACK_MAX 1024
 #define LOCALS_MAX 256 
@@ -18,6 +22,8 @@ enum class InterpretResult {
 
 class VM {
 private:
+    std::stack<Value*> localArrayStack;
+
     /// <summary>
     /// This VM's execution stack.
     /// </summary>
@@ -30,17 +36,20 @@ private:
     /// <summary>
     /// The VM's local variable array.
     /// </summary>
-    Value locals[LOCALS_MAX];
+    Value* locals = nullptr;
 
     /// <summary>
     /// The string table maps strings to internet string objects.
     /// </summary>
     ankerl::unordered_dense::map<std::string, u_ptr<StringObject>> stringTable;
 
+    const Assembly* assembly = nullptr;
+
 public:
     ~VM();
 
-    InterpretResult interpret (const Block& block);
+    void interpret (const Assembly& assembly);
+    void execute (const Function& func);
 
     inline void resetStack () {
         stackTop = stack;
@@ -97,6 +106,17 @@ public:
         pushValue(locals[index]);
     }
 
+    inline void enterFunction (size_t maxLocals) {
+        localArrayStack.push(locals);
+        locals = new Value[maxLocals];
+    }
+
+    inline void exitFunction () {
+        delete[] locals;
+        locals = localArrayStack.top();
+        localArrayStack.pop();
+    }
+
     inline StringObject* internString (std::string str) {
         auto [it, inserted] = stringTable.try_emplace(
             str, make_u<StringObject>(str.length(), str)
@@ -128,3 +148,7 @@ public:
         }
     }
 };
+
+#undef STACK_MA
+#undef LOCALS_MAX
+#undef LOCALS_EXT_MAX

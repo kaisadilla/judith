@@ -7,13 +7,13 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.compiler.jub;
 
-public class BinaryFile {
+public class BinaryBlock {
     public string Name { get; private init; }
     public ConstantTable ConstantTable { get; private set; } = new();
     public List<BinaryFunction> Functions { get; private set; } = new();
     public bool HasImplicitFunction { get; set; } = false;
 
-    public BinaryFile (string name) {
+    public BinaryBlock (string name) {
         Name = name;
     }
 }
@@ -33,7 +33,7 @@ public class BinaryFunction {
     /// </summary>
     public int Arity => Parameters.Count;
 
-    public BinaryFunction (BinaryFile file, string name) {
+    public BinaryFunction (BinaryBlock file, string name) {
         Name = name;
         NameIndex = file.ConstantTable.WriteStringASCII(Name);
     }
@@ -44,7 +44,7 @@ public class FunctionParameter {
     public string Name { get; private init; }
     public int NameIndex { get; private init; }
 
-    public FunctionParameter (BinaryFile file, TypeInfo type, string name) {
+    public FunctionParameter (BinaryBlock file, TypeInfo type, string name) {
         Type = type;
         Name = name;
         NameIndex = file.ConstantTable.WriteStringASCII(Name);

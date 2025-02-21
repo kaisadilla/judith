@@ -16,6 +16,7 @@ public class JubCompiler : SyntaxVisitor {
     const int MAX_LOCALS = ushort.MaxValue + 1;
 
     private Compilation _cmp;
+    private ScopeResolver _scope;
     private LocalBlock? _localBlock = null;
 
     /// <summary>
@@ -26,7 +27,11 @@ public class JubCompiler : SyntaxVisitor {
     /// </summary>
     private Stack<BinaryFunction> _functions = new();
 
-    public List<BinaryFile> Bins { get; private init; } = new();
+    public List<BinaryBlock> Blocks { get; private init; } = new();
+    /// <summary>
+    /// Contains all the function references available in this program.
+    /// </summary>
+    public FunctionRefTable FunctionRefs { get; private init; } = new();
 
     /// <summary>
     /// The current function, if we are inside one.
@@ -35,15 +40,53 @@ public class JubCompiler : SyntaxVisitor {
         ? null
         : _functions.Peek();
 
-    private BinaryFile CurrentBin => Bins[0];
+    private BinaryBlock CurrentBlock => Blocks[^1];
+    private int CurrentBlockIndex => Blocks.Count - 1;
 
     public JubCompiler (Compilation cmp) {
         _cmp = cmp;
+        _scope = new(_cmp.Binder, _cmp.SymbolTable);
     }
 
-    public void Compile () {
+    public JudithDll Compile () {
+        CollectReferences();
+
         foreach (var unit in _cmp.Units) {
             Visit(unit);
+        }
+
+        return new(FunctionRefs, Blocks);
+    }
+
+    private void CollectReferences () {
+        for (int i = 0; i < _cmp.Units.Count; i++) {
+            CollectReferences(_cmp.Units[i], i);
+        }
+    }
+
+    private void CollectReferences (CompilerUnit unit, int blockIndex) {
+        int functionCount = 0;
+
+        if (unit.ImplicitFunction != null) {
+            _AddFunction(unit.ImplicitFunction);
+        }
+
+        foreach (var item in unit.TopLevelItems) {
+            switch (item) {
+                case FunctionDefinition funcDef:
+                    _AddFunction(funcDef);
+                    break;
+            }
+        }
+
+
+        void _AddFunction (FunctionDefinition func) {
+            var boundFunc = _cmp.Binder.GetBoundNodeOrThrow<BoundFunctionDefinition>(func);
+            FunctionRefs.Add(boundFunc.Symbol.FullyQualifiedName, new(
+                block: blockIndex,
+                index: functionCount
+            ));
+            functionCount++;
         }
     }
 
@@ -51,25 +94,28 @@ public class JubCompiler : SyntaxVisitor {
         if (CurrentFunc != null) {
             throw new NotImplementedException("Inner functions are not implemented!");
         }
-
+        
         _localBlock = new(MAX_LOCALS);
-        _functions.Push(new(CurrentBin, name));
+        _functions.Push(new(CurrentBlock, name));
     }
 
     private void EndFunction () {
         RequireFunction();
-
-        CurrentBin.Functions.Add(CurrentFunc);
+        
+        CurrentFunc.MaxLocals = _localBlock.MaxLocals;
+        CurrentBlock.Functions.Add(CurrentFunc);
 
         _functions.Pop();
         _localBlock = null;
     }
 
+    #region Compiling nodes
     public override void Visit (CompilerUnit node) {
-        Bins.Add(new(node.FileName));
+        Blocks.Add(new(node.FileName));
+
 
         if (node.ImplicitFunction != null) {
-            CurrentBin.HasImplicitFunction = true;
+            CurrentBlock.HasImplicitFunction = true;
 
             Visit(node.ImplicitFunction);
         }
@@ -81,8 +127,10 @@ public class JubCompiler : SyntaxVisitor {
 
     public override void Visit (FunctionDefinition node) {
         BeginFunction(node.Identifier.Name);
+        _scope.BeginScope(node);
         Visit(node.Parameters);
         Visit(node.Body);
+        _scope.EndScope();
         EndFunction();
     }
 
@@ -115,9 +163,11 @@ public class JubCompiler : SyntaxVisitor {
 
         var thenJump = EmitJump(OpCode.JFalse, node.Test.Line);
 
+        _scope.BeginThenScope(node);
         _localBlock.BeginScope();
         Visit(node.Consequent);
         _localBlock.EndScope();
+        _scope.EndScope();
 
         int elseJump = -1;
         if (node.Alternate != null) {
@@ -127,9 +177,11 @@ public class JubCompiler : SyntaxVisitor {
         PatchJump(thenJump);
 
         if (node.Alternate != null) {
+            _scope.BeginThenScope(node);
             _localBlock.BeginScope();
             Visit(node.Alternate);
             _localBlock.EndScope();
+            _scope.EndScope();
 
             PatchJump(elseJump);
         }
@@ -146,9 +198,11 @@ public class JubCompiler : SyntaxVisitor {
         var falseJump = EmitJump(OpCode.JFalse, node.Test.Line);
 
         // Compile the body.
+        _scope.BeginScope(node);
         _localBlock.BeginScope();
         Visit(node.Body);
         _localBlock.EndScope();
+        _scope.EndScope();
 
         // Emit a jump back to the start of the loop.
         EmitJumpBack(OpCode.Jmp, loopStart, node.Test.Line);
@@ -196,14 +250,33 @@ public class JubCompiler : SyntaxVisitor {
         }
     }
 
+    public override void Visit (CallExpression node) {
+        Visit(node.Arguments);
+        Visit(node.Callee);
+    }
+
     public override void Visit (IdentifierExpression node) {
         RequireFunction();
 
-        if (_localBlock.TryGetLocalAddr(node.Identifier.Name, out int addr) == false) {
-            throw new Exception("Local not found");
-        }
+        var boundNode = _cmp.Binder.GetBoundNodeOrThrow<BoundIdentifierExpression>(node);
 
-        EmitLoad(addr, node.Line);
+        if (boundNode.Symbol.Kind == SymbolKind.Local) {
+            if (_localBlock.TryGetLocalAddr(node.Identifier.Name, out int addr) == false) {
+                throw new Exception($"Local '{node.Identifier.Name}' not found");
+            }
+
+            EmitLoad(addr, node.Line);
+        }
+        else if (boundNode.Symbol.Kind == SymbolKind.Function) {
+            if (FunctionRefs.TryGetFunctionRef(
+                boundNode.Symbol.FullyQualifiedName, out int funcRefIndex
+            ) == false) throw new(
+                $"Function reference for '{boundNode.Symbol.FullyQualifiedName}' not found."
+            );
+
+            CurrentFunc.Chunk.WriteInstruction(OpCode.Call, node.Line);
+            CurrentFunc.Chunk.WriteUint32((uint)funcRefIndex, node.Line);
+        }
     }
 
     public override void Visit (LiteralExpression node) {
@@ -216,7 +289,7 @@ public class JubCompiler : SyntaxVisitor {
         // TODO: When type alias desugaring is added, this compares directly to
         // F64, F32, I64, I32, etc.
         if (boundNode.Type == _cmp.Native.Types.Num) {
-            int index = CurrentBin.ConstantTable.WriteFloat64(boundNode.Value.AsFloat);
+            int index = CurrentBlock.ConstantTable.WriteFloat64(boundNode.Value.AsFloat);
 
             if (index <= byte.MaxValue) {
                 CurrentFunc.Chunk.WriteInstruction(OpCode.Const, node.Line);
@@ -236,7 +309,7 @@ public class JubCompiler : SyntaxVisitor {
             }
         }
         else if (boundNode.Type == _cmp.Native.Types.String) {
-            int index = CurrentBin.ConstantTable.WriteStringASCII(boundNode.Value.AsString!);
+            int index = CurrentBlock.ConstantTable.WriteStringASCII(boundNode.Value.AsString!);
 
             if (index <= byte.MaxValue) {
                 CurrentFunc.Chunk.WriteInstruction(OpCode.ConstStr, node.Line);
@@ -253,6 +326,16 @@ public class JubCompiler : SyntaxVisitor {
         Visit(node.Value);
     }
 
+    public override void Visit (ParameterList node) {
+        Visit(node.Parameters);
+
+        // We load parameter values from last to first, as the last argument
+        // is at the top of the stack.
+        for (int i = node.Parameters.Count - 1; i >= 0; i--) {
+            EmitStore(i, node.Parameters[i].Line);
+        }
+    }
+
     public override void Visit (Parameter node) {
         RequireFunction();
 
@@ -260,7 +343,7 @@ public class JubCompiler : SyntaxVisitor {
         _localBlock.MarkInitialized(addr);
 
         CurrentFunc.Parameters.Add(
-            new(CurrentBin, TypeInfo.UnresolvedType, node.Declarator.Identifier.Name)
+            new(CurrentBlock, TypeInfo.UnresolvedType, node.Declarator.Identifier.Name)
         ); // TODO: Bind parameters and resolve their types. UnresolvedType is just a placeholder.
     }
 
@@ -537,5 +620,6 @@ public class JubCompiler : SyntaxVisitor {
     private void ThrowUnboundNode (SyntaxNode node) {
         throw new Exception($"Cannot compile incomplete bound node '{node}'");
     }
-    #endregion
+    #endregion Requires
+    #endregion Compiling nodes
 }

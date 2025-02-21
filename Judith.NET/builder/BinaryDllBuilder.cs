@@ -7,14 +7,14 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.builder;
 
-public class JuxBuilder {
+public class BinaryDllBuilder {
     private string _outFolder;
 
-    public JuxBuilder (string outFolder) {
+    public BinaryDllBuilder (string outFolder) {
         _outFolder = outFolder;
     }
 
-    public void BuildBinary (string fileName, BinaryFile file) {
+    public void BuildLibrary (string fileName, JudithDll dll) {
         string path = Path.Join(_outFolder, fileName);
 
         using var stream = File.Open(path, FileMode.Create);
@@ -25,25 +25,59 @@ public class JuxBuilder {
         writer.Write((byte)0); // major_version: byte = 0
         writer.Write((byte)0); // minor_version: byte = 0
 
+        WriteFuncRefTable(writer, dll.FunctionRefTable); // func_ref_arr
+
+        writer.Write((uint)dll.Blocks.Count); // block_count
+
+        foreach (var block in dll.Blocks) {
+            WriteBlock(writer, block);
+        }
+    }
+
+    private void WriteMagicNumber (BinaryWriter writer) {
+        writer.Write((byte)'A');
+        writer.Write((byte)'Z');
+        writer.Write((byte)'A');
+        writer.Write((byte)'R');
+        writer.Write((byte)'I');
+        writer.Write((byte)'A');
+        writer.Write((byte)'J');
+        writer.Write((byte)'U');
+        writer.Write((byte)'D');
+        writer.Write((byte)'I');
+        writer.Write((byte)'T');
+        writer.Write((byte)'H');
+    }
+
+    private void WriteFuncRefTable (BinaryWriter writer, FunctionRefTable table) {
+        writer.Write((uint)table.Array.Count); // ref_count
+
+        foreach (var funcRef in table.Array) { // func_refs
+            writer.Write((uint)funcRef.Block); // block
+            writer.Write((uint)funcRef.Index); // index
+        }
+    }
+
+    private void WriteBlock (BinaryWriter writer, BinaryBlock block) {
         // constant_count: ui32 -- the amount of constants in the table, not its size in bytes.
-        writer.Write((uint)file.ConstantTable.Count);
+        writer.Write((uint)block.ConstantTable.Count);
         // constant_table: constant[constant_count]
-        foreach (var ui8 in file.ConstantTable.Bytes) {
+        foreach (var ui8 in block.ConstantTable.Bytes) {
             writer.Write((byte)ui8);
         }
 
         // has_implicit: bool -- if true, the first function is the implicit function.
-        writer.Write(file.HasImplicitFunction);
+        writer.Write(block.HasImplicitFunction);
 
         // function_count: ui32 -- the amount of functions in the function table.
-        writer.Write((uint)file.Functions.Count);
+        writer.Write((uint)block.Functions.Count);
         // function_table: function[function_count]
-        foreach (var func in file.Functions) {
+        foreach (var func in block.Functions) {
             // name: ui32 -- the index of the function's name in the constant table.
             writer.Write((uint)func.NameIndex);
             // param_count: ui16 -- the arity of the function.
             writer.Write((ushort)func.Arity);
-            
+
             foreach (var param in func.Parameters) {
                 // name: ui32 -- the index of the parameter's name in the constant table.
                 writer.Write((uint)param.NameIndex);
@@ -70,20 +104,5 @@ public class JuxBuilder {
                 writer.Write((int)line);
             }
         }
-    }
-
-    private void WriteMagicNumber (BinaryWriter writer) {
-        writer.Write((byte)'A');
-        writer.Write((byte)'Z');
-        writer.Write((byte)'A');
-        writer.Write((byte)'R');
-        writer.Write((byte)'I');
-        writer.Write((byte)'A');
-        writer.Write((byte)'J');
-        writer.Write((byte)'U');
-        writer.Write((byte)'D');
-        writer.Write((byte)'I');
-        writer.Write((byte)'T');
-        writer.Write((byte)'H');
     }
 }

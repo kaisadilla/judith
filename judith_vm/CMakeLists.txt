@@ -36,7 +36,7 @@ add_executable(
 	"header/root.hpp" "header/types.hpp"
 	"header/VM.hpp" "header/executable/Chunk.hpp"
 	"src/VM.cpp" "src/executable/Chunk.cpp" "src/Value.cpp"
- "src/BlockReader.cpp" "src/utils.cpp" "src/utils/Buffer.cpp" "src/debug/disassembly.cpp" "header/_flags.h")
+ "src/BlockReader.cpp" "src/utils.cpp" "src/utils/Buffer.cpp" "src/debug/disassembly.cpp" "header/_flags.h" "src/executable/Assembly.cpp")
 
 target_link_libraries(${APP_NAME} PRIVATE unordered_dense)
 

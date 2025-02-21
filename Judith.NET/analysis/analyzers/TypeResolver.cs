@@ -94,6 +94,13 @@ public class TypeResolver : SyntaxVisitor {
         _cmp.Binder.BindLeftUnaryExpression(node);
     }
 
+    public override void Visit (CallExpression node) {
+        Visit(node.Callee);
+        Visit(node.Arguments);
+
+        _cmp.Binder.BindCallExpression(node);
+    }
+
     // TODO: AccessExpression
 
     public override void Visit (GroupExpression node) {

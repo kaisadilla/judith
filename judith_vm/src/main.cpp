@@ -3,22 +3,22 @@
 
 #include "main.hpp"
 #include "debug/disassembly.hpp"
-#include <executable/Block.hpp>
+#include <executable/Assembly.hpp>
 #include <executable/Function.hpp>
 #include <BlockReader.hpp>
 #include <VM.hpp>
 
 int main () {
-    Block block = readBlock();
+    Assembly assembly = readAssembly();
 
     std::cout << "\n\n===== DISASSEMBLE =====" << std::endl;
-    std::string dump = disassembleBlock(block);
+    std::string dump = disassembleBlock(assembly.blocks[0]);
     std::cout << dump << std::endl;
 
     std::cout << "\n\n===== EXECUTION =====" << std::endl;
 
     VM vm;
-    vm.interpret(block);
+    vm.interpret(assembly);
 
     //getchar();
     return 0;

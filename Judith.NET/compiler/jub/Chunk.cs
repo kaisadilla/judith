@@ -43,6 +43,13 @@ public class Chunk {
         WriteByte((byte)((i32 >> 24) & 0xff), line);
     }
 
+    public void WriteUint32 (uint u32, int line) {
+        WriteByte((byte)((u32 >> 0) & 0xff), line);
+        WriteByte((byte)((u32 >> 8) & 0xff), line);
+        WriteByte((byte)((u32 >> 16) & 0xff), line);
+        WriteByte((byte)((u32 >> 24) & 0xff), line);
+    }
+
     public void ExpandByte (int index, IEnumerable<byte> values, int line) {
         Code.InsertRange(index, values);
 

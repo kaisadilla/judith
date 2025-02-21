@@ -11,3 +11,6 @@
 //#define u_ptr std::unique_ptr
 #define make_u std::make_unique
 template<typename T> using u_ptr = std::unique_ptr<T>;
+
+// to be used as scaffolding before being replaced with unique ptrs.
+#define OWNED

@@ -42,6 +42,22 @@ public class ScopeResolver {
         Current = boundFuncDef.Scope;
     }
 
+    public void BeginThenScope (IfExpression ifExpr) {
+        var boundIfExpr = GetBoundNodeOrThrow<BoundIfExpression>(ifExpr);
+
+        Current = boundIfExpr.ConsequentScope;
+    }
+
+    public void BeginElseScope (IfExpression ifExpr) {
+        var boundIfExpr = GetBoundNodeOrThrow<BoundIfExpression>(ifExpr);
+
+        if (boundIfExpr.AlternateScope == null) {
+            throw new("Tried to enter the 'else' scope of an if without an else!");
+        }
+
+        Current = boundIfExpr.AlternateScope;
+    }
+
     /// <summary>
     /// Enters the scope defined by the while expression given.
     /// </summary>

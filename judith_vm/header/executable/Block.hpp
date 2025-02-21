@@ -26,7 +26,7 @@ public:
     /// <summary>
     /// An array with the functions that exist in this block.
     /// </summary>
-    /*OWNED*/ Function* functions; // TODO: Make into a unique ptr
+    OWNED Function* functions; // TODO: Make into a unique ptr
     /// <summary>
     /// The amount of functions in the functions array.
     /// </summary>
@@ -41,6 +41,11 @@ public:
         Function* functions,
         size_t functionCount
     );
+
+    Block(const Block&) = delete;
+    Block& operator=(const Block&) = delete;
+    Block(Block&&) noexcept = default;
+    Block& operator=(Block&&) noexcept = default;
 
     ~Block();
 };

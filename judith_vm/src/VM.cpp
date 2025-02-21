@@ -1,10 +1,12 @@
 #include "VM.hpp"
 #include "jal/opcodes.hpp"
+#include "executable/Function.hpp"
 
 #define READ_BYTE() (*(ip++))
 #define READ_SBYTE() ((sbyte)*(ip++))
-#define READ_U16() (*(ip++) | (*(ip++) << 8)) // TODO: Check that unsigned usage is implemented properly.
-#define READ_I32() (*(ip++) | (*(ip++) << 8) | (*(ip++) << 16) | (*(ip++) << 24))
+#define READ_U16() (ip += 2, *(ip - 2) | (*(ip - 1) << 8))
+#define READ_I32() (ip += 4, *(ip - 4) | (*(ip - 3) << 8) | (*(ip - 2) << 16) | (*(ip - 1) << 24))
+#define READ_U32() (ip += 4, *(ip - 4) | (*(ip - 3) << 8) | (*(ip - 2) << 16) | (*(ip - 1) << 24))
 
 #define F_BINARY_OP(op) \
     do { \
@@ -31,13 +33,22 @@ VM::~VM() {
 
 }
 
-InterpretResult VM::interpret (const Block& block) {
-    Chunk& chunk = block.functions[0].chunk;
+void VM::interpret (const Assembly& assembly) {
+    this->assembly = &assembly;
+    execute(assembly.blocks[0].functions[0]);
+}
 
+void VM::execute (const Function& func) {
+#ifdef DEBUG_PRINT_CALL_STACK
+    std::cout << "\n===== ENTERING FUNC " << &func << " ===== \n";
+#endif
+    enterFunction(func.maxLocals);
+
+    const Chunk& chunk = func.chunk;
     byte* ip = chunk.code.get();
-
+    
     while (true) {
-#ifdef DEBUG_DUMP_STACK
+#ifdef DEBUG_PRINT_STACK
         std::cout << "stack: [";
         for (Value* slot = stack; slot < stackTop; slot++) {
             std::cout << slot->asFloat64 << ", ";
@@ -82,16 +93,16 @@ InterpretResult VM::interpret (const Block& block) {
             break;
 
         case OpCode::CONST_STR: {
-#define STRLEN (*(ui64*)strval)
-#define STRHEAD ((char*)(strval + sizeof(ui64)))
+            #define STRLEN (*(ui64*)strval)
+            #define STRHEAD ((char*)(strval + sizeof(ui64)))
 
             byte* strval = (byte*)chunk.constants[READ_BYTE()];
             std::string str(STRHEAD, STRLEN);
             pushValue({ .asStringPtr = internString(str) });
             break;
 
-#undef STRLEN
-#undef STRHEAD
+            #undef STRLEN
+            #undef STRHEAD
         }
             break;
 
@@ -101,7 +112,11 @@ InterpretResult VM::interpret (const Block& block) {
             break;
 
         case OpCode::RET:
-            return InterpretResult::OK;
+#ifdef DEBUG_PRINT_CALL_STACK
+            std::cout << "===== EXITING FUNC " << &func << " =====\n\n";
+#endif
+            exitFunction();
+            return;
 
         case OpCode::F_NEG:
             pushValue({ .asFloat64 = -popValue().asFloat64 });
@@ -288,6 +303,12 @@ InterpretResult VM::interpret (const Block& block) {
             break;
         }
 
+        case OpCode::CALL: {
+            ui32 index = READ_U32();
+            execute(*(assembly->assemblyFunctions[index]));
+            break;
+        }
+
         default:
             std::cerr << "[ERROR] UNKNOWN OPCODE: " << std::hex << (int)instruction
                 << std::dec << std::endl;
@@ -295,7 +316,7 @@ InterpretResult VM::interpret (const Block& block) {
         }
     }
 
-    return InterpretResult::OK;
+    exitFunction();
 }
 
 #undef READ_BYTE

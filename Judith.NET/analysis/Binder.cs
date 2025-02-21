@@ -169,6 +169,19 @@ public class Binder {
         return boundLeftUnaryExpr;
     }
 
+    public BoundCallExpression BindCallExpression (CallExpression callExpr) {
+        if (TryGetBoundNode(callExpr, out BoundCallExpression? boundCallExpression) == false) {
+            boundCallExpression = new(callExpr);
+            BoundNodes[callExpr] = boundCallExpression;
+        }
+
+        if (boundCallExpression.IsComplete == false) {
+            ResolveCallExpression(boundCallExpression);
+        }
+
+        return boundCallExpression;
+    }
+
     public BoundGroupExpression BindGroupExpression (GroupExpression groupExpr) {
         if (TryGetBoundNode(groupExpr, out BoundGroupExpression? boundGroupExpr) == false) {
             boundGroupExpr = new(groupExpr);
@@ -605,6 +618,17 @@ public class Binder {
         }
 
         boundLeftUnaryExpr.Type = TypeInfo.UnresolvedType;
+    }
+
+    private void ResolveCallExpression (BoundCallExpression boundCallExpr) {
+        if (TryGetBoundNode(boundCallExpr.Node.Callee, out BoundExpression? boundExpr)) {
+            if (TypeInfo.IsResolved(boundExpr.Type)) {
+                boundCallExpr.Type = boundExpr.Type;
+                return;
+            }
+        }
+
+        boundCallExpr.Type = TypeInfo.UnresolvedType;
     }
 
     private void ResolveGroupExpression (BoundGroupExpression boundGroupExpr) {

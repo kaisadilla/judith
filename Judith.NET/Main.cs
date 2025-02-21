@@ -2,11 +2,12 @@
 using Judith.NET.analysis.syntax;
 using Judith.NET.builder;
 using Judith.NET.compiler;
+using Judith.NET.compiler.jub;
 using Judith.NET.diagnostics;
 using Judith.NET.message;
 using Newtonsoft.Json;
 
-Console.WriteLine("> judith test.judith");
+Console.WriteLine("> juc test.judith");
 Console.WriteLine();
 
 string src = File.ReadAllText(AppContext.BaseDirectory + "/res/test.judith");
@@ -35,38 +36,21 @@ messages.Add(cmp.Messages);
 
 GenerateDebugFiles();
 if (ShouldAbort()) return;
-
 JubCompiler compiler = new(cmp);
-compiler.Compile();
+JudithDll dll = compiler.Compile();
 
-Console.WriteLine("=== BIN DISASSEMBLIES ===");
+Console.WriteLine("===============================");
+Console.WriteLine("=====|| DLL DISASSEMBLY ||=====");
+Console.WriteLine("===============================");
 Console.WriteLine("");
-for (int binIndex = 0; binIndex < compiler.Bins.Count; binIndex++) {
-    var bin = compiler.Bins[binIndex];
-    Console.WriteLine($"== {bin.Name}.jbin ==");
 
-    Console.WriteLine();
-    Console.WriteLine($"Functions ({bin.Functions.Count}):");
-    for (int i = 0; i < bin.Functions.Count; i++) {
-        Console.WriteLine($"=== # {i:X4} ({bin.Functions[i].Name})");
+DllDisassembler disassembler = new(dll);
+disassembler.Disassemble();
 
-        JasmDisassembler disassembler = new(bin, bin.Functions[i].Chunk);
-        disassembler.Disassemble();
+BinaryDllBuilder builder = new(AppContext.BaseDirectory + "/res/");
+builder.BuildLibrary($"test.jdll", dll);
 
-        Console.WriteLine(disassembler.Dump);
-        Console.WriteLine("");
-    }
-
-    Console.WriteLine("");
-
-    JuxBuilder builder = new(AppContext.BaseDirectory + "/res/");
-    builder.BuildBinary($"{bin.Name}.jbin", bin);
-}
-
-
-
-// Functions
-
+#region Functions
 void PrintErrors () {
     Console.WriteLine($"Errors: {messages.Errors.Count} ---");
     foreach (var error in messages.Errors) {
@@ -109,3 +93,4 @@ void GenerateDebugFiles () {
     string semanticAstStr = JsonConvert.SerializeObject(semanticAst, Formatting.Indented);
     File.WriteAllText(AppContext.BaseDirectory + "/res/test.semantic-ast.json", semanticAstStr);
 }
+#endregion

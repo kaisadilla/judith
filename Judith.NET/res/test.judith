@@ -1,31 +1,82 @@
+const i1 = 1
+const i2 = 1
+const cycles = 20
 
-print_le_sum(a, b)
--- funcname()
--- funcname(a,)
--- member.access("string",)
-
-var a = 1
-var b = 1
-
-var i = 0
-while i < 100 do
-    __p_print b
-
-    const temp = a + b
-    a = b
-    b = temp
-
-    i = i + 1
-end
-
-__p_print "That's what Fibonacci said."
+fib_recur(i1, i2, cycles)
+__p_print("")
+__p_print("Fibonacci for you!")
 
 return
 
-func print_le_sum (const a, b: Num)
-    __p_print (a + b)
+func fib (var a, b, const cycles: Num)
+    var i = 0
+
+    while i < cycles do
+        const next = a + b
+        a = b
+        b = next
+
+        print(next)
+
+        i = i + 1
+    end
+
     return
 end
+
+func fib_recur (a, b, cycles: Num)
+    if cycles <= 0 then return end
+
+    print(a)
+    fib_recur(b, a + b, cycles - 1)
+
+    return 
+end
+
+func print (n: Num)
+    __p_print n
+    return
+end
+
+--func print_str (str: String)
+--    __p_print str
+--    return
+--end
+
+-- var a = 1
+-- var b = 1
+-- 
+-- print_le_sum(a, b)
+-- 5 + 5
+-- -- funcname()
+-- -- funcname(a,)
+-- -- member.access("string",)
+-- 
+-- var i = 0
+-- while i < 100 do
+--     __p_print b
+-- 
+--     const temp = a + b
+--     a = b
+--     b = temp
+-- 
+--     i = i + 1
+-- end
+-- 
+-- __p_print "That's what Fibonacci said."
+-- 
+-- return
+-- 
+-- func ignore1 () end
+-- func ignore2 () end
+-- func ignore3 (a: String) end
+-- 
+-- func print_le_sum (const a, b: Num)
+--     __p_print (a + b)
+--     return
+-- end
+-- 
+-- func ignore4 () end
 
 --const val1: Num = 11
 --const val7 = 11

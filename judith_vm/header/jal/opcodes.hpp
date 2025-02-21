@@ -70,6 +70,8 @@ namespace OpCode {
         JFALSE_K,
         JFALSE_K_L,
 
+        CALL,
+
         PRINT,
     };
 }

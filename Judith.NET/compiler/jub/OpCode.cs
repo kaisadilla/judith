@@ -170,6 +170,11 @@ public enum OpCode : byte {
     /// </summary>
     JFalseKLong,
 
+    /// <summary>
+    /// CALL | CALL | Call function at FunctionRef index $a.
+    /// </summary>
+    Call,
+
     Print,
     InternalFunc,
 }

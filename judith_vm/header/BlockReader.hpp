@@ -2,6 +2,7 @@
 
 #include "root.hpp"
 
+class Assembly;
 struct Block;
 
-Block readBlock ();
+Assembly readAssembly();

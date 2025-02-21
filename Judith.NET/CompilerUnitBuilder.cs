@@ -35,14 +35,14 @@ public class CompilerUnitBuilder {
             }
         }
         ParameterList parameters = new([
-            new Parameter(
-                new LocalDeclarator(
-                    new Identifier("args", false),
-                    LocalKind.Constant,
-                    new(new("String", false)) // TODO: List<String>
-                ),
-                null
-            ),
+            //new Parameter(
+            //    new LocalDeclarator(
+            //        new Identifier("args", false),
+            //        LocalKind.Constant,
+            //        new(new("String", false)) // TODO: List<String>
+            //    ),
+            //    null
+            //),
         ]);
 
         BlockStatement body = new(implicitFunctionNodes);

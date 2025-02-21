@@ -1,6 +1,7 @@
 #include "BlockReader.hpp"
 #include "utils.hpp"
 #include <utils/Buffer.hpp>
+#include "executable/Assembly.hpp"
 #include "executable/Block.hpp"
 #include "executable/Function.hpp"
 #include "executable/ConstantType.hpp"
@@ -12,20 +13,23 @@
         } \
     } while(false)
 
+static std::vector<FunctionRef> readFuncRefTable (Buffer& reader, size_t bufferSize);
+static void readBlock(Buffer& reader, size_t bufferSize, std::vector<Block>&blocks);
+
 void readConstantTable (
     Buffer& reader,
     size_t bufferSize,
-    u_ptr<byte[]>&constantTable,
+    u_ptr<byte[]>& constantTable,
     size_t & constantCount,
-    u_ptr<void* []>&constants,
-    u_ptr<byte[]>&constantTypes
+    u_ptr<void*[]>& constants,
+    u_ptr<byte[]>& constantTypes
 );
 
 void readFunctionTable (
     Buffer& reader,
     size_t bufferSize,
-    const u_ptr<void* []>&constants,
-    const u_ptr<byte[]>&constantTypes,
+    const u_ptr<void*[]>& constants,
+    const u_ptr<byte[]>& constantTypes,
     Function*& functions,
     size_t & functionCount
 );
@@ -45,10 +49,12 @@ bool isMagicNumberCorrect (byte* magicNumbers) {
         && magicNumbers[11] == 'H';
 }
 
-Block readBlock() {
+Assembly readAssembly () {
     constexpr size_t MAGIC_NUMBER_COUNT = 12;
 
-    auto buffer = readBinaryFile("res/test.jbin");
+    std::cout << "JuVM C++" << std::endl;
+
+    auto buffer = readBinaryFile("res/test.jdll");
     size_t bufferSize = buffer.size();
     Buffer reader((buffer));
 
@@ -65,6 +71,40 @@ Block readBlock() {
     reader.readUInt8(); // discard major_version
     reader.readUInt8(); // discard minor_version
 
+    std::vector<FunctionRef> funcRefs = readFuncRefTable(reader, bufferSize);
+    // eagerly loading functions.
+
+    std::vector<Block> blocks;
+    size_t blockCount = reader.readUInt32_LE(); // block_count
+
+    for (size_t i = 0; i < blockCount; i++) { // blocks
+        readBlock(reader, bufferSize, blocks);
+    }
+
+    Function** functions = new Function*[funcRefs.size()];
+    for (size_t i = 0; i < funcRefs.size(); i++) {
+        functions[i] = &(blocks[funcRefs[i].block].functions[funcRefs[i].index]);
+    }
+
+    return Assembly(functions, funcRefs.size(), std::move(blocks));
+}
+
+static std::vector<FunctionRef> readFuncRefTable (Buffer& reader, size_t bufferSize) {
+    std::vector<FunctionRef> refs;
+
+    size_t refCount = (size_t)reader.readUInt32_LE(); // ref_count
+
+    for (size_t i = 0; i < refCount; i++) { // func_refs
+        size_t block = (size_t)reader.readUInt32_LE(); // block
+        size_t index = (size_t)reader.readUInt32_LE(); // index
+
+        refs.push_back(FunctionRef(block, index));
+    }
+
+    return refs;
+}
+
+static void readBlock(Buffer& reader, size_t bufferSize, std::vector<Block>& blocks) {
     u_ptr<byte[]> constantTable;
     size_t constantCount;
     u_ptr<void*[]> constants;
@@ -84,7 +124,7 @@ Block readBlock() {
         reader, bufferSize, constants, constantTypes, functions, functionCount
     );
 
-    return Block(
+    blocks.emplace_back(
         std::move(constantTable),
         constantCount,
         std::move(constants),
@@ -205,7 +245,7 @@ void readFunctionTable (
             reader.readUInt32_LE(); // discard param:name
         }
 
-        reader.readUInt16_LE(); // discard max_locals
+        byte maxLocals = (byte)reader.readUInt16_LE(); // max_locals
         reader.readUInt16_LE(); // discard max_stack
 
         // Read chunk:
@@ -229,7 +269,7 @@ void readFunctionTable (
         }
 
         // TODO: Check this.
-        new (&functions[f]) Function(Chunk(
+        new (&functions[f]) Function(maxLocals, Chunk(
             constants.get(),
             constantTypes.get(),
             size,

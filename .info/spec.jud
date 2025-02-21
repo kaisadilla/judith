@@ -153,7 +153,7 @@ name = 3 -- error: number cannot be assigned to local of type String.
 var score = 12 -- "score" is of type Num, because it's been initialized with a Num.
 score = "Kevin" -- error, score was inferred to be a Num.
 
--- null and undefined
+-- ## null and undefined
 -- 'null' and 'undefined' are special values.
 
 -- 'null' represents the abscence of a value, and can ONLY be used in locals
@@ -166,6 +166,58 @@ var name = null -- error, type cannot be inferred.
 -- doesn't exist (for example, accessing a field in an object that hasn't been
 -- defined). 'undefined' cannot be assigned to anything, but can be used to test
 -- if values are equal to it.
+
+-- ## Null-conditional operators: ?., ?[], ?->, ?() and ?.[]
+-- The null conditional operators allow safe use of a nullable type, with the
+-- drawback that said use may result in "null" or "undefined". These operators
+-- apply the the access or call operation to their operand only when their
+-- value is not "null" or "undefined". If it is, then it returns their operand's
+-- value:
+
+-- usage:
+-- Null-conditional member access operator (?.)
+person?.name -- if "person" is null or undefined, returns that. Else returns the
+             -- value of its "name" field.
+
+-- Null-conditional index operator (?[])
+my_list?[5] -- if "my_list" is null or undefined, returns that. Else returns the
+            -- value at index 5.
+
+-- Null-conditional unwrapper operator (?->)
+boxed_val?->name -- If "boxed_val" is null or undefined, returns that. Else
+                 -- returns the value of its wrapped value's "name" field.
+
+-- Null-conditional call operator (?())
+person?.print_name?() -- if "print_name" is null or undefined, returns that. Else
+                      -- calls the function as normal.
+
+-- Null-conditional dynamic index operator (?.[])
+json_obj?.[inquired_value] -- if "json_obj" is null or undefined, returns that.
+                           -- Else returns the dynamic indexed member (see: Reflection).
+
+-- Note that "undefined" cannot be assigned to a value, so any expression that
+-- returns "undefined" will be transformed into "null" when assigned.
+
+-- ## Null-coalescing operator: ?? (and ??=)
+-- The null-coalescing operator returns the value at the left if it isn't "null"
+-- or "undefined", or the value at the right otherwise.
+const designated_boss: Person? = null
+
+const boss = designated_boss ?? get_new_boss() -- Will evaluate to "get_new_boss()"
+
+var score: Num? = null
+score ??= 0 -- Since "score" is null, it'll be assigned 0.
+score ??= -10 -- Nothing will happen, as "score" is not null.
+json_obj?.[inquired_value] ?? "unknown value" -- If json_obj?.[inquired_value] doesn't
+                                              -- exist, that'll evaluate to "undefined"
+                                              -- and the null-coalescing operation
+                                              -- will evaluate to "unknown value".
+
+-- Note that ?? and ??= do short-circuit, which means that, if the left-hand side
+-- is returned, the right-hand side is not evaluated at all:
+
+20 ?? Console::log("Unknown") -- Nothing will be logged, as this expression returns
+                              -- 20 and discards the right-hand side expression.
 #endregion
 
 #region Primitives
@@ -327,7 +379,57 @@ product.name or "<unknown product>" -- if "product.name" is truthy, then the
 5 <= 2 -- less than or equal to
 3 < 4 < 5 -- between: 4 is greater than 3 and less than 5.
 
-a ?? b -- returns a if it's not null or undefined, or b otherwise
+-- ## Compound assignment operations:
+-- Most binary operators in Judith support compound assignment:
+i += 3 -- equivalent to i = i + 3
+i *= 5 -- equivalent to i = i * 5
+i %i= 9 -- equivalent to i = i %i 9
+i &= 0b1100_0111 -- equivalent to i = i & 0b1100_0111
+i <<= 2 -- equivalent to i = i << 2
+i ??= 10 -- equivalent to i = i ?? 10
+i and= "some string" -- equivalent to i = i and "some string"
+
+-- ## Access operators: . :: [] -> () .[]
+-- Access operators are used to access a member of an element of any kind:
+
+-- Member access operator: .
+-- This operator accesses a member of an instance, such as instance member fields
+-- or extension functions.
+const person = Person!()
+person.age -- access field "age" inside "person"
+
+-- Scope resolution operator: ::
+-- This operator accesses a member of a type, module, namespace or other construct
+-- that doesn't have instances.
+Person::count -- Accesses static member field "count" that belongs to class "Person"
+              -- itself (rather than a specific instance)
+game::physics::RigidBody -- accesses "physics" module inside "game" module, and
+                         -- the class "RigidBody" inside that "physics" module.
+
+-- Indexing operator: []
+-- This operator can be defined by types to allow accessing values via index.
+-- The amount of arguments taken by this operator and their type are defined
+-- by the class itself:
+const my_list = ["John", "Kevin", "Tali"]
+my_list[1] -- returns "Kevin", because List<_T> defines [i: Int].
+
+-- Unwrap operator: ->
+-- This operator can be defined by types to allow accessing a value they wrap.
+const boxed_num = Box<Num>!(5)
+boxed_num->str() -- accesses Num.str()
+boxed_num.str() -- accesses Box<Num>.str()
+
+-- Call operator: ()
+-- Calls a callable value, generally a function:
+init() -- calls the function "init".
+(() => Console::log("e"))() -- calls the lambda function defined at the left.
+const init: (c: Num) => Void = null
+const crash: (c: Num) => Void = c => System::exit()
+(init ?? crash)(12) -- dynamically calls whatever this expression resolves to.
+
+-- Index operator: .[]
+-- See "Reflection".
+
 #endregion
 
 #region Strings
@@ -1511,6 +1613,136 @@ end
 -- This function can be used as normal within the file, but will not be visible
 -- to any 
 #endregion
+
+#region Reflection
+-- Judith supports reflection natively, thanks to the way it is compiled into
+-- JASM. Judith is a statically-typed language and, as such, uses traditional
+-- compiling techniques, like offsets for fields, that remove identifiers and
+-- source code in general from the equation. However, Judith also stores metadata
+-- about the source code associated with its binary files, and that metadata
+-- allows Judith to "become" a dynamically-typed language when needed. This
+-- makes it possible, for example, to access a field by name during runtime.
+
+struct Person
+    name: String
+    age: Num
+end
+
+-- ## Dynamic index operator
+-- The dynamic index operator .[] can be used on any object with members to
+-- retrieve the value of said member:
+const person = Person!("Kevin", 36) -- regular struct
+person.["age"] -- access field "age" via reflection, returns 36.
+
+-- When indexing a field that doesn't exist, a special value is returned:
+-- "undefined". "undefined" is not "null" (as "null" could be a real and valid
+-- value for the field) - instead, "undefined" is a sentinel value that indicates
+-- that whatever is being accessed is not defined at all.
+person.["country"] -- doesn't exist, returns "undefined".
+-- undefined cannot be assigned or stored anywhere, it can only be referenced by
+-- reference equals statements:
+const has_country = person.["country"] !== undefined -- = false.
+
+-- Member methods can also be accessed via reflection:
+person.["get_birthday"]?.() -- will work if person has a "get_birthday" method.
+
+-- Extension methods cannot be indexed as they are not part of the object's
+-- definition:
+impl func Person::print_name () end
+person.["print_name"] -- "undefined", as "print_name" is not part of Person.
+
+-- The index operator is resolved at runtime, so any expression that resolves
+-- to a String is valid:
+const field = "age"
+person.[field] -- returns 36, which is the value of "person.age".
+
+-- The value of any field returned by indexing is "unknown | undefined", as it's
+-- not possible to determine at compile time the result of the access.
+const val = person.[field] -- type "unknown", the developer has to test "val" at
+                          -- runtime to resolve its type and safely access it.
+
+const collective_years_of_experience: Num = 164
+if val is Num then
+    collective_years_of_experience += val -- valid, because 'val' is Num here.
+end
+
+-- Note that indexing a value of type unknown is a valid operation, as indexing
+-- produces "undefined" (a valid value) when indexing members that don't exist:
+if val !== undefined then
+    val.["month"] -- valid. "val" doesn't contain "month", so this will safely
+                 -- return "undefined".
+end
+
+-- You cannot, however, index "undefined", as "undefined" cannot have members:
+val.["month"] -- compile error, Type "unknown | undefined" cannot be indexed.
+
+-- The index operator accepts the null-conditional operator:
+val.["person"]?.["age"] -- if val.["person"] returns "undefined" or "null", then
+                        -- ?.["age"] won't be called, and the result will be
+                        -- "undefined" or "null" (depending on the value of
+                        -- val.["person"]).
+
+-- ## Dynamic objects
+-- [Note: dynamic objects are designed for interoperability with dynamic
+-- languages and services that don't follow type-friendly standards. It should
+-- not be used as a way to bypass the type system.]
+-- Dynamic objects are objects whose members are bound at runtime. Dynamic
+-- objects are available in Judith through the Dynamic type:
+const anything: String = "absolutely"
+const my_obj: Dynamic = {
+    [anything] = "can", -- at runtime, creates a field named "absolutely"
+    go = "here", -- 'go' acts as a string defining this field's key.
+    [7] = 31 -- numbers can also act as keys.
+}
+
+-- Dynamic objects must be accessed by indexing:
+my_obj.go -- error, "my_obj" doesn't have fields.
+my_obj.["go"] -- valid, returns "here".
+
+-- ## Getting information about an object
+typedef class Person
+    name: String
+    last_name: String
+    age: Num
+    country: Country
+
+    static count: Num
+
+    func print_age ()
+        -- statements
+    end
+
+    static func print_count ()
+        -- statements
+    end
+end
+
+-- membersof(): retrieves the names of all members of the given identifier.
+-- If the identifier is an instance, retrieves all of its fields:
+const p: Person!()
+membersof(p) -- returns ["name", "last_name", "age", "country", "print_age"]
+membersof(Person) -- returns ["count", "print_count"]
+-- fieldsof() and methodsof(): get fields and methods separately
+fieldsof(p) -- returns ["name", "last_name", "age", "country"]
+fieldsof(Person) -- returns ["count"]
+methodsof(p) -- returns ["print_age"]
+methodsof(Person) -- returns ["print_count"]
+-- typeof(): get type information (returns TypeMetadata object)
+typeof(p) -- returns the type information of whichever type P is.
+typeof(Person) -- returns the type information of Person specifically.
+
+-- note that, when you query the information of an instance, you'll receive the
+-- information of the specific type of that instance, even if it's assigned to
+-- a local of a different type:
+typedef Employee = Person | String
+const employee: Employee = Person!()
+typeof(employee) -- returns the TypeMetadata of Person, not Employee.
+memberof(employee) -- returns the members of employee as Person, not as Employee.
+
+-- Also note that, due to this behavior, extension methods (including those
+-- brought by externally implemented interfaces) will not be returned by these
+-- operations.
+
 
 #region Directives
 -- Directives are a special subset of Judith. They act as a small extension that
