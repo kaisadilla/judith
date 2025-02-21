@@ -64,9 +64,16 @@ public class Binder {
         boundFuncDef = new(funcDef, symbol, scope);
         BoundNodes[funcDef] = boundFuncDef;
 
-        ResolveFunction(boundFuncDef);
-
         return boundFuncDef;
+    }
+
+    public BoundBlockStatement BindBlockStatement (BlockStatement blockStmt) {
+        if (TryGetBoundNode(blockStmt, out BoundBlockStatement? boundBlockStmt) == false) {
+            boundBlockStmt = new(blockStmt);
+            BoundNodes[blockStmt] = boundBlockStmt;
+        }
+
+        return boundBlockStmt;
     }
 
     public BoundLocalDeclarationStatement BindLocalDeclarationStatement (
@@ -499,33 +506,6 @@ public class Binder {
     #endregion
 
     #region Resolve methods
-    public void ResolveFunction (BoundFunctionDefinition boundFuncDef) {
-        ResolveFunctionReturnType(boundFuncDef);
-    }
-
-    public void ResolveFunctionReturnType (BoundFunctionDefinition boundFuncDef) {
-        if (
-            boundFuncDef.ReturnType != null
-            && boundFuncDef.ReturnType != TypeInfo.UnresolvedType
-        ) {
-            return;
-        }
-
-        if (boundFuncDef.Node.ReturnTypeAnnotation == null) {
-            // TODO: Infer from body.
-        }
-        else {
-            if (TryGetBoundNode(
-                boundFuncDef.Node.ReturnTypeAnnotation,
-                out BoundNode? boundReturnType
-            ) == false) {
-                return;
-            }
-
-            // TODO
-        }
-    }
-
     private void ResolveBinaryExpression (BoundBinaryExpression boundBinaryExpr) {
         switch (boundBinaryExpr.Node.Operator.OperatorKind) {
             // Math - their type is determined by the operator function they call,

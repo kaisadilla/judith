@@ -32,3 +32,5 @@ public class TypeInfo {
         FullyQualifiedName = fullyQualifiedName;
     }
 }
+
+// TODO: Specialized type infos: AliasedTypeInfo, UnionTypeInfo, SetTypeInfo, etc.

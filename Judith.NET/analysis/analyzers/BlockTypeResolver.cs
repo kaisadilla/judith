@@ -9,7 +9,9 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.analysis.analyzers;
 
-public class BlockTypeResolver : SyntaxVisitor<TypeInfo?> {
+using RetInfo = (SyntaxKind retKind, TypeInfo type);
+
+public class BlockTypeResolver : SyntaxVisitor<RetInfo?> {
     public MessageContainer Messages { get; private set; } = new();
 
     private Compilation _cmp;
@@ -28,56 +30,95 @@ public class BlockTypeResolver : SyntaxVisitor<TypeInfo?> {
         if (unit.ImplicitFunction != null) Visit(unit.ImplicitFunction);
     }
 
-    public override TypeInfo? Visit (FunctionDefinition node) {
-        if (node.ReturnTypeAnnotation != null) {
-            return null;
-        }
+    //public override TypeInfo? Visit (FunctionDefinition node) {
+    //    if (node.ReturnTypeAnnotation != null) {
+    //        return null;
+    //    }
+    //
+    //    var boundNode = _cmp.Binder.GetBoundNodeOrThrow<BoundFunctionDefinition>(node);
+    //    if (TypeInfo.IsResolved(boundNode.ReturnType)) {
+    //        return null;
+    //    }
+    //
+    //    var returnType = Visit(node.Body);
+    //
+    //    if (returnType != null) {
+    //        boundNode.ReturnType = returnType;
+    //        boundNode.Symbol.Type = returnType;
+    //    }
+    //    else {
+    //        boundNode.ReturnType = TypeInfo.UnresolvedType;
+    //        boundNode.Symbol.Type = TypeInfo.UnresolvedType;
+    //    }
+    //
+    //    return boundNode.ReturnType;
+    //}
 
-        var boundNode = _cmp.Binder.GetBoundNodeOrThrow<BoundFunctionDefinition>(node);
-        if (TypeInfo.IsResolved(boundNode.ReturnType)) {
-            return null;
-        }
+    public override RetInfo? Visit (BlockStatement node) {
+        var boundNode = _cmp.Binder.GetBoundNodeOrThrow<BoundBlockStatement>(node);
+        // Start with unresolved type.
+        List<TypeInfo> foundRetTypes = new();
 
-        var returnType = Visit(node.Body);
-
-        if (returnType != null) {
-            boundNode.ReturnType = returnType;
-            boundNode.Symbol.Type = returnType;
-        }
-        else {
-            boundNode.ReturnType = TypeInfo.UnresolvedType;
-            boundNode.Symbol.Type = TypeInfo.UnresolvedType;
-        }
-
-        return boundNode.ReturnType;
-    }
-
-    public override TypeInfo Visit (BlockStatement node) {
-        TypeInfo returnType = TypeInfo.UnresolvedType;
-
+        // We'll find "return" or "yield" statements inside the block, recursively,
+        // and build a list with all return types found.
         foreach (var stmt in node.Nodes) {
             if (stmt.Kind != SyntaxKind.ReturnStatement) continue;
 
-            var type = Visit(stmt);
-            if (TypeInfo.IsResolved(type) == false) continue;
+            var retInfo = Visit(stmt);
+            // If we didn't visit return / yield, retInfo will be null.
+            if (retInfo.HasValue == false) continue;
 
-            if (TypeInfo.IsResolved(returnType) && type != returnType) {
+            // We cannot conclude this blocks's type until every returned type
+            // in it is resolved; so we just set its type to unresolved and
+            // abort the procedure.
+            if (retInfo.Value.type == TypeInfo.UnresolvedType) {
+                boundNode.EvaluationKind = BlockEvaluationKind.Return;
+                boundNode.Type = TypeInfo.UnresolvedType;
+                return null;
+            }
+
+            foundRetTypes.Add(retInfo.Value.type);
+        }
+
+        // Calculate evaluation kind.
+        boundNode.EvaluationKind = BlockEvaluationKind.Return; // TODO: Implement yield.
+
+        // Calculate return type.
+        if (foundRetTypes.Count == 0) {
+            boundNode.Type = TypeInfo.VoidType;
+        }
+        else {
+            HashSet<TypeInfo> types = [.. foundRetTypes];
+
+            if (types.Contains(TypeInfo.VoidType) && types.Count > 1) {
+                Messages.Add(CompilerMessage.Analyzers.InconsistentReturnBehavior(node.Line));
+                boundNode.Type = TypeInfo.ErrorType;
+            }
+            // If we have more than one type, that would form a union, but
+            // right now that's not implemented so we throw instead.
+            else if (types.Count > 1) {
                 throw new NotImplementedException(
                     "Multiple return types not implemented yet."
                 );
             }
-
-            returnType = type;
+            // Else, the only type in the set is the return type.
+            else {
+                boundNode.Type = types.ToArray()[0];
+            }
         }
 
-        return returnType;
+        // BlockStatement is the one that keeps this information. When a function
+        // or a need statement need to infer their type from their body, they
+        // pull the info from this node's bound node.
+        return null; 
     }
 
-    public override TypeInfo? Visit (ReturnStatement node) {
-        if (node.Expression == null) return TypeInfo.VoidType;
+    public override RetInfo? Visit (ReturnStatement node) {
+        if (node.Expression == null) {
+            return (SyntaxKind.ReturnStatement, TypeInfo.VoidType);
+        }
 
-        var boundNode = _cmp.Binder.GetBoundNodeOrThrow<BoundExpression>(node.Expression);
-
-        return boundNode.Type;
+        var boundExpr = _cmp.Binder.GetBoundNodeOrThrow<BoundExpression>(node.Expression);
+        return (SyntaxKind.ReturnStatement, boundExpr.Type ?? TypeInfo.UnresolvedType);
     }
 }

@@ -36,7 +36,7 @@ public class LexerTests {
     }
 
     private Lexer SmallCompile (string src) {
-        Lexer lexer = new(src, new());
+        Lexer lexer = new(src);
         lexer.Tokenize();
         return lexer;
     }

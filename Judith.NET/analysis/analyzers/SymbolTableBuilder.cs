@@ -42,6 +42,13 @@ public class SymbolTableBuilder : SyntaxVisitor {
         _scope.EndScope(); // If this fails, something is wrong in CreateAnonymousInnerTable().
     }
 
+    public override void Visit (BlockStatement node) {
+        // Block statements do not create symbols, but we bind them in this step anyway.
+        _cmp.Binder.BindBlockStatement(node);
+
+        base.Visit(node);
+    }
+
     public override void Visit (IfExpression node) {
         Visit(node.Test);
 

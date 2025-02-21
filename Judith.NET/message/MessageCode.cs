@@ -43,6 +43,7 @@ public enum MessageCode {
     // 3xxx - Analyzer errors
     // SymbolResolver
     NameDoesNotExist = 3_000,
+
     // Binder
     NumberSuffixCannotBeUsedForDecimal,
     FloatLiteralOverflow,
@@ -50,6 +51,15 @@ public enum MessageCode {
     UnsignedIntegerLiteralOverflow,
     IntegerLiteralIsTooLarge,
     UndefinedBinaryOperation,
+
     // TypeResolver
     TypeDoesntExist,
+
+    // BlockTypeResolver
+    InconsistentReturnBehavior,
+
+    // ImplicitNodeAnalyzer
+    ReturnNotAllowed,
+    YieldNotAllowed,
+    NotAllPathsYieldValue,
 }

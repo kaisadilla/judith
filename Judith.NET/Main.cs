@@ -6,11 +6,14 @@ using Judith.NET.compiler.jub;
 using Judith.NET.diagnostics;
 using Judith.NET.message;
 using Newtonsoft.Json;
+using System.Diagnostics;
 
 Console.WriteLine("> juc test.judith");
 Console.WriteLine();
 
 string src = File.ReadAllText(AppContext.BaseDirectory + "/res/test.judith");
+
+Stopwatch s = Stopwatch.StartNew();
 
 MessageContainer messages = new();
 
@@ -34,21 +37,28 @@ Compilation cmp = new([cu]);
 cmp.Analyze();
 messages.Add(cmp.Messages);
 
-GenerateDebugFiles();
+//GenerateDebugFiles();
 if (ShouldAbort()) return;
 JubCompiler compiler = new(cmp);
 JudithDll dll = compiler.Compile();
 
-Console.WriteLine("===============================");
-Console.WriteLine("=====|| DLL DISASSEMBLY ||=====");
-Console.WriteLine("===============================");
-Console.WriteLine("");
-
-DllDisassembler disassembler = new(dll);
-disassembler.Disassemble();
+//Console.WriteLine("===============================");
+//Console.WriteLine("=====|| DLL DISASSEMBLY ||=====");
+//Console.WriteLine("===============================");
+//Console.WriteLine("");
+//
+//DllDisassembler disassembler = new(dll);
+//disassembler.Disassemble();
 
 BinaryDllBuilder builder = new(AppContext.BaseDirectory + "/res/");
 builder.BuildLibrary($"test.jdll", dll);
+
+s.Stop();
+Console.WriteLine($"\nTotal build time: {s.ElapsedMilliseconds} ms");
+
+#if RELEASE
+Console.ReadKey(true);
+#endif
 
 #region Functions
 void PrintErrors () {

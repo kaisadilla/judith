@@ -23,6 +23,8 @@ public enum MessageOrigin {
     SymbolResolver,
     Binder,
     TypeResolver,
+    BlockTypeResolver,
+    ImplicitNodeAnalyzer,
     Compiler,
 }
 
@@ -409,6 +411,47 @@ public class CompilerMessage {
                 MessageOrigin.TypeResolver,
                 (int)MessageCode.TypeDoesntExist,
                 $"The type '{type}' does not exist in the current context.",
+                line
+            );
+        }
+
+        public static CompilerMessage InconsistentReturnBehavior (int line) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.BlockTypeResolver,
+                (int)MessageCode.InconsistentReturnBehavior,
+                "Inconsistent return behavior. Some paths return values while " +
+                "others return Void. This is not allowed.",
+                line
+            );
+        }
+
+        public static CompilerMessage ReturnNotAllowed (int line) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.ImplicitNodeAnalyzer,
+                (int)MessageCode.ReturnNotAllowed,
+                "Return statements are not allowed in this context.",
+                line
+            );
+        }
+
+        public static CompilerMessage YieldNotAllowed (int line) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.ImplicitNodeAnalyzer,
+                (int)MessageCode.YieldNotAllowed,
+                "Yield statements are not allowed in this context.",
+                line
+            );
+        }
+
+        public static CompilerMessage NotAllPathsYieldValue (int line) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.ImplicitNodeAnalyzer,
+                (int)MessageCode.NotAllPathsYieldValue,
+                "Not all paths yield a value.",
                 line
             );
         }

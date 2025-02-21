@@ -17,13 +17,11 @@ namespace Judith.NET.analysis.analyzers;
 public class SymbolResolver : SyntaxVisitor {
     public MessageContainer Messages { get; private set; } = new();
 
-    private Compilation _cmp;
-
-    private ScopeResolver _scope;
+    private readonly Compilation _cmp;
+    private readonly ScopeResolver _scope;
 
     public SymbolResolver (Compilation cmp) {
         _cmp = cmp;
-
         _scope = new(_cmp.Binder, _cmp.SymbolTable);
     }
 

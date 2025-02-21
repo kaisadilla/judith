@@ -17,8 +17,10 @@ namespace Judith.NET.analysis.analyzers;
 public class TypeResolver : SyntaxVisitor {
     public MessageContainer Messages { get; private set; } = new();
 
-    private Compilation _cmp;
-    private ScopeResolver _scope;
+    private readonly Compilation _cmp;
+    private readonly ScopeResolver _scope;
+
+    private Binder Binder => _cmp.Binder;
 
     public TypeResolver (Compilation cmp) {
         _cmp = cmp;
@@ -34,8 +36,32 @@ public class TypeResolver : SyntaxVisitor {
     }
 
     public override void Visit (FunctionDefinition node) {
-        // TODO.
-        base.Visit(node);
+        var boundFuncDef = Binder.GetBoundNodeOrThrow<BoundFunctionDefinition>(node);
+
+        Visit(node.Body);
+        Visit(node.Parameters);
+        VisitIfNotNull(node.ReturnTypeAnnotation);
+
+        if (TypeInfo.IsResolved(boundFuncDef.ReturnType)) return;
+
+        // If the return type is explicitly declared.
+        if (node.ReturnTypeAnnotation != null) {
+            var boundAnnot = Binder.GetBoundNodeOrThrow<BoundTypeAnnotation>(
+                node.ReturnTypeAnnotation
+            );
+
+            boundFuncDef.Symbol.Type = boundAnnot.Symbol.Type;
+            boundFuncDef.ReturnType = boundFuncDef.Symbol.Type;
+        }
+        // Else, if it's inferred from its body.
+        else {
+            var boundBody = Binder.GetBoundNodeOrThrow<BoundBlockStatement>(
+                node.Body
+            );
+
+            boundFuncDef.Symbol.Type = boundBody.Type;
+            boundFuncDef.ReturnType = boundFuncDef.Symbol.Type;
+        }
     }
 
     public override void Visit (LocalDeclarationStatement node) {
@@ -47,7 +73,7 @@ public class TypeResolver : SyntaxVisitor {
     }
 
     public override void Visit (IfExpression node) {
-        var boundIfExpr = GetBoundNodeOrThrow<BoundIfExpression>(node);
+        var boundIfExpr = Binder.GetBoundNodeOrThrow<BoundIfExpression>(node);
 
         Visit(node.Test);
 
@@ -119,14 +145,5 @@ public class TypeResolver : SyntaxVisitor {
 
     public override void Visit (EqualsValueClause node) {
         Visit(node.Value);
-    }
-
-
-    private T GetBoundNodeOrThrow<T> (SyntaxNode node) where T : BoundNode {
-        if (_cmp.Binder.TryGetBoundNode(node, out T? boundNode) == false) {
-            throw new($"Node '{node}' should be bound!");
-        }
-
-        return boundNode;
     }
 }

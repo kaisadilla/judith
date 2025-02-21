@@ -32,6 +32,14 @@ public class Compilation {
     }
 
     public void Analyze () {
+        // Add implicit nodes (such as implicit return statements) to the tree.
+        ImplicitNodeAnalyzer implicitNodeAnalyzer = new(this);
+        foreach (var cu in Units) {
+            implicitNodeAnalyzer.Analyze(cu);
+        }
+        Messages.Add(implicitNodeAnalyzer.Messages);
+        if (Messages.HasErrors) return;
+
         // Add all the different symbols that exist in the program to the table,
         // and binds declarations to the symbols they create.
         SymbolTableBuilder symbolTableBuilder = new(this);

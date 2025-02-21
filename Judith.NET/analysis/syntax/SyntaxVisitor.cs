@@ -35,6 +35,12 @@ public abstract class SyntaxVisitor {
         }
     }
 
+    public virtual void VisitIfNotNull (SyntaxNode? node) {
+        if (node != null) {
+            Visit(node);
+        }
+    }
+
     //public virtual void Visit (Expression node) => DefaultVisit(node);
     //public virtual void Visit (Statement node) => DefaultVisit(node);
     //public virtual void Visit (Item node) => DefaultVisit(node);

@@ -37,6 +37,14 @@ public abstract class SyntaxVisitor<TResult> {
         return default;
     }
 
+    public virtual TResult? VisitIfNotNull (SyntaxNode? node) {
+        if (node != null) {
+            return Visit(node);
+        }
+
+        return default;
+    }
+
     //public virtual TResult? Visit (Expression node) => DefaultVisit(node);
     //public virtual TResult? Visit (Statement node) => DefaultVisit(node);
     //public virtual TResult? Visit (Item node) => DefaultVisit(node);
