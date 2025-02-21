@@ -17,8 +17,10 @@ public class BinaryDllBuilder {
     public void BuildLibrary (string fileName, JudithDll dll) {
         string path = Path.Join(_outFolder, fileName);
 
-        using var stream = File.Open(path, FileMode.Create);
-        using var writer = new BinaryWriter(stream, Encoding.UTF8, false);
+        List<byte> fileBytes = new();
+
+        using var ms = new MemoryStream();
+        using var writer = new BinaryWriter(ms);
 
         WriteMagicNumber(writer); // magic_number: byte[12] = 'AZARIAJUDITH'
         writer.Write((byte)0); // endianness: byte = 0 -- little-endian
@@ -32,6 +34,8 @@ public class BinaryDllBuilder {
         foreach (var block in dll.Blocks) {
             WriteBlock(writer, block);
         }
+
+        File.WriteAllBytes(path, ms.ToArray());
     }
 
     private void WriteMagicNumber (BinaryWriter writer) {
