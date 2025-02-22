@@ -37,18 +37,18 @@ Compilation cmp = new([cu]);
 cmp.Analyze();
 messages.Add(cmp.Messages);
 
-//GenerateDebugFiles();
+GenerateDebugFiles();
 if (ShouldAbort()) return;
 JubCompiler compiler = new(cmp);
 JudithDll dll = compiler.Compile();
 
-//Console.WriteLine("===============================");
-//Console.WriteLine("=====|| DLL DISASSEMBLY ||=====");
-//Console.WriteLine("===============================");
-//Console.WriteLine("");
-//
-//DllDisassembler disassembler = new(dll);
-//disassembler.Disassemble();
+Console.WriteLine("===============================");
+Console.WriteLine("=====|| DLL DISASSEMBLY ||=====");
+Console.WriteLine("===============================");
+Console.WriteLine("");
+
+DllDisassembler disassembler = new(dll);
+disassembler.Disassemble();
 
 BinaryDllBuilder builder = new(AppContext.BaseDirectory + "/res/");
 builder.BuildLibrary($"test.jdll", dll);

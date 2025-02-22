@@ -10,6 +10,14 @@ public class LocalDeclarator : SyntaxNode {
     public Identifier Identifier { get; init; }
     public LocalKind LocalKind { get; init; }
     public TypeAnnotation? TypeAnnotation { get; private set; }
+    /// <summary>
+    /// Indicates whether the type annotation is inherited from another local
+    /// declarator that follows this one, rather than being explicitly indicated
+    /// for this specific declarator. For example, in the statement
+    /// "var a, b: Num", b has its type "Num" explicitly indicated, while a
+    /// inherits the type annotation "Num" from b. This is NOT inference.
+    /// </summary>
+    public bool IsTypeAnnotationInherited { get; set; }
 
     public Token? FieldKindToken { get; init; }
 
@@ -33,7 +41,7 @@ public class LocalDeclarator : SyntaxNode {
         return visitor.Visit(this);
     }
 
-    public void SetType (TypeAnnotation? type) {
+    public void SetTypeAnnotation (TypeAnnotation? type) {
         TypeAnnotation = type;
     }
 }

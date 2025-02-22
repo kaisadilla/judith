@@ -926,7 +926,7 @@ public class Parser {
         // This is valid behavior, as type may be inferred from usage.
         for (int i = declarators.Count - 2; i >= 0; i--) {
             if (declarators[i].TypeAnnotation is null) {
-                declarators[i].SetType(declarators[i + 1].TypeAnnotation);
+                declarators[i].SetTypeAnnotation(declarators[i + 1].TypeAnnotation);
             }
         }
 
@@ -1066,6 +1066,28 @@ public class Parser {
 
         if (TryConsume(TokenKind.RightParen, out Token? rightParenToken) == false) {
             throw Error(CompilerMessage.Parser.RightParenExpected(Peek().Line));
+        }
+
+        // If the function has parameters.
+        if (parameters.Count > 0) {
+            // The last parameter must have a type annotation. Types are not
+            // inferred in parameters, even if they have default values.
+            if (parameters[^1].Declarator.TypeAnnotation == null) {
+                throw Error(CompilerMessage.Parser.ParameterTypeMustBeSpecified(Peek().Line));
+            }
+
+            // Each parameter, from right to left, inherits the type annotation
+            // of the one to its right if it doesn't have one.
+            TypeAnnotation inherited = parameters[^1].Declarator.TypeAnnotation!;
+
+            for (int i = parameters.Count - 2; i >= 0; i--) {
+                if (parameters[i].Declarator.TypeAnnotation == null) {
+                    parameters[i].Declarator.SetTypeAnnotation(inherited);
+                }
+                else {
+                    inherited = parameters[i].Declarator.TypeAnnotation!;
+                }
+            }
         }
 
         parameterList = SF.ParameterList(leftParenToken, parameters, rightParenToken);

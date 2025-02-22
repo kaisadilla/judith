@@ -260,7 +260,7 @@ public class JubCompiler : SyntaxVisitor {
 
         var boundNode = _cmp.Binder.GetBoundNodeOrThrow<BoundIdentifierExpression>(node);
 
-        if (boundNode.Symbol.Kind == SymbolKind.Local) {
+        if (boundNode.Symbol.Kind == SymbolKind.Local || boundNode.Symbol.Kind == SymbolKind.Parameter) {
             if (_localBlock.TryGetLocalAddr(node.Identifier.Name, out int addr) == false) {
                 throw new Exception($"Local '{node.Identifier.Name}' not found");
             }

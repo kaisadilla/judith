@@ -88,4 +88,11 @@ public class SymbolTableBuilder : SyntaxVisitor {
         var symbol = _scope.Current.AddSymbol(SymbolKind.Local, node.Identifier.Name);
         _cmp.Binder.BindLocalDeclarator(node, symbol);
     }
+
+    public override void Visit (Parameter node) {
+        var symbol = _scope.Current.AddSymbol(
+            SymbolKind.Parameter, node.Declarator.Identifier.Name
+        );
+        _cmp.Binder.BindParameter(node, symbol);
+    }
 }

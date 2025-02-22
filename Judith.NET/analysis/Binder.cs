@@ -274,6 +274,14 @@ public class Binder {
 
         return boundTypeAnnt;
     }
+    public BoundParameter BindParameter (Parameter param, Symbol symbol) {
+        if (TryGetBoundNode(param, out BoundParameter? boundParam) == false) {
+            boundParam = new(param, symbol);
+            BoundNodes[param] = boundParam;
+        }
+
+        return boundParam;
+    }
 
     #region Resolve literals
     private BoundLiteralExpression ResolveBooleanLiteralExpression (LiteralExpression expr) {

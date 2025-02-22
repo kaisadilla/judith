@@ -146,4 +146,26 @@ public class TypeResolver : SyntaxVisitor {
     public override void Visit (EqualsValueClause node) {
         Visit(node.Value);
     }
+
+    public override void Visit (Parameter node) {
+        if (node.Declarator.TypeAnnotation == null) {
+            throw new(
+                "Parameters must have a type annotation (either explicit" +
+                "or inherited. Their type cannot be infered."
+            );
+        }
+
+        Visit(node.Declarator.TypeAnnotation);
+
+        var boundParam = Binder.GetBoundNodeOrThrow<BoundParameter>(node);
+
+        if (TypeInfo.IsResolved(boundParam.Type)) return;
+
+        var boundAnnot = Binder.GetBoundNodeOrThrow<BoundTypeAnnotation>(
+            node.Declarator.TypeAnnotation
+        );
+
+        boundParam.Symbol.Type = boundAnnot.Symbol.Type;
+        boundParam.Type = boundParam.Symbol.Type;
+    }
 }

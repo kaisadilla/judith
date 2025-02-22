@@ -23,6 +23,7 @@ public enum SymbolKind {
     Function,
     MemberField,
     MemberFunction,
+    Parameter,
     Local,
 }
 

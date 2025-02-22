@@ -322,6 +322,16 @@ public class CompilerMessage {
                 line
             );
         }
+
+        public static CompilerMessage ParameterTypeMustBeSpecified (int line) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.Parser,
+                (int)MessageCode.ParameterTypeMustBeSpecified,
+                $"Parameters must specify their type.",
+                line
+            );
+        }
     }
 
     public static class Analyzers {

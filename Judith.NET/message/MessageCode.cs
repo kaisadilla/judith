@@ -39,6 +39,7 @@ public enum MessageCode {
     InvalidTopLevelStatement,
     InvalidIntegerLiteral,
     InvalidFloatLiteral,
+    ParameterTypeMustBeSpecified,
 
     // 3xxx - Analyzer errors
     // SymbolResolver

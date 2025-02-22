@@ -115,6 +115,7 @@ public class NativeFeatures {
         Symbol symbol = symbolTbl.AddSymbol(symbolKind, name);
         TypeInfo typeInfo = new(name, symbol.FullyQualifiedName);
         typeTbl.AddType(typeInfo);
+        symbol.Type = typeInfo;
 
         return typeInfo;
     }
