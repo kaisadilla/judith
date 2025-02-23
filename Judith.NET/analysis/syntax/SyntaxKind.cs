@@ -83,6 +83,8 @@ public enum SyntaxKind
     LocalDeclaratorList,
     LocalDeclarator,
 
+    MemberField,
+
     P_PrintStatement,
 }
 

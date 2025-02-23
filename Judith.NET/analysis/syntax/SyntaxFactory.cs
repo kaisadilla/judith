@@ -26,6 +26,30 @@ public static class SyntaxFactory {
         return funcItem;
     }
 
+    public static StructTypeDefinition StructTypeDefinition (
+        Token? hidToken,
+        Token typedefToken,
+        Token structToken,
+        Identifier identifier,
+        List<MemberField> memberFields,
+        Token endToken
+    ) {
+        var isHidden = hidToken != null;
+
+        var structTypedef = new StructTypeDefinition(
+            isHidden, identifier, memberFields
+        ) {
+            TypedefToken = typedefToken,
+            StructToken = structToken,
+            EndToken = endToken,
+        };
+
+        structTypedef.SetSpan(new(typedefToken.Start, endToken.End));
+        structTypedef.SetLine(typedefToken.Line);
+
+        return structTypedef;
+    }
+
     public static BlockStatement BlockStatement (
         Token? openingToken, List<SyntaxNode> statements, Token closingToken
     ) {
@@ -427,6 +451,53 @@ public static class SyntaxFactory {
         }
 
         return matchCase;
+    }
+
+    public static MemberField MemberField (
+        Token? accessToken,
+        Token? staticToken,
+        Token? mutableToken,
+        Identifier identifier,
+        TypeAnnotation typeAnnotation,
+        EqualsValueClause? initializer
+    ) {
+        MemberAccessKind access = accessToken?.Kind switch {
+            TokenKind.KwPub => MemberAccessKind.Public,
+            TokenKind.KwHid => MemberAccessKind.Hidden,
+            _ => MemberAccessKind.ReadOnly,
+        };
+
+        bool isStatic = staticToken != null;
+        bool isMutable = mutableToken != null;
+
+        var memberField = new MemberField(
+            access, isStatic, isMutable, identifier, typeAnnotation, initializer
+        ) {
+            AccessToken = accessToken,
+            StaticToken = staticToken,
+            MutableToken = mutableToken,
+        };
+
+        int start = true switch {
+            true when accessToken != null => accessToken.Start,
+            true when staticToken != null => staticToken.Start,
+            true when mutableToken != null => mutableToken.Start,
+            _ => identifier.Span.Start,
+        };
+
+        int line = true switch {
+            true when accessToken != null => accessToken.Line,
+            true when staticToken != null => staticToken.Line,
+            true when mutableToken != null => mutableToken.Line,
+            _ => identifier.Line,
+        };
+
+        int end = initializer?.Span.End ?? typeAnnotation.Span.End;
+
+        memberField.SetSpan(new(start, end));
+        memberField.SetLine(line);
+
+        return memberField;
     }
 
     #region Debug statements

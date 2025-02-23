@@ -27,7 +27,14 @@ public class CompilerUnitBuilder {
         foreach (var node in _nodes) {
             switch (node.Kind) {
                 case SyntaxKind.FunctionDefinition:
-                    topLevelItems.Add(CastOrThrow<FunctionDefinition>(node));
+                case SyntaxKind.UserTypeDefinition:
+                case SyntaxKind.AliasTypeDefinition:
+                case SyntaxKind.UnionTypeDefinition:
+                case SyntaxKind.SetTypeDefinition:
+                case SyntaxKind.StructTypeDefinition:
+                case SyntaxKind.InterfaceTypeDefinition:
+                case SyntaxKind.ClassTypeDefinition:
+                    topLevelItems.Add(CastOrThrow<Item>(node));
                     break;
                 default:
                     implicitFunctionNodes.Add(node);

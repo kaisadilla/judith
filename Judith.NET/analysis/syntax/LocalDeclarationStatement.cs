@@ -18,7 +18,8 @@ public class LocalDeclarationStatement : Statement {
     public LocalDeclarationStatement (
         LocalDeclaratorList declaratorList, EqualsValueClause? initializer
     )
-        : base(SyntaxKind.LocalDeclarationStatement) {
+        : base(SyntaxKind.LocalDeclarationStatement)
+    {
         DeclaratorList = declaratorList;
         Initializer = initializer;
 

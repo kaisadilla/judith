@@ -40,6 +40,16 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
         };
     }
 
+    public override object? Visit (StructTypeDefinition node) {
+        return new {
+            Name = nameof(StructTypeDefinition),
+            node.IsHidden,
+            Identifier = Visit(node.Identifier),
+            MemberFields = node.MemberFields.Select(f => Visit(f)),
+            Semantics = GetBoundOrNull(node),
+        };
+    }
+
     public override object Visit (BlockStatement node) {
         return new {
             Name = nameof(BlockStatement),
@@ -298,12 +308,14 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (ArgumentList node) {
         return new {
+            Name = nameof(ArgumentList),
             Arguments = node.Arguments.Select(a => Visit(a)),
         };
     }
 
     public override object Visit (Argument node) {
         return new {
+            Name = nameof(Argument),
             Expression = Visit(node.Expression),
         };
     }
@@ -318,6 +330,19 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
         };
     }
 
+    public override object? Visit (MemberField node) {
+        return new {
+            Name = nameof(MemberField),
+            node.Access,
+            node.IsStatic,
+            node.IsMutable,
+            Identifier = Visit(node.Identifier),
+            TypeAnnotation = Visit(node.TypeAnnotation),
+            Initializer = VisitIfNotNull(node.Initializer),
+            Semantics = GetBoundOrNull(node),
+        };
+    }
+
     public override object Visit (P_PrintStatement node) {
         return new {
             Name = nameof(P_PrintStatement),
@@ -327,11 +352,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
     }
 
     #region Helper methdods
-    private object? VisitIfNotNull (SyntaxNode? node) {
-        return node != null ? Visit(node) : null;
-    }
 
-    private object? GetBoundOrNull (SyntaxNode? node) {
+    private object? GetBoundOrNull (SyntaxNode node) {
         if (_cmp.Binder.TryGetBoundNode(node, out BoundNode? boundNode) == false) {
             return null;
         }

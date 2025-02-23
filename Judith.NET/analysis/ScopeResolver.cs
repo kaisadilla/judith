@@ -42,6 +42,12 @@ public class ScopeResolver {
         Current = boundFuncDef.Scope;
     }
 
+    public void BeginScope (StructTypeDefinition node) {
+        var boundNode = GetBoundNodeOrThrow<BoundStructTypeDefinition>(node);
+
+        Current = boundNode.Scope;
+    }
+
     public void BeginThenScope (IfExpression ifExpr) {
         var boundIfExpr = GetBoundNodeOrThrow<BoundIfExpression>(ifExpr);
 

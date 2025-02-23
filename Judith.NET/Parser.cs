@@ -188,8 +188,10 @@ public class Parser {
             hidable = funcDef;
             return true;
         }
-        
-        // TODO: TypeDefinition
+        else if (TryConsumeTypedef(hidToken, out TypeDefinition? typedef)) {
+            hidable = typedef;
+            return true;
+        }
 
         hidable = null;
         return false;
@@ -219,6 +221,54 @@ public class Parser {
 
         funcDef = SF.FunctionDefinition(
             hidToken, funcToken, identifier, parameters, returnType, body
+        );
+        return true;
+    }
+
+    private bool TryConsumeTypedef (
+        Token? hidToken, [NotNullWhen(true)] out TypeDefinition? typedef
+    ) {
+        if (TryConsume(TokenKind.KwTypedef, out Token? typedefToken) == false) {
+            typedef = null;
+            return false;
+        }
+
+        if (TryConsumeStructTypedef(
+            hidToken, typedefToken, out StructTypeDefinition? structTypedef
+        )) {
+            typedef = structTypedef;
+            return true;
+        }
+
+        throw Error(CompilerMessage.Parser.UnexpectedToken(Peek().Line, Peek()));
+    }
+
+    private bool TryConsumeStructTypedef (
+        Token? hidToken,
+        Token typedefToken,
+        [NotNullWhen(true)] out StructTypeDefinition? structTypedef
+    ) {
+        if (TryConsume(TokenKind.KwStruct, out Token? structToken) == false) {
+            structTypedef = null;
+            return false;
+        }
+
+        if (TryConsumeIdentifier(out Identifier? id) == false) {
+            throw Error(CompilerMessage.Parser.IdentifierExpected(Peek().Line));
+        }
+
+        List<MemberField> memberFields = new();
+
+        while (TryConsumeMemberField(out MemberField? field)) {
+            memberFields.Add(field);
+        }
+
+        if (TryConsume(TokenKind.KwEnd, out Token? endToken) == false) {
+            throw Error(CompilerMessage.Parser.EndExpected(Peek().Line));
+        }
+
+        structTypedef = SF.StructTypeDefinition(
+            hidToken, typedefToken, structToken, id, memberFields, endToken
         );
         return true;
     }
@@ -743,7 +793,37 @@ public class Parser {
             return true;
         }
 
-        return TryConsumeCallExpression(out expr);
+        return TryConsumePrimary(out expr);
+    }
+
+    private bool TryConsumePrimary ([NotNullWhen(true)] out Expression? expr) {
+        if (TryConsumeGroupExpression(out expr)) return true;
+        if (TryConsumeMemberAccessExpression(out expr)) return true;
+        if (TryConsumeCallExpression(out expr)) return true;
+        if (TryConsumeLiteralExpression(out expr)) return true;
+        if (TryConsumeIdentifierExpression(out expr)) return true;
+
+        expr = null;
+        return false;
+    }
+
+    // This always has the highest precedence, and acts as a primary.
+    private bool TryConsumeGroupExpression ([NotNullWhen(true)] out Expression? expr) {
+        if (TryConsume(TokenKind.LeftParen, out Token? leftParenToken) == false) {
+            expr = null;
+            return false;
+        }
+
+        if (TryConsumeExpression(out expr) == false) {
+            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+        }
+
+        if (TryConsume(TokenKind.RightParen, out Token? rightParenToken) == false) {
+            throw Error(CompilerMessage.Parser.RightParenExpected(Peek().Line));
+        }
+
+        expr = SF.GroupExpression(leftParenToken, expr, rightParenToken);
+        return true;
     }
 
     // "(" arglist? ")"
@@ -781,34 +861,6 @@ public class Parser {
 
         expr = leftExpr;
         return true;
-    }
-
-    // This always has the highest precedence, and acts as a primary.
-    private bool TryConsumeGroupExpression ([NotNullWhen(true)] out Expression? expr) {
-        if (TryConsume(TokenKind.LeftParen, out Token? leftParenToken) == false) {
-            expr = null;
-            return false;
-        }
-
-        if (TryConsumeExpression(out expr) == false) {
-            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
-        }
-
-        if (TryConsume(TokenKind.RightParen, out Token? rightParenToken) == false) {
-            throw Error(CompilerMessage.Parser.RightParenExpected(Peek().Line));
-        }
-
-        expr = SF.GroupExpression(leftParenToken, expr, rightParenToken);
-        return true;
-    }
-
-    private bool TryConsumePrimary ([NotNullWhen(true)] out Expression? expr) {
-        if (TryConsumeGroupExpression(out expr)) return true;
-        if (TryConsumeLiteralExpression(out expr)) return true;
-        if (TryConsumeIdentifierExpression(out expr)) return true;
-
-        expr = null;
-        return false;
     }
 
     private bool TryConsumeIdentifierExpression (
@@ -1000,7 +1052,7 @@ public class Parser {
         }
 
         typeAnnotation = SF.TypeAnnotation(colonToken, identifier);
-        return false;
+        return true;
     }
 
     private bool TryConsumeOperator (
@@ -1094,38 +1146,6 @@ public class Parser {
         return true;
     }
 
-    private bool TryConsumeMatchCase ([NotNullWhen(true)] out MatchCase? matchCase) {
-        List<Expression> tests = new();
-
-        // If "else" is matched, this is the default case and we don't need to
-        // try to get patterns. If it doesn't, then one or more patterns
-        // (separated by commas) must appear next.
-        if (TryConsume(TokenKind.KwElse, out Token? elseToken) == false) {
-            while (TryConsumeLiteralExpression(out Expression? expr)) {
-                tests.Add(expr);
-
-                // After each literal, there must be a comma for a subsequent
-                // literal to be a valid token.
-                if (Match(TokenKind.Comma) == false) {
-                    break;
-                }
-            }
-        }
-
-        if (elseToken == null && tests.Count == 0) {
-            matchCase = null;
-            return false;
-        }
-
-        TokenKind? then = elseToken == null ? TokenKind.KwThen : null;
-        if (TryConsumeBodyStatement(then, out BodyStatement? consequent) == false) {
-            throw Error(CompilerMessage.Parser.BodyExpected(Peek().Line));
-        }
-
-        matchCase = SF.MatchCase(elseToken, tests, consequent);
-        return true;
-    }
-
     private bool TryConsumeArgumentList ([NotNullWhen(true)] out ArgumentList? argList) {
         if (TryConsume(TokenKind.LeftParen, out Token? leftParenToken) == false) {
             argList = null;
@@ -1159,6 +1179,60 @@ public class Parser {
         }
 
         argument = SF.Argument(expr);
+        return true;
+    }
+
+    private bool TryConsumeMatchCase ([NotNullWhen(true)] out MatchCase? matchCase) {
+        List<Expression> tests = new();
+
+        // If "else" is matched, this is the default case and we don't need to
+        // try to get patterns. If it doesn't, then one or more patterns
+        // (separated by commas) must appear next.
+        if (TryConsume(TokenKind.KwElse, out Token? elseToken) == false) {
+            while (TryConsumeLiteralExpression(out Expression? expr)) {
+                tests.Add(expr);
+
+                // After each literal, there must be a comma for a subsequent
+                // literal to be a valid token.
+                if (Match(TokenKind.Comma) == false) {
+                    break;
+                }
+            }
+        }
+
+        if (elseToken == null && tests.Count == 0) {
+            matchCase = null;
+            return false;
+        }
+
+        TokenKind? then = elseToken == null ? TokenKind.KwThen : null;
+        if (TryConsumeBodyStatement(then, out BodyStatement? consequent) == false) {
+            throw Error(CompilerMessage.Parser.BodyExpected(Peek().Line));
+        }
+
+        matchCase = SF.MatchCase(elseToken, tests, consequent);
+        return true;
+    }
+
+    private bool TryConsumeMemberField ([NotNullWhen(true)] out MemberField? field) {
+        TryConsume(out Token? accessToken, TokenKind.KwPub, TokenKind.KwHid);
+        TryConsume(TokenKind.KwStatic, out Token? staticToken);
+        TryConsume(TokenKind.KwMut, out Token? mutToken);
+
+        if (TryConsumeIdentifier(out Identifier? id) == false) {
+            field = null;
+            return false;
+        }
+
+        if (TryConsumeTypeAnnotation(out TypeAnnotation? typeAnnotation) == false) {
+            throw Error(CompilerMessage.Parser.TypeAnnotationExpected(Peek().Line));
+        }
+
+        TryConsumeEqualsValueClause(out EqualsValueClause? evc);
+
+        field = SF.MemberField(
+            accessToken, staticToken, mutToken, id, typeAnnotation, evc
+        );
         return true;
     }
 

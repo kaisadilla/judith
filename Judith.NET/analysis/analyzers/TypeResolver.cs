@@ -22,6 +22,8 @@ public class TypeResolver : SyntaxVisitor {
 
     private Binder Binder => _cmp.Binder;
 
+    private List<SyntaxNode> incompleteNodes = new();
+
     public TypeResolver (Compilation cmp) {
         _cmp = cmp;
         _scope = new(_cmp.Binder, _cmp.SymbolTable);
@@ -35,12 +37,25 @@ public class TypeResolver : SyntaxVisitor {
         if (unit.ImplicitFunction != null) Visit(unit.ImplicitFunction);
     }
 
+    public void Reanalyze () {
+        List<SyntaxNode> oldIncompleteNodes = new(incompleteNodes);
+
+        foreach (var node in oldIncompleteNodes) {
+            Visit(node);
+        }
+
+        // TODO: Check that something was done.
+    }
+
     public override void Visit (FunctionDefinition node) {
         var boundFuncDef = Binder.GetBoundNodeOrThrow<BoundFunctionDefinition>(node);
 
+        VisitIfNotNull(node.ReturnTypeAnnotation);
+
+        _scope.BeginScope(node);
         Visit(node.Body);
         Visit(node.Parameters);
-        VisitIfNotNull(node.ReturnTypeAnnotation);
+        _scope.EndScope();
 
         if (TypeInfo.IsResolved(boundFuncDef.ReturnType)) return;
 
@@ -64,12 +79,44 @@ public class TypeResolver : SyntaxVisitor {
         }
     }
 
+    public override void Visit (StructTypeDefinition node) {
+        var boundNode = Binder.GetBoundNodeOrThrow<BoundStructTypeDefinition>(node);
+
+        _scope.BeginScope(node);
+        Visit(node.MemberFields);
+        _scope.EndScope();
+    }
+
     public override void Visit (LocalDeclarationStatement node) {
         if (node.Initializer != null) {
             Visit(node.Initializer);
         }
 
         _cmp.Binder.BindLocalDeclarationStatement(node);
+    }
+
+    public override void Visit (ReturnStatement node) {
+        var boundRetStmt = _cmp.Binder.BindReturnStatement(node);
+
+        if (node.Expression == null) {
+            boundRetStmt.Type = TypeInfo.VoidType;
+        }
+        else {
+            Visit(node.Expression);
+
+            var boundExpr = _cmp.Binder.GetBoundNodeOrThrow<BoundExpression>(node.Expression);
+
+            boundRetStmt.Type = boundExpr.Type;
+        }
+    }
+
+    public override void Visit (YieldStatement node) {
+        var boundYieldStmt = _cmp.Binder.BindYieldStatement(node);
+
+        Visit(node.Expression);
+
+        var boundExpr = _cmp.Binder.GetBoundNodeOrThrow<BoundExpression>(node.Expression);
+        boundYieldStmt.Type = boundExpr.Type;
     }
 
     public override void Visit (IfExpression node) {
@@ -167,5 +214,19 @@ public class TypeResolver : SyntaxVisitor {
 
         boundParam.Symbol.Type = boundAnnot.Symbol.Type;
         boundParam.Type = boundParam.Symbol.Type;
+    }
+
+    public override void Visit (MemberField node) {
+        var boundNode = Binder.GetBoundNodeOrThrow<BoundMemberField>(node);
+        if (TypeInfo.IsResolved(boundNode.Type)) return;
+
+        Visit(node.TypeAnnotation);
+
+        var boundAnnot = Binder.GetBoundNodeOrThrow<BoundTypeAnnotation>(
+            node.TypeAnnotation
+        );
+
+        boundNode.Symbol.Type = boundAnnot.Symbol.Type;
+        boundNode.Type = boundNode.Symbol.Type;
     }
 }

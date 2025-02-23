@@ -55,7 +55,7 @@ alias_type_def          > IDENTIFIER "=" access_expr
 set_type_def            > "set" IDENTIFIER logical_expr+ "end"
                         ;
 
-struct_type_def         > "struct" IDENTIFIER ( access_expr | (IDENTIFIER "?"? type_annotation ( "=" logical_expr )? ) )*
+struct_type_def         > "struct" IDENTIFIER member* "end" -- every member declaration is valid syntax, but not necessarily semantically valid.
                         ;
 
 interface_type_def      > "interface" IDENTIFIER ( symbol_def | method_def | method_decl )* "end"
@@ -64,7 +64,7 @@ interface_type_def      > "interface" IDENTIFIER ( symbol_def | method_def | met
 class_type_def          > "class" IDENTIFIER class_member* "end"
                         ;
 
-class_member            > symbol_def
+member                  > symbol_def
                         | memb_field_def
                         | memb_method_def
                         | memb_ctor_def
@@ -151,8 +151,8 @@ when_expr               > statement "when" expression
 range_expr              > assignment_expr ".." assignment_expr -- You cannot concatenate ranges (i.e. 3..5..9) because ".." maps to Range and Range doesn't accept another Range in its constructor.
                         ;
 
-assignment_expr         > access_expr "=" logical_expr
-                        | logical_expr
+assignment_expr         > access_expr "=" assignment_expr
+                        | or_logical_expr
                         ;
 
 or_logical_expr         > boolean_expr ( "or" boolean_expr )*
@@ -170,35 +170,46 @@ addition_expr           > mult_expr ( ( "+" | "-" ) mult_expr )*
 mult_expr               > unary_left ( ( "*" | "/" | perc_operator ) unary_left )*
                         ;
 
+null_or_expr            > call_expr ( "??" call_expr )*
+                        ;
+
 unary_left              > ( "not" | "-" | "~" ) unary_left
                         | null_or_expr
                         ;
 
-null_or_expr            > call_expr ( "??" call_expr )*
-                        ;
-
-call_expr               > access_expr ( "(" arg_list? ")" )?
+primary_expr            > cast_expr
                         | access_expr
+                        | call_expr
+                        | object_init_expr
+                        | template_identifier_expr
+                        | identifier_expr
+                        | literal_expr
+                        | group_expr
                         ;
 
-access_expr             > cast_expr? ( ( "." | "::" ) cast_expr )+
-                        | cast_expr
+cast_expr               > primary_expr ( ( ":" | ":?" ) primary_expr )*
                         ;
 
-cast_expr               > template_identifier_expr ( ( ":" | ":?" ) template_identifier_expr )*
+access_expr             > primary_expr? ( ( "." | "::" ) identifier_expr )+
+                        | primary_expr
+                        ;
+
+call_expr               > primary_expr ( "(" arg_list? ")" )?
+                        ;
+
+object_init_expr        > primary_expr? "{" (IDENTIFIER "=" expression)* "}"
                         ;
 
 template_identifier_expr> primary_expr ( "<" template_arg_list ">" )?
-                        ;
-
-primary_expr            > identifier_expr
-                        | literal_expr
                         ;
 
 identifier_expr         > IDENTIFIER
                         ;
 
 literal_expr            > literal
+                        ;
+
+group_expr              > "(" expression ")"
                         ;
 
 literal                 > NUMBER

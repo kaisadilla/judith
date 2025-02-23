@@ -17,7 +17,7 @@ public enum MessageCode {
     // 2xxx - Parsing errors
     UnexpectedToken = 2_000,
     IdentifierExpected,
-    TypeExpected,
+    TypeAnnotationExpected,
     LeftParenExpected,
     RightParenExpected,
     RightCurlyBracketExpected,

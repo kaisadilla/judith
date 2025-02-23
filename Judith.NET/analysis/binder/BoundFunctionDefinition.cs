@@ -20,7 +20,9 @@ public class BoundFunctionDefinition : BoundNode {
 
     public BoundFunctionDefinition (
         FunctionDefinition node, Symbol symbol, SymbolTable scope
-    ) : base(node) {
+    )
+        : base(node)
+    {
         Symbol = symbol;
         Scope = scope;
     }

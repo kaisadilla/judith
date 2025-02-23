@@ -102,5 +102,10 @@ void GenerateDebugFiles () {
     var semanticAst = new AstWithSemanticsPrinter(cmp).Visit(cu);
     string semanticAstStr = JsonConvert.SerializeObject(semanticAst, Formatting.Indented);
     File.WriteAllText(AppContext.BaseDirectory + "/res/test.semantic-ast.json", semanticAstStr);
+
+    var nodeTypes = new AstTypePrinter(cmp);
+    nodeTypes.Analyze();
+    string nodeTypeStr = string.Join("\n", nodeTypes.TypedNodes);
+    File.WriteAllText(AppContext.BaseDirectory + "/res/test.node-types.txt", nodeTypeStr);
 }
 #endregion

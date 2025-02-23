@@ -89,12 +89,12 @@ public class CompilerMessage {
             );
         }
 
-        public static CompilerMessage TypeExpected (int line) {
+        public static CompilerMessage TypeAnnotationExpected (int line) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
-                (int)MessageCode.TypeExpected,
-                $"Type expected.",
+                (int)MessageCode.TypeAnnotationExpected,
+                $"Type annotation expected.",
                 line
             );
         }

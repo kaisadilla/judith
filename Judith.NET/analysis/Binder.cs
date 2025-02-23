@@ -57,14 +57,27 @@ public class Binder {
     public BoundFunctionDefinition BindFunctionDefinition (
         FunctionDefinition funcDef, Symbol symbol, SymbolTable scope
     ) {
-        if (TryGetBoundNode(funcDef, out BoundFunctionDefinition? boundFuncDef)) {
-            return boundFuncDef;
+        if (TryGetBoundNode(
+            funcDef, out BoundFunctionDefinition? boundFuncDef
+        ) == false) {
+            boundFuncDef = new(funcDef, symbol, scope);
+            BoundNodes[funcDef] = boundFuncDef;
         }
 
-        boundFuncDef = new(funcDef, symbol, scope);
-        BoundNodes[funcDef] = boundFuncDef;
-
         return boundFuncDef;
+    }
+
+    public BoundStructTypeDefinition BindStructTypeDefinition (
+        StructTypeDefinition structTypedef, Symbol symbol, SymbolTable scope
+    ) {
+        if (TryGetBoundNode(
+            structTypedef, out BoundStructTypeDefinition? boundStructTypeDef
+        ) == false) {
+            boundStructTypeDef = new(structTypedef, symbol, scope);
+            BoundNodes[structTypedef] = boundStructTypeDef;
+        }
+
+        return boundStructTypeDef;
     }
 
     public BoundBlockStatement BindBlockStatement (BlockStatement blockStmt) {
@@ -107,6 +120,24 @@ public class Binder {
         }
 
         return boundLocalDeclStmt;
+    }
+
+    public BoundReturnStatement BindReturnStatement (ReturnStatement returnStmt) {
+        if (TryGetBoundNode(returnStmt, out BoundReturnStatement? boundReturnStmt) == false) {
+            boundReturnStmt = new(returnStmt);
+            BoundNodes[returnStmt] = boundReturnStmt;
+        }
+
+        return boundReturnStmt;
+    }
+
+    public BoundYieldStatement BindYieldStatement (YieldStatement yieldStmt) {
+        if (TryGetBoundNode(yieldStmt, out BoundYieldStatement? boundYieldStmt) == false) {
+            boundYieldStmt = new(yieldStmt);
+            BoundNodes[yieldStmt] = boundYieldStmt;
+        }
+
+        return boundYieldStmt;
     }
 
     public BoundIfExpression BindIfExpression (
@@ -274,6 +305,7 @@ public class Binder {
 
         return boundTypeAnnt;
     }
+
     public BoundParameter BindParameter (Parameter param, Symbol symbol) {
         if (TryGetBoundNode(param, out BoundParameter? boundParam) == false) {
             boundParam = new(param, symbol);
@@ -281,6 +313,15 @@ public class Binder {
         }
 
         return boundParam;
+    }
+
+    public BoundMemberField BindMemberField (MemberField field, Symbol symbol) {
+        if (TryGetBoundNode(field, out BoundMemberField? boundMemberField) == false) {
+            boundMemberField = new(field, symbol);
+            BoundNodes[field] = boundMemberField;
+        }
+
+        return boundMemberField;
     }
 
     #region Resolve literals
@@ -366,7 +407,7 @@ public class Binder {
                     value = 0;
                 }
 
-                bound = new(expr, _cmp.Native.Types.Num, new((double)value)); // F64
+                bound = new(expr, _cmp.Native.Types.Num, new((double)value)); // TODO: F64
             }
             else if (suffix == "f32") {
                 try {
@@ -379,13 +420,13 @@ public class Binder {
                     value = 0;
                 }
 
-                bound = new(expr, _cmp.Native.Types.Num, new((double)value)); // F32
+                bound = new(expr, _cmp.Native.Types.F32, new((double)value));
             }
             else {
                 Messages.Add(CompilerMessage.Analyzers.NumberSuffixCannotBeUsedForDecimal(
                     suffix, expr.Literal.Line
                 ));
-                bound = new(expr, _cmp.Native.Types.Num, new(0d)); // F64
+                bound = new(expr, _cmp.Native.Types.F64, new(0d));
             }
 
         }
@@ -412,22 +453,22 @@ public class Binder {
 
                 // suffixes "i64", "i" and null are always ok. else:
                 if (suffix == "u64" || suffix == "u") {
-                    bound = new(expr, _cmp.Native.Types.Num, new((double)value)); // U64 / (ulong)
+                    bound = new(expr, _cmp.Native.Types.Ui64, new((ulong)value));
                 }
-                else if (suffix == "i32") {
+                else if (suffix == "u32") {
                     CheckUnsignedIntegerSize(value, int.MaxValue, "U32");
-                    bound = new(expr, _cmp.Native.Types.Num, new((double)value)); // U32 / (ulong)
+                    bound = new(expr, _cmp.Native.Types.Ui32, new((ulong)value));
                 }
-                else if (suffix == "i16") {
+                else if (suffix == "u16") {
                     CheckUnsignedIntegerSize(value, int.MaxValue, "U16");
-                    bound = new(expr, _cmp.Native.Types.Num, new((double)value)); // U16 / (ulong)
+                    bound = new(expr, _cmp.Native.Types.Ui16, new((ulong)value));
                 }
-                else if (suffix == "i8") {
+                else if (suffix == "u8") {
                     CheckUnsignedIntegerSize(value, int.MaxValue, "U8");
-                    bound = new(expr, _cmp.Native.Types.Num, new((double)value)); // U8 / (ulong)
+                    bound = new(expr, _cmp.Native.Types.Ui8, new((ulong)value));
                 }
                 else {
-                    bound = new(expr, _cmp.Native.Types.Num, new((double)value)); //GetSuffixTypeInfo(suffix) / (ulong)
+                    bound = new(expr, GetSuffixTypeInfo(suffix), new((ulong)value));
                 }
             }
             // Signed integer
@@ -451,22 +492,22 @@ public class Binder {
 
                 // suffixes "i64", "i" and null are always ok. else:
                 if (suffix == "i64" || suffix == "i" || suffix == null) {
-                    bound = new(expr, _cmp.Native.Types.Num, new((double)value)); // I64 / (long)
+                    bound = new(expr, _cmp.Native.Types.Num, new((double)value)); // TODO: I64, long.
                 }
                 else if (suffix == "i32") {
                     CheckIntegerSize(value, int.MaxValue, "I32");
-                    bound = new(expr, _cmp.Native.Types.Num, new((double)value)); // I32 / (long)
+                    bound = new(expr, _cmp.Native.Types.I32, new((long)value));
                 }
                 else if (suffix == "i16") {
                     CheckIntegerSize(value, short.MaxValue, "I16");
-                    bound = new(expr, _cmp.Native.Types.Num, new((double)value)); // I16 / (long)
+                    bound = new(expr, _cmp.Native.Types.I16, new((long)value));
                 }
                 else if (suffix == "i8") {
                     CheckIntegerSize(value, short.MaxValue, "I8");
-                    bound = new(expr, _cmp.Native.Types.Num, new((double)value)); // I8 / (long)
+                    bound = new(expr, _cmp.Native.Types.I8, new((long)value));
                 }
                 else {
-                    bound = new(expr, _cmp.Native.Types.Num, new((double)value)); // GetSuffixTypeInfo(suffix) / (long)
+                    bound = new(expr, GetSuffixTypeInfo(suffix), new((long)value));
                 }
             }
         }

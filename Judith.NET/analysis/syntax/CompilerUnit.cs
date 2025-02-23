@@ -25,6 +25,9 @@ public class CompilerUnit : SyntaxNode {
         FileName = fileName;
         TopLevelItems = topLevelItems;
         ImplicitFunction = implicitFunction;
+
+        Children.AddRange(TopLevelItems);
+        if (ImplicitFunction != null) Children.Add(ImplicitFunction);
     }
 
     public override void Accept (SyntaxVisitor visitor) {

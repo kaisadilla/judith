@@ -71,6 +71,20 @@ public class SimpleAstPrinter : SyntaxVisitor<List<string>> {
         return txt;
     }
 
+    public override List<string>? Visit (StructTypeDefinition node) {
+        List<string> txt = [];
+
+        txt.Add($"typedef struct (name: {node.Identifier.Name}) {{");
+
+        foreach (var member in node.MemberFields) {
+            AddNewline(txt, Visit(member), 1);
+        }
+
+        txt.Add("}");
+
+        return txt;
+    }
+
     public override List<string> Visit (BlockStatement node) {
         List<string> txt = [];
 
@@ -419,6 +433,25 @@ public class SimpleAstPrinter : SyntaxVisitor<List<string>> {
         AddNewline(txt, Visit(node.Consequent), 2);
         txt.Add("    ]");
         txt.Add("}");
+
+        return txt;
+    }
+
+    public override List<string>? Visit (MemberField node) {
+        List<string> txt = [$"member field (name: {node.Identifier.Name}, " +
+            $"access: {node.Access}, isStatic: {node.IsStatic}, isMutable: " +
+            $"{node.IsMutable}, type: "
+        ];
+
+        AddInline(txt, Visit(node.TypeAnnotation), 1);
+
+        if (node.Identifier != null) {
+            txt[^1] = ") = ";
+            AddInline(txt, Visit(node.Identifier), 1);
+        }
+        else {
+            txt[^1] = ")";
+        }
 
         return txt;
     }

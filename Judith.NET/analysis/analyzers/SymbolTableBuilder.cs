@@ -42,6 +42,18 @@ public class SymbolTableBuilder : SyntaxVisitor {
         _scope.EndScope(); // If this fails, something is wrong in CreateAnonymousInnerTable().
     }
 
+    public override void Visit (StructTypeDefinition node) {
+        string name = node.Identifier.Name;
+
+        var symbol = _scope.Current.AddSymbol(SymbolKind.StructType, name);
+        var scope = _scope.Current.CreateInnerTable(ScopeKind.StructSpace, symbol);
+        _cmp.Binder.BindStructTypeDefinition(node, symbol, scope);
+
+        _scope.BeginScope(scope);
+        Visit(node.MemberFields);
+        _scope.EndScope();
+    }
+
     public override void Visit (BlockStatement node) {
         // Block statements do not create symbols, but we bind them in this step anyway.
         _cmp.Binder.BindBlockStatement(node);
@@ -86,6 +98,7 @@ public class SymbolTableBuilder : SyntaxVisitor {
 
     public override void Visit (LocalDeclarator node) {
         var symbol = _scope.Current.AddSymbol(SymbolKind.Local, node.Identifier.Name);
+
         _cmp.Binder.BindLocalDeclarator(node, symbol);
     }
 
@@ -93,6 +106,15 @@ public class SymbolTableBuilder : SyntaxVisitor {
         var symbol = _scope.Current.AddSymbol(
             SymbolKind.Parameter, node.Declarator.Identifier.Name
         );
+
         _cmp.Binder.BindParameter(node, symbol);
+    }
+
+    public override void Visit (MemberField node) {
+        var symbol = _scope.Current.AddSymbol(
+            SymbolKind.MemberField, node.Identifier.Name
+        );
+
+        _cmp.Binder.BindMemberField(node, symbol);
     }
 }

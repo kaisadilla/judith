@@ -18,7 +18,7 @@ public enum SymbolKind {
     SetType,
     StructType,
     InterfaceType,
-    Class,
+    ClassType,
     Namespace,
     Function,
     MemberField,

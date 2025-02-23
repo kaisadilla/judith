@@ -14,28 +14,28 @@ public class NativeFeatures {
     /// </summary>
     public NativeFeatures (TypeTable typeTbl, SymbolTable symbolTbl) {
         Types = new() {
-            F32 = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, "F32"),
-            F64 = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, "F64"),
+            F32 = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, TypeKind.Primitive, "F32"),
+            F64 = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, TypeKind.Primitive, "F64"),
 
-            I8 = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, "I8"),
-            I16 = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, "I16"),
-            I32 = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, "I32"),
-            I64 = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, "I64"),
+            I8 = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, TypeKind.Primitive, "I8"),
+            I16 = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, TypeKind.Primitive, "I16"),
+            I32 = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, TypeKind.Primitive, "I32"),
+            I64 = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, TypeKind.Primitive, "I64"),
 
-            Ui8 = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, "Ui8"),
-            Ui16 = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, "Ui16"),
-            Ui32 = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, "Ui32"),
-            Ui64 = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, "Ui64"),
+            Ui8 = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, TypeKind.Primitive, "Ui8"),
+            Ui16 = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, TypeKind.Primitive, "Ui16"),
+            Ui32 = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, TypeKind.Primitive, "Ui32"),
+            Ui64 = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, TypeKind.Primitive, "Ui64"),
 
-            String = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, "String"),
-            Bool = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, "Bool"),
+            String = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, TypeKind.String, "String"),
+            Bool = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, TypeKind.Primitive, "Bool"),
 
-            Byte = AddNativeType(typeTbl, symbolTbl, SymbolKind.AliasType, "Byte"),
-            Int = AddNativeType(typeTbl, symbolTbl, SymbolKind.AliasType, "Int"),
-            Float = AddNativeType(typeTbl, symbolTbl, SymbolKind.AliasType, "Float"),
-            Num = AddNativeType(typeTbl, symbolTbl, SymbolKind.AliasType, "Num"),
+            Byte = AddNativeType(typeTbl, symbolTbl, SymbolKind.AliasType, TypeKind.Alias, "Byte"),
+            Int = AddNativeType(typeTbl, symbolTbl, SymbolKind.AliasType, TypeKind.Alias, "Int"),
+            Float = AddNativeType(typeTbl, symbolTbl, SymbolKind.AliasType, TypeKind.Alias, "Float"),
+            Num = AddNativeType(typeTbl, symbolTbl, SymbolKind.AliasType, TypeKind.Alias, "Num"),
 
-            Void = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, "Void"),
+            Void = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, TypeKind.Pseudo, "Void"),
         };
     }
 
@@ -110,10 +110,14 @@ public class NativeFeatures {
     }
 
     private static TypeInfo AddNativeType (
-        TypeTable typeTbl, SymbolTable symbolTbl, SymbolKind symbolKind, string name
+        TypeTable typeTbl,
+        SymbolTable symbolTbl,
+        SymbolKind symbolKind,
+        TypeKind typeKind,
+        string name
     ) {
         Symbol symbol = symbolTbl.AddSymbol(symbolKind, name);
-        TypeInfo typeInfo = new(name, symbol.FullyQualifiedName);
+        TypeInfo typeInfo = new(typeKind, name, symbol.FullyQualifiedName);
         typeTbl.AddType(typeInfo);
         symbol.Type = typeInfo;
 

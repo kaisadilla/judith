@@ -40,6 +40,8 @@ public class Compilation {
         Messages.Add(implicitNodeAnalyzer.Messages);
         if (Messages.HasErrors) return;
 
+        // TODO: -1. Evaluate wellformedness (semantically agnostic)
+
         // Add all the different symbols that exist in the program to the table,
         // and binds declarations to the symbols they create.
         SymbolTableBuilder symbolTableBuilder = new(this);

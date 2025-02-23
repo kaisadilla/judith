@@ -82,7 +82,14 @@ public enum TokenKind {
     KwGoto,
     KwFunc,
     KwGenerator,
+    KwTypedef,
+    KwStruct,
+    KwInterface,
+    KwClass,
     KwHid,
+    KwPub,
+    KwMut,
+    KwStatic,
 
     // Private keywords
     PkwPrint,

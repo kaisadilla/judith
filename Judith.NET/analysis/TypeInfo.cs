@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -7,27 +9,39 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.analysis;
 
+[JsonConverter(typeof(StringEnumConverter))]
+public enum TypeKind {
+    Unresolved,
+    Pseudo,
+    Primitive,
+    Alias,
+    String,
+    Struct,
+}
+
 public class TypeInfo {
-    public string Name { get; set; }
-    public string FullyQualifiedName { get; set; }
+    public TypeKind Kind { get; private init; }
+    public string Name { get; private init; }
+    public string FullyQualifiedName { get; private init; }
 
     public static TypeInfo UnresolvedType { get; private set; } = new(
-        "!Unresolved", "!Unresolved"
+        TypeKind.Unresolved, "!Unresolved", "!Unresolved"
     );
 
     public static TypeInfo VoidType { get; private set; } = new(
-        "Void", "Void"
+        TypeKind.Pseudo, "Void", "Void"
     );
 
     public static TypeInfo ErrorType { get; private set; } = new(
-        "<error-type>", "<error-type>"
+        TypeKind.Pseudo, "<error-type>", "<error-type>"
     );
 
     public static bool IsResolved ([NotNullWhen(true)] TypeInfo? typeInfo) {
         return typeInfo != null && typeInfo != UnresolvedType;
     }
 
-    public TypeInfo (string name, string fullyQualifiedName) {
+    public TypeInfo (TypeKind kind, string name, string fullyQualifiedName) {
+        Kind = kind;
         Name = name;
         FullyQualifiedName = fullyQualifiedName;
     }

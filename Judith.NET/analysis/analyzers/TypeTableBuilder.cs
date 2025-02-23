@@ -1,4 +1,5 @@
-﻿using Judith.NET.analysis.syntax;
+﻿using Judith.NET.analysis.binder;
+using Judith.NET.analysis.syntax;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,5 +23,26 @@ public class TypeTableBuilder : SyntaxVisitor {
         }
 
         if (unit.ImplicitFunction != null) Visit(unit.ImplicitFunction);
+    }
+
+    public override void Visit (StructTypeDefinition node) {
+        var boundNode = _cmp.Binder.GetBoundNodeOrThrow<BoundStructTypeDefinition>(node);
+
+        var type = new TypeInfo(
+            TypeKind.Struct,
+            boundNode.Symbol.Name,
+            boundNode.Symbol.FullyQualifiedName
+        );
+
+        _cmp.TypeTable.AddType(type);
+
+        _scope.BeginScope(node);
+        foreach (var field in node.MemberFields) {
+            Visit(field);
+        }
+        _scope.EndScope();
+
+        boundNode.Symbol.Type = type;
+        boundNode.Type = boundNode.Symbol.Type;
     }
 }

@@ -38,11 +38,7 @@ public abstract class SyntaxVisitor<TResult> {
     }
 
     public virtual TResult? VisitIfNotNull (SyntaxNode? node) {
-        if (node != null) {
-            return Visit(node);
-        }
-
-        return default;
+        return node != null ? Visit(node) : default;
     }
 
     //public virtual TResult? Visit (Expression node) => DefaultVisit(node);
@@ -51,6 +47,7 @@ public abstract class SyntaxVisitor<TResult> {
 
     public virtual TResult? Visit (CompilerUnit node) => VisitChildren(node);
     public virtual TResult? Visit (FunctionDefinition node) => VisitChildren(node);
+    public virtual TResult? Visit (StructTypeDefinition node) => VisitChildren(node);
 
     public virtual TResult? Visit (BlockStatement node) => VisitChildren(node);
     public virtual TResult? Visit (ArrowStatement node) => VisitChildren(node);
@@ -89,6 +86,8 @@ public abstract class SyntaxVisitor<TResult> {
     public virtual TResult? Visit (ArgumentList node) => VisitChildren(node);
     public virtual TResult? Visit (Argument node) => VisitChildren(node);
     public virtual TResult? Visit (MatchCase node) => VisitChildren(node);
+
+    public virtual TResult? Visit (MemberField node) => VisitChildren(node);
 
     public virtual TResult? Visit (P_PrintStatement node) => VisitChildren(node);
 }

@@ -261,11 +261,9 @@ const name: String = "Iulius"; -- a string of characters.
 --     expressed. For example, function signatures are indicated as:
 --     '(<parameters>) => <return_type>'. A function that doesn't return
 --     anything is expressed as () => Void.
--- Any: used to represent a value that can be used in any way. A value of this
---     type allows any operation at compile-time.
--- Unknown: used to represent a value whose type is not known. Unlike "Any",
---     "Unknown" doesn't allow any operation on itself other than checking its
---     type and certain methods available to all types (such as Unknown.str()).
+-- Unknown: used to represent a value whose type is not known. "Unknown" doesn't 
+--     allow any operation on itself other than checking its type and certain
+--     methods available to all types (such as Unknown.str()).
 -- Never: used to represent a type that can never occur. This type can appear
 --     when we've narrowed down an object's type until it cannot be any type
 --     at all. E.g. after exhausting all possible types of a union type.
@@ -1071,6 +1069,9 @@ typedef struct Employee
                 -- have the same type. In this case, both "salary" members exist.
 end
 
+-- structs have a default constructor that contains all of its fields in order:
+const p: Person = !("Kevin", 28, 'Germany', 103_000d);
+
 const employee: Employee = -- init
 employee.country -- Valid access, "country" is a member of Employee.
 employee.salary -- Type Num, this is the "salary" we defined in "Employee".
@@ -1743,6 +1744,7 @@ memberof(employee) -- returns the members of employee as Person, not as Employee
 -- brought by externally implemented interfaces) will not be returned by these
 -- operations.
 
+#endregion
 
 #region Directives
 -- Directives are a special subset of Judith. They act as a small extension that
