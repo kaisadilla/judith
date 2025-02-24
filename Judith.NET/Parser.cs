@@ -793,13 +793,83 @@ public class Parser {
             return true;
         }
 
-        return TryConsumePrimary(out expr);
+        return TryConsumeObjectInitializationExpression(out expr);
+    }
+
+    // primary_expr? obj_initializer
+    private bool TryConsumeObjectInitializationExpression (
+        [NotNullWhen(true)] out Expression? expr
+    ) {
+        // Because provider can be implicit (e.g. "{ num = 3, num2 = 5 }"), we
+        // can't discard an object initialization expresssion just yet.
+        TryConsumeCallExpression(out Expression? provider);
+
+        // If there's no initializer block, then whether this parse failed or
+        // succeeded depends on whether we found something as a provider.
+        if (TryConsumeObjectInitializer(out ObjectInitializer? objInit) == false) {
+            expr = provider;
+            return expr != null;
+        }
+
+        expr = SF.ObjectInitializationExpression(provider, objInit);
+        return true;
+    }
+
+    // "(" arglist? ")"
+    private bool TryConsumeCallExpression ([NotNullWhen(true)] out Expression? expr) {
+        if (TryConsumeAccessExpression(out Expression? leftExpr) == false) {
+            expr = null;
+            return false;
+        }
+
+        if (TryConsumeArgumentList(out ArgumentList? argList) == false) {
+            expr = leftExpr;
+            return true;
+        }
+
+        expr = SF.CallExpression(leftExpr, argList);
+        return true;
+    }
+
+    private bool TryConsumeAccessExpression ([NotNullWhen(true)] out Expression? expr) {
+        // Because member access can be implicit (e.g. ".name" or "::count"), we
+        // can't discard a member access just because we didn't find what it's
+        // accessing.
+        TryConsumePrimary(out Expression? leftExpr);
+
+        // Now, if we don't find a member access token:
+        if (Peek().Kind != TokenKind.Dot && Peek().Kind != TokenKind.DoubleColon) {
+            // IF we didn't find a provider, then we aren't parsing an expression
+            // that stems from this one:
+            if (leftExpr == null) {
+                expr = null;
+                return false;
+            }
+            // If we did, then that provider becomes the expression.
+            else {
+                expr = leftExpr;
+                return true;
+            }
+        }
+
+        while (TryConsumeOperator(
+            out Operator? op, TokenKind.Dot, TokenKind.DoubleColon
+        )) {
+            if (TryConsumePrimary(out Expression? rightExpr) == false) {
+                throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+            }
+
+            leftExpr = SF.AccessExpression(leftExpr, op, rightExpr);
+        }
+
+        if (leftExpr == null) throw new("Invalid flow.");
+
+        expr = leftExpr;
+        return true;
     }
 
     private bool TryConsumePrimary ([NotNullWhen(true)] out Expression? expr) {
         if (TryConsumeGroupExpression(out expr)) return true;
-        if (TryConsumeMemberAccessExpression(out expr)) return true;
-        if (TryConsumeCallExpression(out expr)) return true;
         if (TryConsumeLiteralExpression(out expr)) return true;
         if (TryConsumeIdentifierExpression(out expr)) return true;
 
@@ -823,43 +893,6 @@ public class Parser {
         }
 
         expr = SF.GroupExpression(leftParenToken, expr, rightParenToken);
-        return true;
-    }
-
-    // "(" arglist? ")"
-    private bool TryConsumeCallExpression ([NotNullWhen(true)] out Expression? expr) {
-        if (TryConsumeMemberAccessExpression(out Expression? leftExpr) == false) {
-            expr = null;
-            return false;
-        }
-
-        if (TryConsumeArgumentList(out ArgumentList? argList) == false) {
-            expr = leftExpr;
-            return true;
-        }
-
-        expr = SF.CallExpression(leftExpr, argList);
-        return true;
-    }
-
-    private bool TryConsumeMemberAccessExpression ([NotNullWhen(true)] out Expression? expr) {
-        // TODO: Replace with TemplateIdentifierExpression
-        if (TryConsumePrimary(out Expression? leftExpr) == false) {
-            expr = null;
-            return false;
-        }
-
-        while (TryConsumeOperator(
-            out Operator? op, TokenKind.Dot, TokenKind.DoubleColon
-        )) {
-            if (TryConsumeIdentifierExpression(out Expression? rightExpr) == false) {
-                throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
-            }
-
-            leftExpr = SF.AccessExpression(leftExpr, op, rightExpr);
-        }
-
-        expr = leftExpr;
         return true;
     }
 
@@ -1214,10 +1247,45 @@ public class Parser {
         return true;
     }
 
+    private bool TryConsumeObjectInitializer (
+        [NotNullWhen(true)] out ObjectInitializer? objInit
+    ) {
+        if (TryConsume(TokenKind.LeftCurlyBracket, out Token? leftBracket) == false) {
+            objInit = null;
+            return false;
+        }
+
+        List<AssignmentExpression> assignments = new();
+
+        do {
+            if (TryConsumeAssignmentExpression(out Expression? expr) == false
+                || expr.Kind != SyntaxKind.AssignmentExpression) {
+                throw Error(CompilerMessage.Parser.AssignmentExpressionExpected(
+                    Peek().Line
+                ));
+            }
+
+            if (expr is not AssignmentExpression assignment) {
+                throw new("Malformed assignment expression.");
+            }
+
+            assignments.Add(assignment);
+        }
+        while (Match(TokenKind.Comma) && Peek().Kind != TokenKind.RightCurlyBracket);
+
+        if (TryConsume(TokenKind.RightCurlyBracket, out Token? rightBracket) == false) {
+            throw Error(CompilerMessage.Parser.RightCurlyBracketExpected(Peek().Line));
+        }
+
+        objInit = SF.ObjectInitializer(leftBracket, assignments, rightBracket);
+        return true;
+    }
+
     private bool TryConsumeMemberField ([NotNullWhen(true)] out MemberField? field) {
         TryConsume(out Token? accessToken, TokenKind.KwPub, TokenKind.KwHid);
         TryConsume(TokenKind.KwStatic, out Token? staticToken);
         TryConsume(TokenKind.KwMut, out Token? mutToken);
+        TryConsume(TokenKind.KwConst, out Token? constToken);
 
         if (TryConsumeIdentifier(out Identifier? id) == false) {
             field = null;
@@ -1231,7 +1299,7 @@ public class Parser {
         TryConsumeEqualsValueClause(out EqualsValueClause? evc);
 
         field = SF.MemberField(
-            accessToken, staticToken, mutToken, id, typeAnnotation, evc
+            accessToken, staticToken, mutToken, constToken, id, typeAnnotation, evc
         );
         return true;
     }

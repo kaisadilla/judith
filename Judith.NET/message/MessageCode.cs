@@ -36,6 +36,7 @@ public enum MessageCode {
     HidableItemExpected,
     LocalDeclaratorExpected,
     LocalDeclaratorListExpected,
+    AssignmentExpressionExpected,
     InvalidTopLevelStatement,
     InvalidIntegerLiteral,
     InvalidFloatLiteral,

@@ -36,12 +36,57 @@ public class Symbol {
     public SymbolKind Kind { get; set; }
     public string Name { get; set; }
     public string FullyQualifiedName { get; set; }
-    public TypeInfo? Type { get; set; }
+    public TypeInfo? Type { get; set; } // TODO: For functions, this is the type of the function signature (e.g. (Int, Int) => Void), not the return type, as that's determined by overloads.
 
-    public Symbol (SymbolTable table, SymbolKind kind, string name, string fullyQualifiedName) {
+    public Symbol (
+        SymbolTable table, SymbolKind kind, string name, string fullyQualifiedName
+    ) {
         Table = table;
         Kind = kind;
         Name = name;
         FullyQualifiedName = fullyQualifiedName;
+    }
+}
+
+public class FunctionSymbol : Symbol {
+    public List<TypeInfo> Overload { get; private init; } = new();
+    public TypeInfo? ReturnType { get; set; }
+
+    public FunctionSymbol (
+        SymbolTable table,
+        string name,
+        string fullyQualifiedName,
+        List<TypeInfo> overload,
+        TypeInfo? returnType
+    )
+        : base(table, SymbolKind.Function, name, fullyQualifiedName)
+    {
+        Overload = overload;
+        ReturnType = returnType;
+    }
+
+    /// <summary>
+    /// Returns true if the overload given matches the one in this symbol. If
+    /// either overload contains unresolved types, 
+    /// </summary>
+    /// <param name="overload">The type of each parameter, in order.</param>
+    public bool MatchesOverload (List<TypeInfo> overload) {
+        for (int i = 0; i < overload.Count; i++) {
+            if (overload[i] == TypeInfo.UnresolvedType) return false;
+            if (overload[i] != Overload[i]) return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Returns true if this function's overload types are all resolved.
+    /// </summary>
+    public bool IsResolved () {
+        foreach (var type in Overload) {
+            if (type == TypeInfo.UnresolvedType) return false;
+        }
+
+        return true;
     }
 }

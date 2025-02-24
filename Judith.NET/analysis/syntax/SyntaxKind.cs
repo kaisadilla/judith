@@ -63,9 +63,12 @@ public enum SyntaxKind
     LogicalBinaryExpression,
     BinaryExpression,
     LeftUnaryExpression,
-    CallExpression,
-    AccessExpression,
+
+    // Primary expressions
     GroupExpression,
+    AccessExpression,
+    ObjectInitializationExpression,
+    CallExpression,
     IdentifierExpression,
     LiteralExpression,
 
@@ -83,6 +86,7 @@ public enum SyntaxKind
     LocalDeclaratorList,
     LocalDeclarator,
 
+    ObjectInitializer,
     MemberField,
 
     P_PrintStatement,

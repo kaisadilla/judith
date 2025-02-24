@@ -55,7 +55,7 @@ public class Binder {
     }
 
     public BoundFunctionDefinition BindFunctionDefinition (
-        FunctionDefinition funcDef, Symbol symbol, SymbolTable scope
+        FunctionDefinition funcDef, FunctionSymbol symbol, SymbolTable scope
     ) {
         if (TryGetBoundNode(
             funcDef, out BoundFunctionDefinition? boundFuncDef
@@ -93,37 +93,19 @@ public class Binder {
         LocalDeclarationStatement localDeclStmt
     ) {
         if (TryGetBoundNode(
-            localDeclStmt,
-            out BoundLocalDeclarationStatement? boundLocalDeclStmt
+            localDeclStmt, out BoundLocalDeclarationStatement? boundLocalDeclStmt
         ) == false) {
             boundLocalDeclStmt = new(localDeclStmt);
             BoundNodes[localDeclStmt] = boundLocalDeclStmt;
-        }
-
-        TypeInfo implicitType = TypeInfo.UnresolvedType;
-        if (localDeclStmt.Initializer != null) {
-            if (TryGetBoundNode(localDeclStmt.Initializer.Value, out BoundExpression? expr)) {
-                if (TypeInfo.IsResolved(expr.Type)) implicitType = expr.Type;
-            }
-        }
-
-        foreach (var localDecl in localDeclStmt.DeclaratorList.Declarators) {
-            if (TryGetBoundNode(localDecl, out BoundLocalDeclarator? boundLocalDecl) == false) {
-                throw new Exception("Local declarator should be bound.");
-            }
-
-            if (TypeInfo.IsResolved(boundLocalDecl.Type) == false) {
-                ResolveLocalDeclarator(boundLocalDecl, implicitType);
-            }
-
-            implicitType = boundLocalDecl.Type ?? TypeInfo.UnresolvedType;
         }
 
         return boundLocalDeclStmt;
     }
 
     public BoundReturnStatement BindReturnStatement (ReturnStatement returnStmt) {
-        if (TryGetBoundNode(returnStmt, out BoundReturnStatement? boundReturnStmt) == false) {
+        if (TryGetBoundNode(
+            returnStmt, out BoundReturnStatement? boundReturnStmt) == false
+        ) {
             boundReturnStmt = new(returnStmt);
             BoundNodes[returnStmt] = boundReturnStmt;
         }
@@ -174,10 +156,6 @@ public class Binder {
             BoundNodes[assignmentExpr] = boundAssignmentExpr;
         }
 
-        if (boundAssignmentExpr.IsComplete == false) {
-            ResolveAssignmentExpression(boundAssignmentExpr);
-        }
-
         return boundAssignmentExpr;
     }
 
@@ -185,10 +163,6 @@ public class Binder {
         if (TryGetBoundNode(binaryExpr, out BoundBinaryExpression? boundBinaryExpr) == false) {
             boundBinaryExpr = new(binaryExpr);
             BoundNodes[binaryExpr] = boundBinaryExpr;
-        }
-
-        if (boundBinaryExpr.IsComplete == false) {
-            ResolveBinaryExpression(boundBinaryExpr);
         }
 
         return boundBinaryExpr;
@@ -200,10 +174,6 @@ public class Binder {
             BoundNodes[leftUnaryExpr] = boundLeftUnaryExpr;
         }
 
-        if (boundLeftUnaryExpr.IsComplete == false) {
-            ResolveLeftUnaryExpression(boundLeftUnaryExpr);
-        }
-
         return boundLeftUnaryExpr;
     }
 
@@ -211,10 +181,6 @@ public class Binder {
         if (TryGetBoundNode(callExpr, out BoundCallExpression? boundCallExpression) == false) {
             boundCallExpression = new(callExpr);
             BoundNodes[callExpr] = boundCallExpression;
-        }
-
-        if (boundCallExpression.IsComplete == false) {
-            ResolveCallExpression(boundCallExpression);
         }
 
         return boundCallExpression;
@@ -226,10 +192,6 @@ public class Binder {
             BoundNodes[groupExpr] = boundGroupExpr;
         }
 
-        if (boundGroupExpr.IsComplete == false) {
-            ResolveGroupExpression(boundGroupExpr);
-        }
-
         return boundGroupExpr;
     }
 
@@ -239,22 +201,6 @@ public class Binder {
         if (TryGetBoundNode(idExpr, out BoundIdentifierExpression? boundIdExpr) == false) {
             boundIdExpr = new(idExpr, symbol);
             BoundNodes[idExpr] = boundIdExpr;
-        }
-
-        if (boundIdExpr.IsComplete == false) {
-            ResolveIdentifierExpression(boundIdExpr);
-        }
-
-        return boundIdExpr;
-    }
-
-    public BoundIdentifierExpression BindIdentifierExpression (IdentifierExpression idExpr) {
-        if (TryGetBoundNode(idExpr, out BoundIdentifierExpression? boundIdExpr) == false) {
-            throw new Exception("IdentifierExpression should be bound.");
-        }
-
-        if (boundIdExpr.IsComplete == false) {
-            ResolveIdentifierExpression(boundIdExpr);
         }
 
         return boundIdExpr;
@@ -554,162 +500,29 @@ public class Binder {
     }
     #endregion
 
-    #region Resolve methods
-    private void ResolveBinaryExpression (BoundBinaryExpression boundBinaryExpr) {
-        switch (boundBinaryExpr.Node.Operator.OperatorKind) {
-            // Math - their type is determined by the operator function they call,
-            // except for natively defined operations (e.g. I64 + I64).
-            case OperatorKind.Add:
-            case OperatorKind.Subtract:
-            case OperatorKind.Multiply:
-            case OperatorKind.Divide:
-                ResolveMathOperation();
-                return;
 
-            // Comparisons - they always return bool.
-            case OperatorKind.Equals:
-            case OperatorKind.NotEquals:
-            case OperatorKind.Like:
-            case OperatorKind.ReferenceEquals:
-            case OperatorKind.ReferenceNotEquals:
-            case OperatorKind.LessThan:
-            case OperatorKind.LessThanOrEqualTo:
-            case OperatorKind.GreaterThan:
-            case OperatorKind.GreaterThanOrEqualTo:
-            case OperatorKind.LogicalAnd:
-            case OperatorKind.LogicalOr:
-                boundBinaryExpr.Type = GetTypeInfo("Bool");
-                return;
 
-            // Operators that aren't used in binary expressions:
-            case OperatorKind.Assignment:
-            case OperatorKind.MemberAccess:
-            case OperatorKind.ScopeResolution:
-            case OperatorKind.BitwiseNot:
-                throw new Exception(
-                    $"Invalid operator for a binary expression: " +
-                    $"'{boundBinaryExpr.Node.Operator.OperatorKind}'."
-                );
-        }
 
-        void ResolveMathOperation () {
-            var opKind = boundBinaryExpr.Node.Operator.OperatorKind;
+    /// <summary>
+    /// Returns the overload created by the parameter list given. Passing
+    /// unbound parameters to this method will not produce an error.
+    /// </summary>
+    /// <param name="paramList">The list of parameters forming the overload.</param>
+    /// <returns></returns>
+    public List<TypeInfo> GetOverload (ParameterList paramList) {
+        List<TypeInfo> signature = new();
 
-            TryGetBoundNode(boundBinaryExpr.Node.Left, out BoundExpression? boundLeft);
-            TryGetBoundNode(boundBinaryExpr.Node.Right, out BoundExpression? boundRight);
-
-            if (boundLeft == null 
-                || boundRight == null
-                || TypeInfo.IsResolved(boundLeft.Type) == false
-                || TypeInfo.IsResolved(boundRight.Type) == false
-            ) {
-                boundBinaryExpr.Type = TypeInfo.UnresolvedType;
-                return;
+        foreach (var param in paramList.Parameters) {
+            if (TryGetBoundNode(param, out BoundParameter? boundParam) == false) {
+                signature.Add(TypeInfo.UnresolvedType);
             }
-
-            if (
-                _cmp.Native.IsNumericType(boundLeft.Type)
-                && _cmp.Native.IsNumericType(boundRight.Type)
-            ) {
-                boundBinaryExpr.Type = _cmp.Native.CoalesceNumericTypes(
-                    boundLeft.Type, boundRight.Type
-                );
-                return;
-            }
-
-            // TODO: Implement and check defined operations and stuff.
-            if (boundLeft.Type == boundRight.Type) {
-                boundBinaryExpr.Type = boundLeft.Type;
-                return;
-            }
-
-            boundBinaryExpr.Type = TypeInfo.ErrorType;
-        }
-    }
-
-    private void ResolveAssignmentExpression (BoundAssignmentExpression boundAssignmentExpr) {
-        if (TryGetBoundNode(boundAssignmentExpr.Node.Right, out BoundExpression? boundExpr)) {
-            if (TypeInfo.IsResolved(boundExpr.Type)) {
-                boundAssignmentExpr.Type = boundExpr.Type;
-                return;
+            else {
+                signature.Add(boundParam.Type ?? TypeInfo.UnresolvedType);
             }
         }
 
-        boundAssignmentExpr.Type = TypeInfo.UnresolvedType;
+        return signature;
     }
-
-    private void ResolveLeftUnaryExpression (BoundLeftUnaryExpression boundLeftUnaryExpr) {
-        if (TryGetBoundNode(boundLeftUnaryExpr.Node.Expression, out BoundExpression? boundExpr)) {
-            if (TypeInfo.IsResolved(boundExpr.Type)) {
-                boundLeftUnaryExpr.Type = boundExpr.Type;
-                return;
-            }
-        }
-
-        boundLeftUnaryExpr.Type = TypeInfo.UnresolvedType;
-    }
-
-    private void ResolveCallExpression (BoundCallExpression boundCallExpr) {
-        if (TryGetBoundNode(boundCallExpr.Node.Callee, out BoundExpression? boundExpr)) {
-            if (TypeInfo.IsResolved(boundExpr.Type)) {
-                boundCallExpr.Type = boundExpr.Type;
-                return;
-            }
-        }
-
-        boundCallExpr.Type = TypeInfo.UnresolvedType;
-    }
-
-    private void ResolveGroupExpression (BoundGroupExpression boundGroupExpr) {
-        if (TryGetBoundNode(boundGroupExpr.Node.Expression, out BoundExpression? boundExpr)) {
-            if (TypeInfo.IsResolved(boundExpr.Type)) {
-                boundGroupExpr.Type = boundExpr.Type;
-                return;
-            }
-        }
-
-        boundGroupExpr.Type = TypeInfo.UnresolvedType;
-    }
-
-    private void ResolveIdentifierExpression (BoundIdentifierExpression boundIdExpr) {
-        if (TypeInfo.IsResolved(boundIdExpr.Symbol.Type)) {
-            boundIdExpr.Type = boundIdExpr.Symbol.Type;
-        }
-        else {
-            boundIdExpr.Type = TypeInfo.UnresolvedType;
-        }
-    }
-
-    private void ResolveLocalDeclarator (
-        BoundLocalDeclarator boundLocalDecl, TypeInfo inferredType
-    ) {
-        if (boundLocalDecl.Node.TypeAnnotation == null) {
-            boundLocalDecl.Type = inferredType;
-            boundLocalDecl.Symbol.Type = boundLocalDecl.Type;
-            return;
-        }
-
-        if (TryGetBoundNode(
-            boundLocalDecl.Node.TypeAnnotation,
-            out BoundTypeAnnotation? typeAnnt
-        ) == false) {
-            throw new Exception("Type annotation should be bound.");
-        }
-
-        if (_cmp.TypeTable.TryGetType(
-            typeAnnt.Symbol.FullyQualifiedName,
-            out TypeInfo? type
-        ) == false) {
-            Messages.Add(CompilerMessage.Analyzers.TypeDoesntExist(
-                typeAnnt.Symbol.FullyQualifiedName,
-                typeAnnt.Node.Line
-            ));
-        }
-
-        boundLocalDecl.Type = type;
-        boundLocalDecl.Symbol.Type = boundLocalDecl.Type;
-    }
-    #endregion
 
     private TypeInfo GetTypeInfo (string type) {
         if (_cmp.TypeTable.TryGetType(type, out var typeInfo)) {

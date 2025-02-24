@@ -28,6 +28,7 @@ public class MemberField : SyntaxNode {
     public MemberAccessKind Access { get; private set; }
     public bool IsStatic { get; private set; }
     public bool IsMutable { get; private set; }
+    public bool IsConst { get; private set; }
     public Identifier Identifier { get; private set; }
     public TypeAnnotation TypeAnnotation { get; private set; }
     public EqualsValueClause? Initializer { get; private set; }
@@ -35,11 +36,13 @@ public class MemberField : SyntaxNode {
     public Token? AccessToken { get; set; }
     public Token? StaticToken { get; set; }
     public Token? MutableToken { get; set; }
+    public Token? ConstToken { get; set; }
 
     public MemberField (
         MemberAccessKind access,
         bool isStatic,
         bool isMutable,
+        bool isConst,
         Identifier identifier,
         TypeAnnotation annotation,
         EqualsValueClause? initializer
@@ -49,6 +52,7 @@ public class MemberField : SyntaxNode {
         Access = access;
         IsStatic = isStatic;
         IsMutable = isMutable;
+        IsConst = isConst;
         Identifier = identifier;
         TypeAnnotation = annotation;
         Initializer = initializer;

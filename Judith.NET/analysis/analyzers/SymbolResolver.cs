@@ -20,6 +20,8 @@ public class SymbolResolver : SyntaxVisitor {
     private readonly Compilation _cmp;
     private readonly ScopeResolver _scope;
 
+    private List<SyntaxNode> _incompleteNodes = new();
+
     public SymbolResolver (Compilation cmp) {
         _cmp = cmp;
         _scope = new(_cmp.Binder, _cmp.SymbolTable);

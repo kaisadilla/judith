@@ -3,6 +3,11 @@ typedef struct Person
     age: Num
 end
 
+const p = Person {
+    name = "Kevin",
+    age = 32,
+}
+
 
 const i1 = 1
 const i2 = 1

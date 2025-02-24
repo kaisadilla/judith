@@ -167,24 +167,23 @@ boolean_expr            > addition_expr ( ( "==" | "!=" | "===" | "!==" | "<" | 
 addition_expr           > mult_expr ( ( "+" | "-" ) mult_expr )*
                         ;
 
-mult_expr               > unary_left ( ( "*" | "/" | perc_operator ) unary_left )*
+mult_expr               > null_or_expr ( ( "*" | "/" | perc_operator ) null_or_expr )*
                         ;
 
-null_or_expr            > call_expr ( "??" call_expr )*
+null_or_expr            > unary_left ( "??" unary_left )*
                         ;
 
 unary_left              > ( "not" | "-" | "~" ) unary_left
-                        | null_or_expr
+                        | primary_expr
                         ;
 
-primary_expr            > cast_expr
+primary_expr            > literal_expr
+                        | identifier_expr
+                        | group_expr
+                        | cast_expr
                         | access_expr
                         | call_expr
-                        | object_init_expr
-                        | template_identifier_expr
-                        | identifier_expr
-                        | literal_expr
-                        | group_expr
+                        | object_init_expr  
                         ;
 
 cast_expr               > primary_expr ( ( ":" | ":?" ) primary_expr )*
@@ -200,10 +199,7 @@ call_expr               > primary_expr ( "(" arg_list? ")" )?
 object_init_expr        > primary_expr? "{" (IDENTIFIER "=" expression)* "}"
                         ;
 
-template_identifier_expr> primary_expr ( "<" template_arg_list ">" )?
-                        ;
-
-identifier_expr         > IDENTIFIER
+identifier_expr         > IDENTIFIER template_arg_list?
                         ;
 
 literal_expr            > literal
@@ -241,22 +237,22 @@ func_signature          > "(" ( access_expr ( "," access_expr )* )+ ")" "=>" acc
 perc_operator           > "%" IDENTIFIER
                         ;
 
-param_list              > local_declarator ( "=" logical_expr )? ( "," local_declarator ( "=" logical_expr )? )*
+param_list              > "(" local_declarator ( "=" logical_expr )? ( "," local_declarator ( "=" logical_expr )? )* ")"
                         ;
 
-arg_list                > expression ( "," expression* )?
+arg_list                > "(" expression ( "," expression* )? ")"
                         ;
 
-template_param_list     > template_param ( "," template_param* )?
+template_param_list     > "<" template_param ( "," template_param* )? ">"
                         ;
 
-template_param          > IDENTIFIER ( ":" ( "typename" | template_identifier_expr ) )?
+template_param          > IDENTIFIER ( ":" ( "typename" | identifier_expr ) )?
                         ;
 
-template_arg_list       > template_arg ( "," template_arg* )?
+template_arg_list       > "<" template_arg ( "," template_arg* )? ">"
                         ;
                         
-template_arg            > template_identifier_expr
+template_arg            > identifier_expr
                         | logical_expr
                         ;
 

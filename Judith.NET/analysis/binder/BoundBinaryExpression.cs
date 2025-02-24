@@ -10,7 +10,5 @@ namespace Judith.NET.analysis.binder;
 public class BoundBinaryExpression : BoundExpression {
     public new BinaryExpression Node => (BinaryExpression)base.Node;
 
-    public override bool IsComplete => TypeInfo.IsResolved(Type);
-
     public BoundBinaryExpression (BinaryExpression binaryExpr) : base(binaryExpr) { }
 }

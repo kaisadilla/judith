@@ -117,10 +117,10 @@ public class SimpleAstPrinter : SyntaxVisitor<List<string>> {
         AddInline(txt, declarators, 1);
 
         if (node.Initializer != null) {
-            txt[0] += " " + Visit(node.Initializer)[0] + " ";
+            AddInline(txt, Visit(node.Initializer), 1);
         }
 
-        txt[0] += "}";
+        txt[0] += " }";
 
         return txt;
     }
@@ -275,6 +275,20 @@ public class SimpleAstPrinter : SyntaxVisitor<List<string>> {
 
         txt[^1] += $" {Visit(node.Operator)[0]} ";
         AddInline(txt, Visit(node.Expression), 1);
+
+        return txt;
+    }
+
+    public override List<string>? Visit (ObjectInitializationExpression node) {
+        List<string> txt = ["object_init_expr: {"];
+
+        txt.Add("    provider: ");
+        AddInline(txt, VisitIfNotNull(node.Provider) ?? ["null"], 1);
+
+        txt.Add("    initializer: {");
+        AddInline(txt, Visit(node.Initializer), 1);
+        txt[^1] += "}";
+        txt.Add("}");
 
         return txt;
     }
@@ -437,20 +451,32 @@ public class SimpleAstPrinter : SyntaxVisitor<List<string>> {
         return txt;
     }
 
+    public override List<string>? Visit (ObjectInitializer node) {
+        List<string> txt = ["["];
+
+        foreach (var assignment in node.Assignments) {
+            AddNewline(txt, Visit(assignment), 1);
+        }
+
+        txt.Add("]");
+
+        return txt;
+    }
+
     public override List<string>? Visit (MemberField node) {
-        List<string> txt = [$"member field (name: {node.Identifier.Name}, " +
+        List<string> txt = [$"member_field (name: {node.Identifier.Name}, " +
             $"access: {node.Access}, isStatic: {node.IsStatic}, isMutable: " +
-            $"{node.IsMutable}, type: "
+            $"{node.IsMutable}, type"
         ];
 
         AddInline(txt, Visit(node.TypeAnnotation), 1);
 
-        if (node.Identifier != null) {
-            txt[^1] = ") = ";
-            AddInline(txt, Visit(node.Identifier), 1);
+        if (node.Initializer != null) {
+            txt[^1] += ") = ";
+            AddInline(txt, Visit(node.Initializer), 1);
         }
         else {
-            txt[^1] = ")";
+            txt[^1] += ")";
         }
 
         return txt;

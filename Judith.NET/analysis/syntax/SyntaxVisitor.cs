@@ -68,9 +68,11 @@ public abstract class SyntaxVisitor {
     public virtual void Visit (AssignmentExpression node) => VisitChildren(node);
     public virtual void Visit (BinaryExpression node) => VisitChildren(node);
     public virtual void Visit (LeftUnaryExpression node) => VisitChildren(node);
-    public virtual void Visit (CallExpression node) => VisitChildren(node);
-    public virtual void Visit (AccessExpression node) => VisitChildren(node);
+
     public virtual void Visit (GroupExpression node) => VisitChildren(node);
+    public virtual void Visit (AccessExpression node) => VisitChildren(node);
+    public virtual void Visit (CallExpression node) => VisitChildren(node);
+    public virtual void Visit (ObjectInitializationExpression node) => VisitChildren(node);
     public virtual void Visit (IdentifierExpression node) => VisitChildren(node);
     public virtual void Visit (LiteralExpression node) => VisitChildren(node);
 
@@ -87,6 +89,7 @@ public abstract class SyntaxVisitor {
     public virtual void Visit (Argument node) => VisitChildren(node);
     public virtual void Visit (MatchCase node) => VisitChildren(node);
 
+    public virtual void Visit (ObjectInitializer node) => VisitChildren(node);
     public virtual void Visit (MemberField node) => VisitChildren(node);
 
     public virtual void Visit (P_PrintStatement node) => VisitChildren(node);

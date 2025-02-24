@@ -1,4 +1,5 @@
-﻿using Judith.NET.analysis.syntax;
+﻿using Judith.NET.analysis.binder;
+using Judith.NET.analysis.syntax;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,14 +33,17 @@ public class SymbolTableBuilder : SyntaxVisitor {
     public override void Visit (FunctionDefinition node) {
         string name = node.Identifier.Name;
 
-        var symbol = _scope.Current.AddSymbol(SymbolKind.Function, name);
+        var overload = _cmp.Binder.GetOverload(node.Parameters);
+
+        var symbol = _scope.Current.AddFunctionSymbol(name, overload);
         var scope = _scope.Current.CreateInnerTable(ScopeKind.FunctionBlock, symbol);
-        _cmp.Binder.BindFunctionDefinition(node, symbol, scope);
 
         _scope.BeginScope(scope);
         Visit(node.Parameters);
         Visit(node.Body);
         _scope.EndScope(); // If this fails, something is wrong in CreateAnonymousInnerTable().
+
+        _cmp.Binder.BindFunctionDefinition(node, symbol, scope);
     }
 
     public override void Visit (StructTypeDefinition node) {
@@ -56,6 +60,7 @@ public class SymbolTableBuilder : SyntaxVisitor {
 
     public override void Visit (BlockStatement node) {
         // Block statements do not create symbols, but we bind them in this step anyway.
+        // Block statements will use bound nodes to store their return / yield type(s).
         _cmp.Binder.BindBlockStatement(node);
 
         base.Visit(node);

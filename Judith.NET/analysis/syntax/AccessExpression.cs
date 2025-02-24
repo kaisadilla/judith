@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 namespace Judith.NET.analysis.syntax;
 
 public class AccessExpression : Expression {
-    public Expression Left { get; private init; }
+    public Expression? Left { get; private init; }
     public Operator Operator { get; private init; }
     public Expression Right { get; private init; }
 
-    public AccessExpression (Expression leftExpr, Operator op, Expression rightExpr)
+    public AccessExpression (Expression? leftExpr, Operator op, Expression rightExpr)
         : base(SyntaxKind.AccessExpression) {
         Left = leftExpr;
         Operator = op;

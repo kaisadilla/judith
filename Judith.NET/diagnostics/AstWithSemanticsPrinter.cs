@@ -183,10 +183,19 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
         };
     }
 
+    public override object? Visit (ObjectInitializationExpression node) {
+        return new {
+            Expression = VisitIfNotNull(node.Provider),
+            Initializer = Visit(node.Initializer),
+            Semantics = GetBoundOrNull(node),
+        };
+    }
+
     public override object Visit (CallExpression node) {
         return new {
             Callee = Visit(node.Callee),
             Arguments = Visit(node.Arguments),
+            Semantics = GetBoundOrNull(node),
         };
     }
 
@@ -194,7 +203,7 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
         return new {
             Name = nameof(AccessExpression),
             Operator = Visit(node.Operator),
-            Left = Visit(node.Left),
+            Left = VisitIfNotNull(node.Left),
             Right = Visit(node.Right),
             Semantics = GetBoundOrNull(node),
         };
@@ -326,6 +335,13 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
             node.IsElseCase,
             Tests = node.Tests.Select(t => Visit(t)),
             Consequent = Visit(node.Consequent),
+            Semantics = GetBoundOrNull(node),
+        };
+    }
+
+    public override object? Visit (ObjectInitializer node) {
+        return new {
+            Assignments = node.Assignments.Select(a => Visit(a)),
             Semantics = GetBoundOrNull(node),
         };
     }

@@ -10,7 +10,5 @@ namespace Judith.NET.analysis.binder;
 public abstract class BoundExpression : BoundNode {
     public TypeInfo? Type { get; set; }
 
-    public abstract bool IsComplete { get; }
-
     public BoundExpression (SyntaxNode node) : base(node) { }
 }

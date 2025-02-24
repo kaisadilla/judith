@@ -1197,19 +1197,31 @@ typedef class Person
     -- field can be mutated even by pure methods. Semantically, mutable members
     -- are not considered part of the object's state, so they should not have
     -- any effect on the object's behavior.
+    -- note that "mut" is not compatible with "static" or "const", as it wouldn't
+    -- have any effect.
     mut times_age_was_read: Num = 0 -- Default initializer.
+    -- A field member can be marked as absolutely immutable with the "const"
+    -- keyword. An absolutely immutable field can never be mutated, not even by
+    -- impure functions. Semantically, const members represent values that the
+    -- class watches, but does not infere with. For example, here Person may
+    -- need to have a reference to the Company the person belongs to, but a
+    -- person cannot mutate the company. This allows using a const "company"
+    -- local to be used to construct this Person.
+    -- Note that the company can still be altered from the outside.
+    const company: Company
 
     -- static members do not belong to any instance, but rather the class itself.
     static people_created: Num = 0
 
     -- Classes may include constructors inside their own definition:
-    ctor (name: String, birth_year: Num?, country: Country)
+    ctor (name: String, birth_year: Num?, country: Country, company: Company)
         -- The instance a method or constructor is running on is contained in
         -- a special local named "self".
         self.name = name
         -- "self" can be implied by simply using the accessor token "." on nothing.
         .birth_year = birth_year
         .country = country
+        .company = company
 
         -- similarly, the class itself can be implied by using the scope
         -- resolution token "::" on nothing. "::people_created" is the same as

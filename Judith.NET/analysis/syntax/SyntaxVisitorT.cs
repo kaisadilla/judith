@@ -68,9 +68,11 @@ public abstract class SyntaxVisitor<TResult> {
     public virtual TResult? Visit (AssignmentExpression node) => VisitChildren(node);
     public virtual TResult? Visit (BinaryExpression node) => VisitChildren(node);
     public virtual TResult? Visit (LeftUnaryExpression node) => VisitChildren(node);
-    public virtual TResult? Visit (CallExpression node) => VisitChildren(node);
-    public virtual TResult? Visit (AccessExpression node) => VisitChildren(node);
+
     public virtual TResult? Visit (GroupExpression node) => VisitChildren(node);
+    public virtual TResult? Visit (AccessExpression node) => VisitChildren(node);
+    public virtual TResult? Visit (CallExpression node) => VisitChildren(node);
+    public virtual TResult? Visit (ObjectInitializationExpression node) => VisitChildren(node);
     public virtual TResult? Visit (IdentifierExpression node) => VisitChildren(node);
     public virtual TResult? Visit (LiteralExpression node) => VisitChildren(node);
 
@@ -87,6 +89,7 @@ public abstract class SyntaxVisitor<TResult> {
     public virtual TResult? Visit (Argument node) => VisitChildren(node);
     public virtual TResult? Visit (MatchCase node) => VisitChildren(node);
 
+    public virtual TResult? Visit (ObjectInitializer node) => VisitChildren(node);
     public virtual TResult? Visit (MemberField node) => VisitChildren(node);
 
     public virtual TResult? Visit (P_PrintStatement node) => VisitChildren(node);

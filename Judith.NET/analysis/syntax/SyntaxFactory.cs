@@ -251,26 +251,6 @@ public static class SyntaxFactory {
         return unaryExpr;
     }
 
-    public static CallExpression CallExpression (
-        Expression callee, ArgumentList argList
-    ) {
-        var callExpr = new CallExpression(callee, argList);
-        callExpr.SetSpan(new(callee.Span.Start, argList.Span.End));
-        callExpr.SetLine(callee.Line);
-
-        return callExpr;
-    }
-
-    public static AccessExpression AccessExpression (
-        Expression leftExpr, Operator op, Expression rightExpr
-    ) {
-        var accessExpr = new AccessExpression(leftExpr, op, rightExpr);
-        accessExpr.SetSpan(new(leftExpr.Span.Start, rightExpr.Span.End));
-        accessExpr.SetLine(leftExpr.Line);
-
-        return accessExpr;
-    }
-
     public static GroupExpression GroupExpression (
         Token leftParen, Expression expr, Token rightParen
     ) {
@@ -282,6 +262,39 @@ public static class SyntaxFactory {
         groupExpr.SetLine(groupExpr.LeftParenthesisToken.Line);
 
         return groupExpr;
+    }
+
+    public static AccessExpression AccessExpression (
+        Expression? leftExpr, Operator op, Expression rightExpr
+    ) {
+        var accessExpr = new AccessExpression(leftExpr, op, rightExpr);
+        accessExpr.SetSpan(new(leftExpr.Span.Start, rightExpr.Span.End));
+        accessExpr.SetLine(leftExpr.Line);
+
+        return accessExpr;
+    }
+
+    public static CallExpression CallExpression (
+        Expression callee, ArgumentList argList
+    ) {
+        var callExpr = new CallExpression(callee, argList);
+        callExpr.SetSpan(new(callee.Span.Start, argList.Span.End));
+        callExpr.SetLine(callee.Line);
+
+        return callExpr;
+    }
+
+    public static ObjectInitializationExpression ObjectInitializationExpression (
+        Expression? provider, ObjectInitializer initializer
+    ) {
+        var initExpr = new ObjectInitializationExpression(provider, initializer);
+        initExpr.SetSpan(new(
+            provider?.Span.Start ?? initializer.Span.Start,
+            initializer.Span.End
+        ));
+        initExpr.SetLine(provider?.Line ?? initializer.Line);
+
+        return initExpr;
     }
 
     public static IdentifierExpression IdentifierExpression (Identifier identifier) {
@@ -453,10 +466,26 @@ public static class SyntaxFactory {
         return matchCase;
     }
 
+    public static ObjectInitializer ObjectInitializer (
+        Token leftBracketToken,
+        List<AssignmentExpression> assignments,
+        Token rightBracketToken
+    ) {
+        var objInit = new ObjectInitializer(assignments) {
+            LeftBracketToken = leftBracketToken,
+            RightBracketToken = rightBracketToken,
+        };
+        objInit.SetSpan(new(leftBracketToken.Start, rightBracketToken.End));
+        objInit.SetLine(leftBracketToken.Line);
+
+        return objInit;
+    }
+
     public static MemberField MemberField (
         Token? accessToken,
         Token? staticToken,
         Token? mutableToken,
+        Token? constToken,
         Identifier identifier,
         TypeAnnotation typeAnnotation,
         EqualsValueClause? initializer
@@ -469,13 +498,15 @@ public static class SyntaxFactory {
 
         bool isStatic = staticToken != null;
         bool isMutable = mutableToken != null;
+        bool isConst = constToken != null;
 
         var memberField = new MemberField(
-            access, isStatic, isMutable, identifier, typeAnnotation, initializer
+            access, isStatic, isMutable, isConst, identifier, typeAnnotation, initializer
         ) {
             AccessToken = accessToken,
             StaticToken = staticToken,
             MutableToken = mutableToken,
+            ConstToken = constToken,
         };
 
         int start = true switch {

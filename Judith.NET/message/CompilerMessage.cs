@@ -293,6 +293,16 @@ public class CompilerMessage {
             );
         }
 
+        public static CompilerMessage AssignmentExpressionExpected (int line) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.Parser,
+                (int)MessageCode.AssignmentExpressionExpected,
+                $"Assignment expression expected.",
+                line
+            );
+        }
+
         public static CompilerMessage InvalidTopLevelStatement (int line) {
             return new(
                 MessageKind.Error,

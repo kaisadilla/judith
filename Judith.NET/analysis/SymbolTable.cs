@@ -58,6 +58,13 @@ public class SymbolTable {
     public Dictionary<string, Symbol> Symbols { get; private set; } = new();
 
     /// <summary>
+    /// The function symbols contained directly in this table. Each key points
+    /// to a list of function symbols that have the same identifier, but
+    /// different overloads.
+    /// </summary>
+    public Dictionary<string, List<FunctionSymbol>> FunctionSymbols { get; private set; } = new();
+
+    /// <summary>
     /// Returns true if this is the global table.
     /// </summary>
     [JsonIgnore]
@@ -150,6 +157,31 @@ public class SymbolTable {
     }
 
     /// <summary>
+    /// Returns the list of function symbols identified by the given function
+    /// name. This list is searched across all ancestors of this table, starting
+    /// from the innermost table (this one).
+    /// </summary>
+    /// <param name="name">The unqualified name of the function.</param>
+    /// <param name="functionSymbols">A list of all symbols defined by that function.</param>
+    /// <returns></returns>
+    public bool TryFindFunctionSymbolsRecursively (
+        string name, [NotNullWhen(true)] out List<FunctionSymbol>? functionSymbols
+    ) {
+        if (FunctionSymbols.TryGetValue(name, out functionSymbols)) {
+            return true;
+        }
+
+        if (OuterTable != null) {
+            return OuterTable.TryFindFunctionSymbolsRecursively(
+                name, out functionSymbols
+            );
+        }
+
+        functionSymbols = null;
+        return false;
+    }
+
+    /// <summary>
     /// Returns the symbol table identified by the unqualified name given, if
     /// it exists.
     /// </summary>
@@ -167,7 +199,6 @@ public class SymbolTable {
     /// that name already exists in this table (but not its parents or children).
     /// Returns the symbol that has been created.
     /// </summary>
-    /// <param name="scopeKind">The kind of scope to create..</param>
     /// <param name="symbolKind">The kind of symbol to create.</param>
     /// <param name="name">The unqualified name of the symbol.</param>
     public Symbol AddSymbol (SymbolKind symbolKind, string name) {
@@ -179,6 +210,26 @@ public class SymbolTable {
         Symbols[name] = symbol;
 
         return symbol;
+    }
+
+    /// <summary>
+    /// Adds a function symbol to this table. Duplicate overloads will not be
+    /// checked.
+    /// </summary>
+    /// <param name="name">The unqualified name of the function.</param>
+    /// <param name="overload">The type of each parameter, in order.</param>
+    public FunctionSymbol AddFunctionSymbol (string name, List<TypeInfo> overload) {
+        if (FunctionSymbols.TryGetValue(name, out var funcList) == false) {
+            funcList = new();
+            FunctionSymbols[name] = funcList;
+        }
+
+        FunctionSymbol funcSymbol = new(this, name, QualifyName(name), overload, null);
+
+        // We don't check for duplicate overloads here.
+        funcList.Add(funcSymbol);
+
+        return funcSymbol;
     }
 
     /// <summary>
