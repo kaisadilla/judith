@@ -10,7 +10,5 @@ namespace Judith.NET.analysis.binder;
 public class BoundCallExpression : BoundExpression {
     public new CallExpression Node => (CallExpression)base.Node;
 
-    public override bool IsComplete => TypeInfo.IsResolved(Type);
-
     public BoundCallExpression (CallExpression callExpr) : base(callExpr) { }
 }

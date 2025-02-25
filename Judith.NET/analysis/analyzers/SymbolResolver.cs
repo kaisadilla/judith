@@ -20,7 +20,8 @@ public class SymbolResolver : SyntaxVisitor {
     private readonly Compilation _cmp;
     private readonly ScopeResolver _scope;
 
-    private List<SyntaxNode> _incompleteNodes = new();
+    private NodeStateManager _nodeStates = new();
+    public int Resolutions { get; private set; } = 0;
 
     public SymbolResolver (Compilation cmp) {
         _cmp = cmp;
@@ -28,6 +29,8 @@ public class SymbolResolver : SyntaxVisitor {
     }
 
     public void Analyze (CompilerUnit unit) {
+        Resolutions = 0;
+
         foreach (var item in unit.TopLevelItems) {
             Visit(item);
         }
@@ -44,6 +47,11 @@ public class SymbolResolver : SyntaxVisitor {
         _scope.EndScope();
 
         if (node.ReturnTypeAnnotation != null) Visit(node.ReturnTypeAnnotation);
+
+        if (_nodeStates.IsComplete(node) == false) {
+            Resolutions++;
+            _nodeStates.Completed(node);
+        }
     }
 
     public override void Visit (IfExpression node) {
@@ -64,6 +72,11 @@ public class SymbolResolver : SyntaxVisitor {
         }
 
         _scope.EndScope();
+
+        if (_nodeStates.IsComplete(node) == false) {
+            Resolutions++;
+            _nodeStates.Completed(node);
+        }
     }
 
     public override void Visit (WhileExpression node) {
@@ -72,9 +85,16 @@ public class SymbolResolver : SyntaxVisitor {
         _scope.BeginScope(node);
         Visit(node.Body);
         _scope.EndScope();
+
+        if (_nodeStates.IsComplete(node) == false) {
+            Resolutions++;
+            _nodeStates.Completed(node);
+        }
     }
 
     public override void Visit (IdentifierExpression node) {
+        if (_nodeStates.IsComplete(node)) return;
+
         string name = node.Identifier.Name;
 
         if (_scope.Current.TryFindSymbolRecursively(name, out Symbol? symbol) == false) {
@@ -85,9 +105,14 @@ public class SymbolResolver : SyntaxVisitor {
         }
 
         _cmp.Binder.BindIdentifierExpression(node, symbol);
+
+        Resolutions++;
+        _nodeStates.Completed(node);
     }
 
     public override void Visit (TypeAnnotation node) {
+        if (_nodeStates.IsComplete(node)) return;
+
         string name = node.Identifier.Name;
 
         if (_scope.Current.TryFindSymbolRecursively(name, out Symbol? symbol) == false) {
@@ -98,6 +123,13 @@ public class SymbolResolver : SyntaxVisitor {
         }
 
         _cmp.Binder.BindTypeAnnotation(node, symbol);
+
+        Resolutions++;
+        _nodeStates.Completed(node);
+    }
+
+    public override void Visit (ObjectInitializer node) {
+
     }
 
     private T GetBoundNodeOrThrow<T> (SyntaxNode node) where T : BoundNode {

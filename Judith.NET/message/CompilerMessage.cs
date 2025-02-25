@@ -435,6 +435,28 @@ public class CompilerMessage {
             );
         }
 
+        public static CompilerMessage TypeExpected (int line) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.TypeResolver,
+                (int)MessageCode.TypeExpected,
+                $"Type identifier expected.",
+                line
+            );
+        }
+
+        public static CompilerMessage InvalidTypeForObjectInitialization (
+            string fqn, int line
+        ) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.TypeResolver,
+                (int)MessageCode.InvalidTypeForObjectInitialization,
+                $"Cannot initialize an object with type '{fqn}'.",
+                line
+            );
+        }
+
         public static CompilerMessage InconsistentReturnBehavior (int line) {
             return new(
                 MessageKind.Error,

@@ -56,6 +56,8 @@ public enum MessageCode {
 
     // TypeResolver
     TypeDoesntExist,
+    TypeExpected,
+    InvalidTypeForObjectInitialization,
 
     // BlockTypeResolver
     InconsistentReturnBehavior,

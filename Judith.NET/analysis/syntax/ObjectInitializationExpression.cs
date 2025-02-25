@@ -17,6 +17,9 @@ public class ObjectInitializationExpression : Expression {
     {
         Provider = provider;
         Initializer = initializer;
+
+        if (Provider != null) Children.Add(Provider);
+        Children.Add(Initializer);
     }
 
     public override void Accept (SyntaxVisitor visitor) {

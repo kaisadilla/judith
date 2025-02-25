@@ -16,6 +16,8 @@ public class ObjectInitializer : SyntaxNode {
         : base(SyntaxKind.ObjectInitializer)
     {
         Assignments = assignments;
+
+        Children.AddRange(Assignments);
     }
 
     public override void Accept (SyntaxVisitor visitor) {

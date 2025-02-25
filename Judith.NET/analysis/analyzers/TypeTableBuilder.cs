@@ -42,7 +42,8 @@ public class TypeTableBuilder : SyntaxVisitor {
         }
         _scope.EndScope();
 
-        boundNode.Symbol.Type = type;
-        boundNode.Type = boundNode.Symbol.Type;
+        boundNode.Symbol.Type = TypeInfo.NoType;
+        boundNode.Type = TypeInfo.NoType;
+        boundNode.Symbol.AssociatedType = type;
     }
 }

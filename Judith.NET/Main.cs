@@ -99,6 +99,8 @@ void GenerateDebugFiles () {
     var simpleAst = new SimpleAstPrinter().Visit(cu);
     File.WriteAllText(AppContext.BaseDirectory + "/res/test.simple-ast.txt", string.Join('\n', simpleAst));
 
+    if (messages.HasErrors) return;
+
     var semanticAst = new AstWithSemanticsPrinter(cmp).Visit(cu);
     string semanticAstStr = JsonConvert.SerializeObject(semanticAst, Formatting.Indented);
     File.WriteAllText(AppContext.BaseDirectory + "/res/test.semantic-ast.json", semanticAstStr);

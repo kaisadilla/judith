@@ -1,4 +1,5 @@
 ﻿using Judith.NET.analysis.syntax;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,19 +12,20 @@ public class BoundFunctionDefinition : BoundNode {
     public new FunctionDefinition Node => (FunctionDefinition)base.Node;
 
     public FunctionSymbol Symbol { get; private init; }
+    public FunctionOverload Overload { get; private init; }
+    [JsonIgnore]
     public SymbolTable Scope { get; private init; }
-    public List<TypeInfo>? ParameterTypes { get; set; } = null;
-    public TypeInfo? ReturnType { get; set; } = null;
-
-    public bool IsComplete => IsTypeInfoResolved; // TODO: ParameterTypes
-    public bool IsTypeInfoResolved => TypeInfo.IsResolved(ReturnType);
 
     public BoundFunctionDefinition (
-        FunctionDefinition node, FunctionSymbol symbol, SymbolTable scope
+        FunctionDefinition node,
+        FunctionSymbol symbol,
+        FunctionOverload overload,
+        SymbolTable scope
     )
         : base(node)
     {
         Symbol = symbol;
+        Overload = overload;
         Scope = scope;
     }
 }

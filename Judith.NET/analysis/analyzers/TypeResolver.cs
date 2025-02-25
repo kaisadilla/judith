@@ -35,7 +35,7 @@ public class TypeResolver : SyntaxVisitor {
     }
 
     public override void Visit (FunctionDefinition node) {
-        var boundFuncDef = Binder.GetBoundNodeOrThrow<BoundFunctionDefinition>(node);
+        var boundNode = Binder.GetBoundNodeOrThrow<BoundFunctionDefinition>(node);
 
         VisitIfNotNull(node.ReturnTypeAnnotation);
 
@@ -45,13 +45,12 @@ public class TypeResolver : SyntaxVisitor {
         _scope.EndScope();
 
         // If the type 
-        if (TypeInfo.IsResolved(boundFuncDef.ReturnType) == false) {
+        if (TypeInfo.IsResolved(boundNode.Overload.ReturnType) == false) {
             // If the return type is explicitly declared.
             if (node.ReturnTypeAnnotation != null) {
                 TypeInfo type = GetTypeInfo(node.ReturnTypeAnnotation);
 
-                boundFuncDef.Symbol.ReturnType = type;
-                boundFuncDef.ReturnType = boundFuncDef.Symbol.ReturnType;
+                boundNode.Overload.ReturnType = type;
             }
             // Else, if it's inferred from its body.
             else {
@@ -59,14 +58,17 @@ public class TypeResolver : SyntaxVisitor {
                     node.Body
                 );
 
-                boundFuncDef.Symbol.ReturnType = boundBody.Type;
-                boundFuncDef.ReturnType = boundFuncDef.Symbol.ReturnType;
+                boundNode.Overload.ReturnType = boundBody.Type;
             }
         }
 
-        if (boundFuncDef.Symbol.IsResolved() == false) {
-            var overload = Binder.GetOverload(node.Parameters);
-            boundFuncDef.ParameterTypes = overload;
+        if (boundNode.Overload.IsResolved() == false) {
+            // ParamTypes will always be the same size as overload's param types.
+            var paramTypes = Binder.GetParamTypes(node.Parameters);
+
+            for (int i = 0; i < paramTypes.Count; i++) {
+                boundNode.Overload.ParamTypes[i] = paramTypes[i];
+            }
         }
     }
 
@@ -271,39 +273,79 @@ public class TypeResolver : SyntaxVisitor {
     public override void Visit (LeftUnaryExpression node) {
         Visit(node.Expression);
 
-        var boundNode = _cmp.Binder.BindLeftUnaryExpression(node);
+        var boundNode = Binder.BindLeftUnaryExpression(node);
 
         if (TypeInfo.IsResolved(boundNode.Type)) return;
 
-        var boundExpr = _cmp.Binder.GetBoundNodeOrThrow<BoundExpression>(node.Expression);
+        var boundExpr = Binder.GetBoundNodeOrThrow<BoundExpression>(node.Expression);
 
         boundNode.Type = boundExpr.Type ?? TypeInfo.UnresolvedType;
+    }
+
+    public override void Visit (ObjectInitializationExpression node) {
+        Visit(node.Initializer); // has to be called even when node is resolved.
+        VisitIfNotNull(node.Provider);
+
+        var boundNode = Binder.BindObjectInitializationExpression(node);
+
+        if (node.Provider == null) {
+            boundNode.Type = TypeInfo.AnonymousObject;
+            return;
+        }
+        
+        var boundProvider = Binder.GetBoundNodeOrThrow<BoundExpression>(node.Provider);
+
+        // If the provider hasn't been resolved, we can't resolve this node either.
+        if (TypeInfo.IsResolved(boundProvider.Type) == false) {
+            boundProvider.Type = TypeInfo.UnresolvedType;
+            return;
+        }
+
+        if (boundProvider.Node.Kind != SyntaxKind.IdentifierExpression) {
+            Messages.Add(CompilerMessage.Analyzers.TypeExpected(node.Provider.Line));
+        }
+        var symbol = ((BoundIdentifierExpression)boundProvider).Symbol;
+
+        if (symbol.Kind == SymbolKind.StructType) {
+            boundNode.Type = ((TypedefSymbol)symbol).Type;
+        }
+        else {
+            Messages.Add(CompilerMessage.Analyzers.InvalidTypeForObjectInitialization(
+                symbol.FullyQualifiedName, node.Provider.Line
+            ));
+        }
     }
 
     public override void Visit (CallExpression node) {
         Visit(node.Callee);
         Visit(node.Arguments);
 
-        var boundNode = _cmp.Binder.BindCallExpression(node);
+        var boundNode = Binder.BindCallExpression(node);
 
         if (TypeInfo.IsResolved(boundNode.Type)) return;
+        boundNode.Type = TypeInfo.UnresolvedType;
 
-        var overload = GetOverload(node.Arguments);
-        foreach (var type in overload) {
+        var paramTypes = GetOverload(node.Arguments);
+        foreach (var type in paramTypes) {
             if (TypeInfo.IsResolved(type) == false) return;
         }
 
-        // TODO
-        // Callee can resolve to either a function, or an expression that
-        // returns a function.
-        //if (node.Callee.Kind == SyntaxKind.IdentifierExpression) {
-        //
-        //}
-        //
-        //if (_scope.Current.TryFindFunctionSymbolsRecursively()
+        if (node.Callee.Kind == SyntaxKind.IdentifierExpression) {
+            var boundCallee = Binder.GetBoundNodeOrThrow<BoundIdentifierExpression>(
+                node.Callee
+            );
 
-        // TODO: Operator overloading resolution.
+            if (boundCallee.Symbol.Kind == SymbolKind.Function) {
+                var funcSymbol = (FunctionSymbol)boundCallee.Symbol;
 
+                if (funcSymbol.TryGetOverload(paramTypes, out var funcOverload)) {
+                    boundNode.Type = funcOverload.ReturnType ?? TypeInfo.UnresolvedType;
+                }
+            }
+            else {
+                throw new NotImplementedException("Cannot call dynamically yet!");
+            }
+        }
     }
 
     // TODO: AccessExpression

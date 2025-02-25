@@ -70,6 +70,8 @@ public class Compilation {
         if (Messages.HasErrors) return;
         ResolveTypes();
         if (Messages.HasErrors) return;
+        ResolveTypes();
+        if (Messages.HasErrors) return;
 
         //Binder.ResolveIncomplete();
 

@@ -58,13 +58,6 @@ public class SymbolTable {
     public Dictionary<string, Symbol> Symbols { get; private set; } = new();
 
     /// <summary>
-    /// The function symbols contained directly in this table. Each key points
-    /// to a list of function symbols that have the same identifier, but
-    /// different overloads.
-    /// </summary>
-    public Dictionary<string, List<FunctionSymbol>> FunctionSymbols { get; private set; } = new();
-
-    /// <summary>
     /// Returns true if this is the global table.
     /// </summary>
     [JsonIgnore]
@@ -101,6 +94,16 @@ public class SymbolTable {
         tbl.TableSymbol = symbol;
 
         InnerTables[symbol.Name] = tbl;
+        return tbl;
+    }
+
+    public SymbolTable CreateInnerTable (
+        ScopeKind scopeKind, Symbol symbol, FunctionOverload overload
+    ) {
+        SymbolTable tbl = new(scopeKind, this, null);
+        tbl.TableSymbol = symbol;
+
+        InnerTables[symbol.Name + overload.GetSignatureString()] = tbl; // TODO: This function returns "placeholder".
         return tbl;
     }
 
@@ -157,27 +160,30 @@ public class SymbolTable {
     }
 
     /// <summary>
-    /// Returns the list of function symbols identified by the given function
-    /// name. This list is searched across all ancestors of this table, starting
-    /// from the innermost table (this one).
+    /// Returns the function symbol identified by the given function name. This
+    /// symbol is searched across all ancestors of this table, starting from
+    /// the innermost table (this one). If the symbol 
     /// </summary>
     /// <param name="name">The unqualified name of the function.</param>
-    /// <param name="functionSymbols">A list of all symbols defined by that function.</param>
+    /// <param name="functionSymbol">The function's symbol.</param>
     /// <returns></returns>
-    public bool TryFindFunctionSymbolsRecursively (
-        string name, [NotNullWhen(true)] out List<FunctionSymbol>? functionSymbols
+    public bool TryFindFunctionSymbolRecursively (
+        string name, [NotNullWhen(true)] out FunctionSymbol? functionSymbol
     ) {
-        if (FunctionSymbols.TryGetValue(name, out functionSymbols)) {
-            return true;
+        if (Symbols.TryGetValue(name, out Symbol? symbol)) {
+            if (symbol.Kind == SymbolKind.Function) {
+                functionSymbol = (FunctionSymbol)symbol;
+                return true;
+            }
         }
 
         if (OuterTable != null) {
-            return OuterTable.TryFindFunctionSymbolsRecursively(
-                name, out functionSymbols
+            return OuterTable.TryFindFunctionSymbolRecursively(
+                name, out functionSymbol
             );
         }
 
-        functionSymbols = null;
+        functionSymbol = null;
         return false;
     }
 
@@ -206,7 +212,14 @@ public class SymbolTable {
             throw new Exception($"'{name}' is already defined in this table.");
         }
 
-        Symbol symbol = new(this, symbolKind, name, QualifyName(name));
+        Symbol symbol;
+        if (symbolKind == SymbolKind.StructType) {
+            symbol = new TypedefSymbol(this, name, QualifyName(name));
+        }
+        else {
+            symbol = new(this, symbolKind, name, QualifyName(name));
+        }
+
         Symbols[name] = symbol;
 
         return symbol;
@@ -217,19 +230,29 @@ public class SymbolTable {
     /// checked.
     /// </summary>
     /// <param name="name">The unqualified name of the function.</param>
-    /// <param name="overload">The type of each parameter, in order.</param>
-    public FunctionSymbol AddFunctionSymbol (string name, List<TypeInfo> overload) {
-        if (FunctionSymbols.TryGetValue(name, out var funcList) == false) {
-            funcList = new();
-            FunctionSymbols[name] = funcList;
+    /// <param name="paramTypes">The type of each parameter, in order.</param>
+    public (FunctionSymbol symbol, FunctionOverload overload) AddFunctionSymbol (
+        string name, List<TypeInfo> paramTypes
+    ) {
+        FunctionSymbol funcSymbol;
+        if (Symbols.TryGetValue(name, out Symbol? symbol)) {
+            if (symbol.Kind != SymbolKind.Function) throw new(
+                "Symbol exists, but is not a function!"
+            );
+
+            funcSymbol = (FunctionSymbol)symbol;
+        }
+        else {
+            funcSymbol = new FunctionSymbol(this, name, QualifyName(name)) {
+                Type = TypeInfo.UnresolvedFunctionType,
+            };
+            Symbols[name] = funcSymbol;
         }
 
-        FunctionSymbol funcSymbol = new(this, name, QualifyName(name), overload, null);
+        FunctionOverload overload = new(funcSymbol, paramTypes);
+        funcSymbol.Overloads.Add(overload);
 
-        // We don't check for duplicate overloads here.
-        funcList.Add(funcSymbol);
-
-        return funcSymbol;
+        return (funcSymbol, overload);
     }
 
     /// <summary>

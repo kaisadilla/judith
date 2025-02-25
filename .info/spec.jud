@@ -693,6 +693,36 @@ const b = gen.next() -- equals 1
 for const i in gen do -- will loop for 2, 3, 4, 5, 6, 7, 8, 9.
     -- statements
 end
+
+---------------------------
+-- FIRST-CLASS FUNCTIONS --
+---------------------------
+-- Functions (and generators) in Judith are first-class, which means they can
+-- be treated like any other value (assigned to locals and fields, passed
+-- around, etc.)
+-- A function's type is defined by its signature:
+func add (a, b: Num) : Num
+    return a + b
+end
+
+func multiply (a, b: Num) : Num
+    return a + b
+end
+
+func negate (a: Num) : Num
+    return -a
+end
+
+var binary_op: (Num, Num) => Num = add -- valid assignment
+binary_op = multiply -- valid assignment, as multiply matches the signature
+                     -- used as a type.
+binary_op = negate -- ERROR - negate's signature is (Num) => Num.
+
+-- You can call function values as normal:
+binary_op(5, 8) -- Returns "40", since "binary_op" contains "multiply()".
+
+-- TODO: Explore syntax for currying.
+
 #endregion
 
 #region Field shadowing
@@ -970,12 +1000,20 @@ typedef MyCollection = List | Dictionary
 const col: MyCollection = [] -- type: List
 Console::log(col.count) -- valid access, as both "List" and "Dictionary" have
                         -- a property named "count" that is the exact same.
+
+-- Some kinds of unions will raise compiler warnings when used:
+-- Union of literal values:
+typedef Valueless = false | 0 | "" -- Warning: define a "set" instead.
+
+-- Union including "null":
+typedef Animal = Dog | Cat | null -- Warning: don't include "null" in union types.
+                                  -- Use "Animal?" to get a nullable Animal instead.
 #endregion
 
 #region Set
 -- A set is defined by a group of literals. Any literal inside that group is
 -- a valid member of the set. Note that String literals used in sets use single
--- quotes rather than multiquotes.
+-- quotes rather than double quotes.
 typedef set Countries
     'Germany',
     'Sweden',
@@ -1782,7 +1820,7 @@ typedef Some3 = Num
 -- These two directives are used for conditional compiling. The text within the
 -- #if block will be discarded if the if flag is not defined.
 
-#if DEBUG_BUILD -- this block is eliminated from the code if DEBUG_BUILD is not defined.
+#if DEBUG -- this block is eliminated from the code if DEBUG is not defined.
     Console::log(f"Element count: {.elements}")
 #endif
 

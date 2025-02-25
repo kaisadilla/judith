@@ -46,7 +46,7 @@ public class Binder {
         }
     }
 
-    public T GetBoundNodeOrThrow<T> (SyntaxNode node) where T : BoundNode{
+    public T GetBoundNodeOrThrow<T> (SyntaxNode node) where T : BoundNode {
         if (TryGetBoundNode(node, out T? typedBoundNode) == false) {
             throw new($"'{node}' should be bound.");
         }
@@ -55,12 +55,15 @@ public class Binder {
     }
 
     public BoundFunctionDefinition BindFunctionDefinition (
-        FunctionDefinition funcDef, FunctionSymbol symbol, SymbolTable scope
+        FunctionDefinition funcDef,
+        FunctionSymbol symbol,
+        FunctionOverload overload,
+        SymbolTable scope
     ) {
         if (TryGetBoundNode(
             funcDef, out BoundFunctionDefinition? boundFuncDef
         ) == false) {
-            boundFuncDef = new(funcDef, symbol, scope);
+            boundFuncDef = new(funcDef, symbol, overload, scope);
             BoundNodes[funcDef] = boundFuncDef;
         }
 
@@ -68,7 +71,7 @@ public class Binder {
     }
 
     public BoundStructTypeDefinition BindStructTypeDefinition (
-        StructTypeDefinition structTypedef, Symbol symbol, SymbolTable scope
+        StructTypeDefinition structTypedef, TypedefSymbol symbol, SymbolTable scope
     ) {
         if (TryGetBoundNode(
             structTypedef, out BoundStructTypeDefinition? boundStructTypeDef
@@ -175,6 +178,19 @@ public class Binder {
         }
 
         return boundLeftUnaryExpr;
+    }
+
+    public BoundObjectInitializationExpression BindObjectInitializationExpression (
+        ObjectInitializationExpression initExpr
+    ) {
+        if (TryGetBoundNode(
+            initExpr, out BoundObjectInitializationExpression? boundInitExpr
+        ) == false) {
+            boundInitExpr = new(initExpr);
+            BoundNodes[initExpr] = boundInitExpr;
+        }
+
+        return boundInitExpr;
     }
 
     public BoundCallExpression BindCallExpression (CallExpression callExpr) {
@@ -509,7 +525,7 @@ public class Binder {
     /// </summary>
     /// <param name="paramList">The list of parameters forming the overload.</param>
     /// <returns></returns>
-    public List<TypeInfo> GetOverload (ParameterList paramList) {
+    public List<TypeInfo> GetParamTypes (ParameterList paramList) {
         List<TypeInfo> signature = new();
 
         foreach (var param in paramList.Parameters) {

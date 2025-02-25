@@ -12,8 +12,6 @@ public class BoundLiteralExpression : BoundExpression {
 
     public ConstantValue Value { get; private set; }
 
-    public override bool IsComplete => TypeInfo.IsResolved(Type);
-
     public BoundLiteralExpression (
         LiteralExpression node, TypeInfo typeInfo, ConstantValue value
     )

@@ -17,8 +17,6 @@ public class BoundIdentifierExpression : BoundExpression {
 
     public Symbol Symbol { get; private init; }
 
-    public override bool IsComplete => TypeInfo.IsResolved(Type);
-
     public BoundIdentifierExpression (IdentifierExpression idExpr, Symbol symbol)
         : base(idExpr)
     {

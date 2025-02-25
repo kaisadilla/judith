@@ -24,11 +24,6 @@ public class SimpleAstPrinter : SyntaxVisitor<List<string>> {
         }
 
         txt.Add("compiler_unit {");
-        txt.Add("    top_level_items: [");
-        foreach (var strArray in topLevelItems) {
-            AddNewline(txt, strArray, 2);
-        }
-        txt.Add("    ],");
         if (implicitFunc == null) {
             txt.Add("    implicit_func: null");
         }
@@ -38,6 +33,12 @@ public class SimpleAstPrinter : SyntaxVisitor<List<string>> {
                 txt.Add("    " + str);
             }
         }
+        txt[^1] += ",";
+        txt.Add("    top_level_items: [");
+        foreach (var strArray in topLevelItems) {
+            AddNewline(txt, strArray, 2);
+        }
+        txt.Add("    ]");
         txt.Add("}");
 
         return txt;
@@ -372,7 +373,7 @@ public class SimpleAstPrinter : SyntaxVisitor<List<string>> {
     }
 
     public override List<string> Visit (EqualsValueClause node) {
-        List<string> txt = ["= "];
+        List<string> txt = [" = "];
 
         AddInline(txt, Visit(node.Value), 1);
 

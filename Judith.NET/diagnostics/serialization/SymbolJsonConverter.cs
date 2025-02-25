@@ -23,6 +23,10 @@ public class SymbolJsonConverter : JsonConverter<Symbol> {
             ["Type"] = value.Type != null ? JToken.FromObject(value.Type, serializer) : null,
         };
 
+        if (value is FunctionSymbol funcSymbol) {
+            obj["Overloads"] = JToken.FromObject(funcSymbol.Overloads, serializer);
+        }
+
         obj.WriteTo(writer);
     }
 
