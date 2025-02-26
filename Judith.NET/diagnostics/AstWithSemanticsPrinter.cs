@@ -185,7 +185,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object? Visit (ObjectInitializationExpression node) {
         return new {
-            Expression = VisitIfNotNull(node.Provider),
+            Name = nameof(ObjectInitializationExpression),
+            Provider = VisitIfNotNull(node.Provider),
             Initializer = Visit(node.Initializer),
             Semantics = GetBoundOrNull(node),
         };
@@ -193,6 +194,7 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (CallExpression node) {
         return new {
+            Name = nameof(CallExpression),
             Callee = Visit(node.Callee),
             Arguments = Visit(node.Arguments),
             Semantics = GetBoundOrNull(node),
@@ -341,7 +343,17 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object? Visit (ObjectInitializer node) {
         return new {
-            Assignments = node.Assignments.Select(a => Visit(a)),
+            Name = nameof(ObjectInitializer),
+            Assignments = node.FieldInitializations.Select(a => Visit(a)),
+            Semantics = GetBoundOrNull(node),
+        };
+    }
+
+    public override object? Visit (FieldInitialization node) {
+        return new {
+            Name = nameof(FieldInitialization),
+            FieldName = Visit(node.FieldName),
+            Initializer = VisitIfNotNull(node.Initializer),
             Semantics = GetBoundOrNull(node),
         };
     }

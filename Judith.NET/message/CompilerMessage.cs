@@ -342,6 +342,16 @@ public class CompilerMessage {
                 line
             );
         }
+
+        public static CompilerMessage FieldMustBeInitialized (int line) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.Parser,
+                (int)MessageCode.FieldMustBeInitialized,
+                $"Field must be initialized with a value.",
+                line
+            );
+        }
     }
 
     public static class Analyzers {

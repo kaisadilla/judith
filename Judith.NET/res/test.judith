@@ -3,9 +3,33 @@ typedef struct Person
     age: Num
 end
 
+typedef struct Player
+    id: Num
+    username: String
+    is_active: Bool
+    profile: Person
+end
+
 const p = Person {
     name = "Kevin",
     age = 32,
+}
+
+const first_player = Player {
+    id = 315,
+    username = "kevin_32",
+    is_active = true,
+    profile = p,
+}
+
+const second_player = Player {
+    id = 7_314,
+    username = ">>old-player<<",
+    is_active = false,
+    profile = {
+        name = "Josh",
+        age = 51,
+    },
 }
 
 

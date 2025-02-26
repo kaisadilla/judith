@@ -87,6 +87,7 @@ public enum SyntaxKind
     LocalDeclarator,
 
     ObjectInitializer,
+    FieldInitialization,
     MemberField,
 
     P_PrintStatement,

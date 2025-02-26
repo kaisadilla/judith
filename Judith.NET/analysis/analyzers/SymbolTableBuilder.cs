@@ -59,10 +59,10 @@ public class SymbolTableBuilder : SyntaxVisitor {
 
         var symbol = (TypedefSymbol)_scope.Current.AddSymbol(SymbolKind.StructType, name);
         var scope = _scope.Current.CreateInnerTable(ScopeKind.StructSpace, symbol);
-        _cmp.Binder.BindStructTypeDefinition(node, symbol, scope);
+        var boundNode = _cmp.Binder.BindStructTypeDefinition(node, symbol, scope);
 
         _scope.BeginScope(scope);
-        Visit(node.MemberFields);
+        VisitMembers(boundNode, node.MemberFields);
         _scope.EndScope();
 
         _nodeStates[node] = NodeState.Completed;
@@ -135,13 +135,33 @@ public class SymbolTableBuilder : SyntaxVisitor {
         _nodeStates[node] = NodeState.Completed;
     }
 
-    public override void Visit (MemberField node) {
-        var symbol = _scope.Current.AddSymbol(
-            SymbolKind.MemberField, node.Identifier.Name
-        );
+    public override void Visit (ObjectInitializer node) {
+        var bodyScope = _scope.Current.CreateAnonymousInnerTable(ScopeKind.ObjectInitializer); // TODO: Maybe we don't need it.
 
-        _cmp.Binder.BindMemberField(node, symbol);
+        _cmp.Binder.BindObjectInitializer(node, bodyScope);
 
         _nodeStates[node] = NodeState.Completed;
+    }
+
+    /// <summary>
+    /// Visits the member fields inside a member container (structs, interfaces,
+    /// classes...); creating a symbol for it and appending it to the container's
+    /// list of members.
+    /// </summary>
+    /// <param name="memberContainer">The node that contains members.</param>
+    /// <param name="nodes">The members contained.</param>
+    private void VisitMembers (
+        IBoundMemberContainer memberContainer, List<MemberField> nodes
+    ) {
+        foreach (var node in nodes) {
+            var symbol = _scope.Current.AddSymbol(
+                SymbolKind.MemberField, node.Identifier.Name
+            );
+
+            _cmp.Binder.BindMemberField(node, symbol);
+            memberContainer.AddMember(new(symbol));
+
+            _nodeStates[node] = NodeState.Completed;
+        }
     }
 }

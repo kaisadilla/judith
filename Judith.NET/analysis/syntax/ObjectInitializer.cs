@@ -1,23 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Judith.NET.analysis.syntax;
+﻿namespace Judith.NET.analysis.syntax;
 
 public class ObjectInitializer : SyntaxNode {
-    public List<AssignmentExpression> Assignments { get; private init; }
+    public List<FieldInitialization> FieldInitializations { get; private init; }
 
     public Token? LeftBracketToken { get; set; }
     public Token? RightBracketToken { get; set; }
 
-    public ObjectInitializer (List<AssignmentExpression> assignments)
+    public ObjectInitializer (List<FieldInitialization> fieldInits)
         : base(SyntaxKind.ObjectInitializer)
     {
-        Assignments = assignments;
+        FieldInitializations = fieldInits;
 
-        Children.AddRange(Assignments);
+        Children.AddRange(FieldInitializations);
     }
 
     public override void Accept (SyntaxVisitor visitor) {

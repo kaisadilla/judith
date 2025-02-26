@@ -8,13 +8,15 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.analysis.binder;
 
-public class BoundStructTypeDefinition : BoundNode {
+public class BoundStructTypeDefinition : BoundNode, IBoundMemberContainer {
     public new StructTypeDefinition Node => (StructTypeDefinition)base.Node;
 
     public TypedefSymbol Symbol { get; private init; }
     [JsonIgnore]
     public SymbolTable Scope { get; private init; }
     public TypeInfo? Type { get; set; } = null;
+
+    public List<MemberDescription> Members { get; } = [];
 
     public BoundStructTypeDefinition (
         StructTypeDefinition node, TypedefSymbol symbol, SymbolTable scope
@@ -23,5 +25,9 @@ public class BoundStructTypeDefinition : BoundNode {
     {
         Symbol = symbol;
         Scope = scope;
+    }
+
+    public void AddMember (MemberDescription member) {
+        Members.Add(member);
     }
 }

@@ -455,11 +455,19 @@ public class SimpleAstPrinter : SyntaxVisitor<List<string>> {
     public override List<string>? Visit (ObjectInitializer node) {
         List<string> txt = ["["];
 
-        foreach (var assignment in node.Assignments) {
-            AddNewline(txt, Visit(assignment), 1);
+        foreach (var fieldInit in node.FieldInitializations) {
+            AddNewline(txt, Visit(fieldInit), 1);
         }
 
         txt.Add("]");
+
+        return txt;
+    }
+
+    public override List<string>? Visit (FieldInitialization node) {
+        List<string> txt = [$"{node.FieldName.Name} = "];
+
+        AddInline(txt, Visit(node.Initializer), 1);
 
         return txt;
     }

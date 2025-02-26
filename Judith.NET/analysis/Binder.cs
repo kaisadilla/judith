@@ -277,6 +277,17 @@ public class Binder {
         return boundParam;
     }
 
+    public BoundObjectInitializer BindObjectInitializer (
+        ObjectInitializer init, SymbolTable scope
+    ) {
+        if (TryGetBoundNode(init, out BoundObjectInitializer? boundInit) == false) {
+            boundInit = new(init, scope);
+            BoundNodes[init] = boundInit;
+        }
+
+        return boundInit;
+    }
+
     public BoundMemberField BindMemberField (MemberField field, Symbol symbol) {
         if (TryGetBoundNode(field, out BoundMemberField? boundMemberField) == false) {
             boundMemberField = new(field, symbol);

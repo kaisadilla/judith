@@ -41,6 +41,7 @@ public enum MessageCode {
     InvalidIntegerLiteral,
     InvalidFloatLiteral,
     ParameterTypeMustBeSpecified,
+    FieldMustBeInitialized,
 
     // 3xxx - Analyzer errors
     // SymbolResolver

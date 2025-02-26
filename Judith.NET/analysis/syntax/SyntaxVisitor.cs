@@ -90,6 +90,7 @@ public abstract class SyntaxVisitor {
     public virtual void Visit (MatchCase node) => VisitChildren(node);
 
     public virtual void Visit (ObjectInitializer node) => VisitChildren(node);
+    public virtual void Visit (FieldInitialization node) => VisitChildren(node);
     public virtual void Visit (MemberField node) => VisitChildren(node);
 
     public virtual void Visit (P_PrintStatement node) => VisitChildren(node);

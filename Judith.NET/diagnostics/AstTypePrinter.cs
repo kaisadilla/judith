@@ -79,6 +79,13 @@ public class AstTypePrinter : SyntaxVisitor {
         TypedNodes.Add($"LeftUnaryExpr: {node} - Type: {FQN(boundNode.Type)}");
     }
 
+    public override void Visit (ObjectInitializationExpression node) {
+        var boundNode = _cmp.Binder.GetBoundNodeOrThrow<BoundObjectInitializationExpression>(node);
+
+        TypedNodes.Add($"BoundInitExpr: {node} - Type: {FQN(boundNode.Type)}");
+        base.Visit(node);
+    }
+
     public override void Visit (CallExpression node) {
         var boundNode = _cmp.Binder.GetBoundNodeOrThrow<BoundCallExpression>(node);
 
@@ -117,10 +124,17 @@ public class AstTypePrinter : SyntaxVisitor {
         TypedNodes.Add($"Parameter: {node.Declarator.Identifier.Name} - Type: {FQN(boundNode.Type)}");
     }
 
-    public override void Visit (MemberField node) {
-        // TODO: Bound node
+    public override void Visit (FieldInitialization node) {
+        var boundInit = _cmp.Binder.GetBoundNodeOrThrow<BoundExpression>(node.Initializer.Value);
 
-        TypedNodes.Add($"TODO: MemberField: {node.Identifier.Name}");
+        TypedNodes.Add($"FieldInit: {node.FieldName.Name} - Expr ({node.Initializer}) " +
+            $"Type: {FQN(boundInit.Type)}");
+    }
+
+    public override void Visit (MemberField node) {
+        var boundNode = _cmp.Binder.GetBoundNodeOrThrow<BoundMemberField>(node);
+
+        TypedNodes.Add($"MemberField: {node.Identifier.Name} - Type: {FQN(boundNode.Type)}");
         base.Visit(node);
     }
 

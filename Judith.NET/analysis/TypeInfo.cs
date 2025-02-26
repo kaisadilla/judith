@@ -46,12 +46,16 @@ public class TypeInfo {
     );
 
     /// <summary>
-    /// This error type represents the "type" of something that doesn't have
+    /// This pseudotype represents the "type" of something that doesn't have
     /// a type at all. For example, a type itself doesn't have a type, so doing
-    /// "5 + Num" is invalid, because "Num" doesn't have a type.
+    /// "5 + Num" is invalid, because "Num" doesn't have a type. Unlike Void,
+    /// which means something could have a type but doesn't, this means that
+    /// something could not possibly have a type and, while syntactically that
+    /// something can be used somewhere where a type is needed, semantically
+    /// such use doesn't make sense.
     /// </summary>
     public static TypeInfo NoType { get; private set; } = new(
-        TypeKind.Error, "<no-type>", "<no-type>"
+        TypeKind.Pseudo, "<no-type>", "<no-type>"
     );
 
     /// <summary>
@@ -62,12 +66,18 @@ public class TypeInfo {
         TypeKind.Pseudo, "<anonymous-object>", "<anonymous-object>"
     );
 
+    /// <summary>
+    /// This pseudotype represents a (valid) type that is used when a type
+    /// must be provided, but at the same time the context doesn't contain
+    /// a type. For example, the return type of a function that doesn't return
+    /// anything is "Void".
+    /// </summary>
     public static TypeInfo VoidType { get; private set; } = new(
         TypeKind.Pseudo, "Void", "Void"
     );
 
     public static bool IsResolved ([NotNullWhen(true)] TypeInfo? typeInfo) {
-        return typeInfo != null && typeInfo.Kind == TypeKind.Unresolved;
+        return typeInfo != null && typeInfo.Kind != TypeKind.Unresolved;
     }
 
     public TypeInfo (TypeKind kind, string name, string fullyQualifiedName) {

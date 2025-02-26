@@ -90,6 +90,7 @@ public abstract class SyntaxVisitor<TResult> {
     public virtual TResult? Visit (MatchCase node) => VisitChildren(node);
 
     public virtual TResult? Visit (ObjectInitializer node) => VisitChildren(node);
+    public virtual TResult? Visit (FieldInitialization node) => VisitChildren(node);
     public virtual TResult? Visit (MemberField node) => VisitChildren(node);
 
     public virtual TResult? Visit (P_PrintStatement node) => VisitChildren(node);

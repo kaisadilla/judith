@@ -1255,21 +1255,16 @@ public class Parser {
             return false;
         }
 
-        List<AssignmentExpression> assignments = new();
+        List<FieldInitialization> fieldInits = new();
 
         do {
-            if (TryConsumeAssignmentExpression(out Expression? expr) == false
-                || expr.Kind != SyntaxKind.AssignmentExpression) {
-                throw Error(CompilerMessage.Parser.AssignmentExpressionExpected(
-                    Peek().Line
-                ));
-            }
+            if (TryConsumeFieldInitialization(
+                out FieldInitialization? fieldInit
+            ) == false) throw Error(CompilerMessage.Parser.AssignmentExpressionExpected(
+                Peek().Line
+            ));
 
-            if (expr is not AssignmentExpression assignment) {
-                throw new("Malformed assignment expression.");
-            }
-
-            assignments.Add(assignment);
+            fieldInits.Add(fieldInit);
         }
         while (Match(TokenKind.Comma) && Peek().Kind != TokenKind.RightCurlyBracket);
 
@@ -1277,7 +1272,23 @@ public class Parser {
             throw Error(CompilerMessage.Parser.RightCurlyBracketExpected(Peek().Line));
         }
 
-        objInit = SF.ObjectInitializer(leftBracket, assignments, rightBracket);
+        objInit = SF.ObjectInitializer(leftBracket, fieldInits, rightBracket);
+        return true;
+    }
+
+    private bool TryConsumeFieldInitialization (
+        [NotNullWhen(true)] out FieldInitialization? init
+    ) {
+        if (TryConsumeIdentifier(out Identifier? id) == false) {
+            init = null;
+            return false;
+        }
+
+        if (TryConsumeEqualsValueClause(out EqualsValueClause? clause) == false) {
+            throw Error(CompilerMessage.Parser.FieldMustBeInitialized(Peek().Line));
+        }
+
+        init = SF.FieldInitialization(id, clause);
         return true;
     }
 

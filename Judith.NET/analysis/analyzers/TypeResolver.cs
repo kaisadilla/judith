@@ -301,13 +301,20 @@ public class TypeResolver : SyntaxVisitor {
             return;
         }
 
-        if (boundProvider.Node.Kind != SyntaxKind.IdentifierExpression) {
-            Messages.Add(CompilerMessage.Analyzers.TypeExpected(node.Provider.Line));
+        Symbol symbol;
+        if (node.Provider.Kind == SyntaxKind.IdentifierExpression) {
+            symbol = ((BoundIdentifierExpression)boundProvider).Symbol;
         }
-        var symbol = ((BoundIdentifierExpression)boundProvider).Symbol;
+        else if (node.Provider.Kind == SyntaxKind.AccessExpression) {
+            //symbol = ((BoundAccessExpression)boundProvider).Symbol;
+            throw new NotImplementedException("Access not implemented.");
+        }
+        else {
+            throw new NotImplementedException("This can't happen.");
+        }
 
         if (symbol.Kind == SymbolKind.StructType) {
-            boundNode.Type = ((TypedefSymbol)symbol).Type;
+            boundNode.Type = ((TypedefSymbol)symbol).AssociatedType;
         }
         else {
             Messages.Add(CompilerMessage.Analyzers.InvalidTypeForObjectInitialization(
@@ -415,6 +422,9 @@ public class TypeResolver : SyntaxVisitor {
         boundNode.Symbol.Type = boundAnnot.Symbol.Type;
         boundNode.Type = boundNode.Symbol.Type;
     }
+
+
+
 
     /// <summary>
     /// Given a type annotation, returns the type info it refers to. Throws if

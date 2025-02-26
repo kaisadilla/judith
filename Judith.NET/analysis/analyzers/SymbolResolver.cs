@@ -128,10 +128,6 @@ public class SymbolResolver : SyntaxVisitor {
         _nodeStates.Completed(node);
     }
 
-    public override void Visit (ObjectInitializer node) {
-
-    }
-
     private T GetBoundNodeOrThrow<T> (SyntaxNode node) where T : BoundNode {
         if (_cmp.Binder.TryGetBoundNode(node, out T? boundNode) == false) {
             throw new($"Node '{node}' should be bound!");

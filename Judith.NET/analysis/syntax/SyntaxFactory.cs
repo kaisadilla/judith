@@ -297,6 +297,16 @@ public static class SyntaxFactory {
         return initExpr;
     }
 
+    public static FieldInitialization FieldInitialization (
+        Identifier fieldName, EqualsValueClause initializer
+    ) {
+        var fieldInit = new FieldInitialization(fieldName, initializer);
+        fieldInit.SetSpan(new(fieldName.Span.Start, initializer.Span.End));
+        fieldInit.SetLine(fieldName.Line);
+
+        return fieldInit;
+    }
+
     public static IdentifierExpression IdentifierExpression (Identifier identifier) {
         var idExpr = new IdentifierExpression(identifier);
         idExpr.SetSpan(identifier.Span);
@@ -468,10 +478,10 @@ public static class SyntaxFactory {
 
     public static ObjectInitializer ObjectInitializer (
         Token leftBracketToken,
-        List<AssignmentExpression> assignments,
+        List<FieldInitialization> fieldInitializations,
         Token rightBracketToken
     ) {
-        var objInit = new ObjectInitializer(assignments) {
+        var objInit = new ObjectInitializer(fieldInitializations) {
             LeftBracketToken = leftBracketToken,
             RightBracketToken = rightBracketToken,
         };

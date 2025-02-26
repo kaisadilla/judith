@@ -16,6 +16,7 @@ public enum ScopeKind {
     IfBlock,
     WhileBlock,
     ElseBlock,
+    ObjectInitializer,
 }
 
 [JsonConverter(typeof(SymbolTableJsonConverter))]
