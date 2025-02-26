@@ -205,8 +205,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
         return new {
             Name = nameof(AccessExpression),
             Operator = Visit(node.Operator),
-            Left = VisitIfNotNull(node.Left),
-            Right = Visit(node.Right),
+            Left = VisitIfNotNull(node.Receiver),
+            Right = Visit(node.Member),
             Semantics = GetBoundOrNull(node),
         };
     }

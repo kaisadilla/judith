@@ -133,8 +133,8 @@ public enum OperatorKind
     //UserDefined, // % followed by identifier.
 }
 
-public enum AccessKind
-{
-    Scope,
+[JsonConverter(typeof(StringEnumConverter))]
+public enum AccessKind {
     Member,
+    ScopeResolution,
 }

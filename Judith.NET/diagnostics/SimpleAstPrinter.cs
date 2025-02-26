@@ -306,9 +306,9 @@ public class SimpleAstPrinter : SyntaxVisitor<List<string>> {
     public override List<string> Visit (AccessExpression node) {
         List<string> txt = ["("];
 
-        AddInline(txt, Visit(node.Left), 1);
+        AddInline(txt, Visit(node.Receiver), 1);
         txt[^1] += $" {Visit(node.Operator)[0]} ";
-        AddInline(txt, Visit(node.Right), 1);
+        AddInline(txt, Visit(node.Member), 1);
         txt[^1] += ")";
 
         return txt;

@@ -92,6 +92,30 @@ public class SymbolResolver : SyntaxVisitor {
         }
     }
 
+    public override void Visit (AccessExpression node) {
+        if (_nodeStates.IsComplete(node)) return;
+
+        if (node.Receiver == null) {
+            throw new NotImplementedException("Implicit 'self' not yet supported.");
+        }
+
+        Visit(node.Receiver);
+        var boundReceiver = _cmp.Binder.GetBoundNodeOrThrow<BoundExpression>(node.Receiver);
+        var type = boundReceiver.Type;
+
+        if (TypeInfo.IsResolved(type) == false) return;
+
+        if (node.AccessKind == AccessKind.Member) {
+
+        }
+        else { // AccessKind is ScopeResolution.
+
+        }
+
+        Resolutions++;
+        _nodeStates.Completed(node);
+    }
+
     public override void Visit (IdentifierExpression node) {
         if (_nodeStates.IsComplete(node)) return;
 

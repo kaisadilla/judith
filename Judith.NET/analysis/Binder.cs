@@ -301,10 +301,10 @@ public class Binder {
     private BoundLiteralExpression ResolveBooleanLiteralExpression (LiteralExpression expr) {
         BoundLiteralExpression bound;
         if (expr.Literal.TokenKind == TokenKind.KwTrue) {
-            bound = new(expr, GetTypeInfo("Bool"), new ConstantValue(true));
+            bound = new(expr, _cmp.Native.Types.Bool, new ConstantValue(true));
         }
         else if (expr.Literal.TokenKind ==TokenKind.KwFalse) {
-            bound = new(expr, GetTypeInfo("Bool"), new ConstantValue(false));
+            bound = new(expr, _cmp.Native.Types.Bool, new ConstantValue(false));
         }
         else throw new Exception(
             $"Token kind '{expr.Literal.TokenKind}' is not valid for a boolean " +
@@ -519,7 +519,7 @@ public class Binder {
             .Replace("\\r", "\r");
 
         BoundLiteralExpression bound = new(
-            expr, GetTypeInfo("String"), new ConstantValue(str)
+            expr, _cmp.Native.Types.String, new ConstantValue(str)
         );
 
         BoundNodes[expr] = bound;
@@ -549,14 +549,6 @@ public class Binder {
         }
 
         return signature;
-    }
-
-    private TypeInfo GetTypeInfo (string type) {
-        if (_cmp.TypeTable.TryGetType(type, out var typeInfo)) {
-            return typeInfo;
-        }
-
-        throw new Exception($"Couldn't find type '{type}' for native literal!");
     }
 
     private TypeInfo GetSuffixTypeInfo (string? suffix) {

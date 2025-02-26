@@ -265,11 +265,11 @@ public static class SyntaxFactory {
     }
 
     public static AccessExpression AccessExpression (
-        Expression? leftExpr, Operator op, Expression rightExpr
+        Expression? receiver, Operator op, Identifier member
     ) {
-        var accessExpr = new AccessExpression(leftExpr, op, rightExpr);
-        accessExpr.SetSpan(new(leftExpr.Span.Start, rightExpr.Span.End));
-        accessExpr.SetLine(leftExpr.Line);
+        var accessExpr = new AccessExpression(receiver, op, member);
+        accessExpr.SetSpan(new(receiver.Span.Start, member.Span.End));
+        accessExpr.SetLine(receiver.Line);
 
         return accessExpr;
     }

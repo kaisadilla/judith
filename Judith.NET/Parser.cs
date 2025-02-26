@@ -835,19 +835,19 @@ public class Parser {
         // Because member access can be implicit (e.g. ".name" or "::count"), we
         // can't discard a member access just because we didn't find what it's
         // accessing.
-        TryConsumePrimary(out Expression? leftExpr);
+        TryConsumePrimary(out Expression? receiver);
 
         // Now, if we don't find a member access token:
         if (Peek().Kind != TokenKind.Dot && Peek().Kind != TokenKind.DoubleColon) {
             // IF we didn't find a provider, then we aren't parsing an expression
             // that stems from this one:
-            if (leftExpr == null) {
+            if (receiver == null) {
                 expr = null;
                 return false;
             }
             // If we did, then that provider becomes the expression.
             else {
-                expr = leftExpr;
+                expr = receiver;
                 return true;
             }
         }
@@ -855,16 +855,16 @@ public class Parser {
         while (TryConsumeOperator(
             out Operator? op, TokenKind.Dot, TokenKind.DoubleColon
         )) {
-            if (TryConsumePrimary(out Expression? rightExpr) == false) {
-                throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+            if (TryConsumeIdentifier(out Identifier? member) == false) {
+                throw Error(CompilerMessage.Parser.IdentifierExpected(Peek().Line));
             }
 
-            leftExpr = SF.AccessExpression(leftExpr, op, rightExpr);
+            receiver = SF.AccessExpression(receiver, op, member);
         }
 
-        if (leftExpr == null) throw new("Invalid flow.");
+        if (receiver == null) throw new("Receive cannot be null here.");
 
-        expr = leftExpr;
+        expr = receiver;
         return true;
     }
 
