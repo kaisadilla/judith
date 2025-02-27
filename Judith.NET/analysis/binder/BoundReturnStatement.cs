@@ -1,4 +1,5 @@
-﻿using Judith.NET.analysis.syntax;
+﻿using Judith.NET.analysis.semantics;
+using Judith.NET.analysis.syntax;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +11,7 @@ namespace Judith.NET.analysis.binder;
 public class BoundReturnStatement : BoundNode {
     public new ReturnStatement Node => (ReturnStatement)base.Node;
 
-    public TypeInfo? Type { get; set; }
+    public TypeSymbol? Type { get; set; }
 
     public BoundReturnStatement (ReturnStatement returnStmt) : base(returnStmt) { }
 }

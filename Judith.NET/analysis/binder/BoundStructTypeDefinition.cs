@@ -1,4 +1,5 @@
-﻿using Judith.NET.analysis.syntax;
+﻿using Judith.NET.analysis.semantics;
+using Judith.NET.analysis.syntax;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -11,15 +12,14 @@ namespace Judith.NET.analysis.binder;
 public class BoundStructTypeDefinition : BoundNode, IBoundMemberContainer {
     public new StructTypeDefinition Node => (StructTypeDefinition)base.Node;
 
-    public TypedefSymbol Symbol { get; private init; }
+    public TypeSymbol Symbol { get; private init; }
     [JsonIgnore]
     public SymbolTable Scope { get; private init; }
-    public TypeInfo? Type { get; set; } = null;
 
     public List<MemberDescription> Members { get; } = [];
 
     public BoundStructTypeDefinition (
-        StructTypeDefinition node, TypedefSymbol symbol, SymbolTable scope
+        StructTypeDefinition node, TypeSymbol symbol, SymbolTable scope
     )
         : base(node)
     {

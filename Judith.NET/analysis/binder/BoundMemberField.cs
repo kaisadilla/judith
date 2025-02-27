@@ -1,4 +1,5 @@
-﻿using Judith.NET.analysis.syntax;
+﻿using Judith.NET.analysis.semantics;
+using Judith.NET.analysis.syntax;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +11,7 @@ public class BoundMemberField : BoundNode {
     public new MemberField Node => (MemberField)base.Node;
 
     public Symbol Symbol { get; private init; }
-    public TypeInfo? Type { get; set; } = null;
+    public TypeSymbol? Type { get; set; } = null;
 
     public BoundMemberField (MemberField node, Symbol symbol) : base(node) {
         Symbol = symbol;

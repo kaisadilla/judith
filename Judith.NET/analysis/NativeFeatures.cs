@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Judith.NET.analysis.semantics;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -12,48 +13,55 @@ public class NativeFeatures {
     /// <summary>
     /// Adds all native types to the type and symbol tables given.
     /// </summary>
-    public NativeFeatures (TypeTable typeTbl, SymbolTable symbolTbl) {
+    public NativeFeatures (SymbolTable tbl) {
         Types = new() {
-            F32 = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, TypeKind.Primitive, "F32"),
-            F64 = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, TypeKind.Primitive, "F64"),
+            Unresolved = AddType(tbl, SymbolKind.UnresolvedType, "!Unresolved"),
+            UnresolvedFunction = AddType(tbl, SymbolKind.UnresolvedType, "!Function"),
 
-            I8 = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, TypeKind.Primitive, "I8"),
-            I16 = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, TypeKind.Primitive, "I16"),
-            I32 = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, TypeKind.Primitive, "I32"),
-            I64 = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, TypeKind.Primitive, "I64"),
+            Error = AddType(tbl, SymbolKind.ErrorType, "<error-type>"),
 
-            Ui8 = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, TypeKind.Primitive, "Ui8"),
-            Ui16 = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, TypeKind.Primitive, "Ui16"),
-            Ui32 = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, TypeKind.Primitive, "Ui32"),
-            Ui64 = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, TypeKind.Primitive, "Ui64"),
+            NoType = AddType(tbl, SymbolKind.PseudoType, "<no-type>"),
+            Anonymous = AddType(tbl, SymbolKind.PseudoType, "<anonymous-object>"),
+            Void = AddType(tbl, SymbolKind.PseudoType, "Void"),
 
-            String = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, TypeKind.String, "String"),
-            Bool = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, TypeKind.Primitive, "Bool"),
+            F32 = AddType(tbl, SymbolKind.PrimitiveType, "F32"),
+            F64 = AddType(tbl, SymbolKind.PrimitiveType, "F64"),
 
-            Byte = AddNativeType(typeTbl, symbolTbl, SymbolKind.AliasType, TypeKind.Alias, "Byte"),
-            Int = AddNativeType(typeTbl, symbolTbl, SymbolKind.AliasType, TypeKind.Alias, "Int"),
-            Float = AddNativeType(typeTbl, symbolTbl, SymbolKind.AliasType, TypeKind.Alias, "Float"),
-            Num = AddNativeType(typeTbl, symbolTbl, SymbolKind.AliasType, TypeKind.Alias, "Num"),
+            I8 = AddType(tbl, SymbolKind.PrimitiveType, "I8"),
+            I16 = AddType(tbl, SymbolKind.PrimitiveType, "I16"),
+            I32 = AddType(tbl, SymbolKind.PrimitiveType, "I32"),
+            I64 = AddType(tbl, SymbolKind.PrimitiveType, "I64"),
 
-            Void = AddNativeType(typeTbl, symbolTbl, SymbolKind.NativeType, TypeKind.Pseudo, "Void"),
+            Ui8 = AddType(tbl, SymbolKind.PrimitiveType, "Ui8"),
+            Ui16 = AddType(tbl, SymbolKind.PrimitiveType, "Ui16"),
+            Ui32 = AddType(tbl, SymbolKind.PrimitiveType, "Ui32"),
+            Ui64 = AddType(tbl, SymbolKind.PrimitiveType, "Ui64"),
+
+            Bool = AddType(tbl, SymbolKind.PrimitiveType, "Bool"),
+            String = AddType(tbl, SymbolKind.StringType, "String"),
+
+            Byte = AddType(tbl, SymbolKind.AliasType, "Byte"),
+            Int = AddType(tbl, SymbolKind.AliasType, "Int"),
+            Float = AddType(tbl, SymbolKind.AliasType, "Float"),
+            Num = AddType(tbl, SymbolKind.AliasType, "Num"),
         };
     }
 
-    public bool IsNumericType (TypeInfo typeInfo) {
-        return typeInfo == Types.F32
-            || typeInfo == Types.F64
-            || typeInfo == Types.I8
-            || typeInfo == Types.I16
-            || typeInfo == Types.I32
-            || typeInfo == Types.I64
-            || typeInfo == Types.Ui8
-            || typeInfo == Types.Ui16
-            || typeInfo == Types.Ui32
-            || typeInfo == Types.Ui64
-            || typeInfo == Types.Byte
-            || typeInfo == Types.Int
-            || typeInfo == Types.Float
-            || typeInfo == Types.Num;
+    public bool IsNumericType (TypeSymbol type) {
+        return type == Types.F32
+            || type == Types.F64
+            || type == Types.I8
+            || type == Types.I16
+            || type == Types.I32
+            || type == Types.I64
+            || type == Types.Ui8
+            || type == Types.Ui16
+            || type == Types.Ui32
+            || type == Types.Ui64
+            || type == Types.Byte
+            || type == Types.Int
+            || type == Types.Float
+            || type == Types.Num;
     }
 
     /// <summary>
@@ -66,7 +74,7 @@ public class NativeFeatures {
     /// - same size: Will return the same size.
     /// - different size: bigger size.
     /// </summary>
-    public TypeInfo? CoalesceNumericTypes (TypeInfo a, TypeInfo b) {
+    public TypeSymbol? CoalesceNumericTypes (TypeSymbol a, TypeSymbol b) {
         NumberType aType = _GetNumberType(a);
         NumberType bType = _GetNumberType(b);
         int aSize = _GetSize(a);
@@ -87,7 +95,7 @@ public class NativeFeatures {
         }
 
 
-        NumberType _GetNumberType (TypeInfo t) {
+        NumberType _GetNumberType (TypeSymbol t) {
             if (t == Types.F32 || t == Types.F64 || t == Types.Float || t == Types.Num) {
                 return NumberType.Float;
             }
@@ -100,7 +108,7 @@ public class NativeFeatures {
             return NumberType.Float;
         }
 
-        int _GetSize (TypeInfo t) {
+        int _GetSize (TypeSymbol t) {
             if (t == Types.I8 || t == Types.Ui8 || t == Types.Byte) return 8;
             if (t == Types.I16 || t == Types.Ui16) return 16;
             if (t == Types.F32 || t == Types.I32 || t == Types.Ui32) return 32;
@@ -109,43 +117,50 @@ public class NativeFeatures {
         }
     }
 
-    private static TypeInfo AddNativeType (
-        TypeTable typeTbl,
-        SymbolTable symbolTbl,
-        SymbolKind symbolKind,
-        TypeKind typeKind,
-        string name
-    ) {
-        Symbol symbol = symbolTbl.AddSymbol(symbolKind, name);
-        TypeInfo typeInfo = new(typeKind, name, symbol.FullyQualifiedName);
-        typeTbl.AddType(typeInfo);
-        symbol.Type = typeInfo;
-
-        return typeInfo;
+    private TypeSymbol AddType (SymbolTable tbl, SymbolKind kind, string name) {
+        return (TypeSymbol)tbl.AddSymbol(TypeSymbol.Define(kind, name));
     }
 
     public class TypeCollection {
-        public TypeInfo F32 { get; init; } = TypeInfo.UnresolvedType ;
-        public TypeInfo F64 { get; init; } = TypeInfo.UnresolvedType;
+        // Warning supressed as creating a constructor for this would be horrible.
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        // Unresolved types:
+        public TypeSymbol Unresolved { get; init; }
+        public TypeSymbol UnresolvedFunction { get; init; }
 
-        public TypeInfo I8 { get; init; } = TypeInfo.UnresolvedType;
-        public TypeInfo I16 { get; init; } = TypeInfo.UnresolvedType;
-        public TypeInfo I32 { get; init; } = TypeInfo.UnresolvedType;
-        public TypeInfo I64 { get; init; } = TypeInfo.UnresolvedType;
+        // Error types:
+        public TypeSymbol Error { get; init; }
 
-        public TypeInfo Ui8 { get; init; } = TypeInfo.UnresolvedType;
-        public TypeInfo Ui16 { get; init; }= TypeInfo.UnresolvedType;
-        public TypeInfo Ui32 { get; init; }= TypeInfo.UnresolvedType;
-        public TypeInfo Ui64 { get; init; } = TypeInfo.UnresolvedType;
+        // Pseudotypes:
+        public TypeSymbol NoType { get; init; }
+        public TypeSymbol Anonymous { get; init; }
+        public TypeSymbol Void { get; init; }
 
-        public TypeInfo String { get; init; } = TypeInfo.UnresolvedType;
-        public TypeInfo Bool { get; init; } = TypeInfo.UnresolvedType;
+        // Floating-point types:
+        public TypeSymbol F32 { get; init; }
+        public TypeSymbol F64 { get; init; }
 
-        public TypeInfo Byte { get; init; } = TypeInfo.UnresolvedType;
-        public TypeInfo Int { get; init; } = TypeInfo.UnresolvedType;
-        public TypeInfo Float { get; init; } = TypeInfo.UnresolvedType;
-        public TypeInfo Num { get; init; } = TypeInfo.UnresolvedType;
+        // Signed integer types:
+        public TypeSymbol I8 { get; init; }
+        public TypeSymbol I16 { get; init; }
+        public TypeSymbol I32 { get; init; }
+        public TypeSymbol I64 { get; init; }
 
-        public TypeInfo Void { get; init; } = TypeInfo.UnresolvedType;
+        // Unsigned integer types:
+        public TypeSymbol Ui8 { get; init; }
+        public TypeSymbol Ui16 { get; init; }
+        public TypeSymbol Ui32 { get; init; }
+        public TypeSymbol Ui64 { get; init; }
+
+        // Other native types:
+        public TypeSymbol Bool { get; init; }
+        public TypeSymbol String { get; init; }
+
+        // Default aliased types:
+        public TypeSymbol Byte { get; init; } // Default: Ui8
+        public TypeSymbol Int { get; init; } // Default: I64
+        public TypeSymbol Float { get; init; } // Default: F64
+        public TypeSymbol Num { get; init; } // Default: Float
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     }
 }

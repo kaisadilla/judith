@@ -1,4 +1,5 @@
-﻿using Judith.NET.analysis.syntax;
+﻿using Judith.NET.analysis.semantics;
+using Judith.NET.analysis.syntax;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,7 +14,7 @@ public class BoundLiteralExpression : BoundExpression {
     public ConstantValue Value { get; private set; }
 
     public BoundLiteralExpression (
-        LiteralExpression node, TypeInfo typeInfo, ConstantValue value
+        LiteralExpression node, TypeSymbol typeInfo, ConstantValue value
     )
         : base(node)
     {

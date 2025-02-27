@@ -81,9 +81,6 @@ void GenerateDebugFiles () {
     string symbolTableJson = JsonConvert.SerializeObject(cmp.SymbolTable, Formatting.Indented);
     File.WriteAllText(AppContext.BaseDirectory + "/res/test.symbol-table.json", symbolTableJson);
 
-    string typeTableJson = JsonConvert.SerializeObject(cmp.TypeTable, Formatting.Indented);
-    File.WriteAllText(AppContext.BaseDirectory + "/res/test.type-table.json", typeTableJson);
-
     string binderJson = JsonConvert.SerializeObject(cmp.Binder, Formatting.Indented);
     File.WriteAllText(AppContext.BaseDirectory + "/res/test.binder.json", binderJson);
 
@@ -100,6 +97,11 @@ void GenerateDebugFiles () {
     File.WriteAllText(AppContext.BaseDirectory + "/res/test.simple-ast.txt", string.Join('\n', simpleAst));
 
     if (messages.HasErrors) return;
+
+    var typeTableGen = new TypeTableGenerator();
+    typeTableGen.Analyze(cmp.SymbolTable);
+    string typeTableJson = JsonConvert.SerializeObject(typeTableGen.TypeTable, Formatting.Indented);
+    File.WriteAllText(AppContext.BaseDirectory + "/res/test.type-table.json", typeTableJson);
 
     var semanticAst = new AstWithSemanticsPrinter(cmp).Visit(cu);
     string semanticAstStr = JsonConvert.SerializeObject(semanticAst, Formatting.Indented);

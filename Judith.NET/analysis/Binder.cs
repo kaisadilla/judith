@@ -1,4 +1,5 @@
 ﻿using Judith.NET.analysis.binder;
+using Judith.NET.analysis.semantics;
 using Judith.NET.analysis.syntax;
 using Judith.NET.message;
 using Newtonsoft.Json;
@@ -71,7 +72,7 @@ public class Binder {
     }
 
     public BoundStructTypeDefinition BindStructTypeDefinition (
-        StructTypeDefinition structTypedef, TypedefSymbol symbol, SymbolTable scope
+        StructTypeDefinition structTypedef, TypeSymbol symbol, SymbolTable scope
     ) {
         if (TryGetBoundNode(
             structTypedef, out BoundStructTypeDefinition? boundStructTypeDef
@@ -536,22 +537,22 @@ public class Binder {
     /// </summary>
     /// <param name="paramList">The list of parameters forming the overload.</param>
     /// <returns></returns>
-    public List<TypeInfo> GetParamTypes (ParameterList paramList) {
-        List<TypeInfo> signature = new();
+    public List<TypeSymbol> GetParamTypes (ParameterList paramList) {
+        List<TypeSymbol> signature = new();
 
         foreach (var param in paramList.Parameters) {
             if (TryGetBoundNode(param, out BoundParameter? boundParam) == false) {
-                signature.Add(TypeInfo.UnresolvedType);
+                signature.Add(_cmp.Native.Types.Unresolved);
             }
             else {
-                signature.Add(boundParam.Type ?? TypeInfo.UnresolvedType);
+                signature.Add(boundParam.Type ?? _cmp.Native.Types.Unresolved);
             }
         }
 
         return signature;
     }
 
-    private TypeInfo GetSuffixTypeInfo (string? suffix) {
+    private TypeSymbol GetSuffixTypeInfo (string? suffix) {
         return suffix switch {
             "f64" => _cmp.Native.Types.F64,
             "f32" => _cmp.Native.Types.F32,

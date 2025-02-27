@@ -21,14 +21,12 @@ public class Compilation {
     public NativeFeatures Native { get; private set; }
     public SymbolTable SymbolTable { get; private set; }
     public Binder Binder { get; private set; }
-    public TypeTable TypeTable { get; private set; }
 
     public Compilation (List<CompilerUnit> units) {
         Units = units;
         SymbolTable = SymbolTable.CreateGlobalTable();
         Binder = new(this);
-        TypeTable = new();
-        Native = new(TypeTable, SymbolTable);
+        Native = new(SymbolTable);
     }
 
     public void Analyze () {

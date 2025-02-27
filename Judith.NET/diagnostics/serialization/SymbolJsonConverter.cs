@@ -1,11 +1,6 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Judith.NET.analysis.semantics;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Judith.NET.analysis;
+using Newtonsoft.Json.Linq;
 
 namespace Judith.NET.diagnostics.serialization;
 public class SymbolJsonConverter : JsonConverter<Symbol> {
@@ -26,8 +21,7 @@ public class SymbolJsonConverter : JsonConverter<Symbol> {
         if (value is FunctionSymbol funcSymbol) {
             obj["Overloads"] = JToken.FromObject(funcSymbol.Overloads, serializer);
         }
-        else if (value is TypedefSymbol typedefSymbol) {
-            obj["AssociatedType"] = typedefSymbol.AssociatedType == null ? null : JToken.FromObject(typedefSymbol.AssociatedType, serializer);
+        else if (value is TypeSymbol typeSymbol) {
         }
 
         obj.WriteTo(writer);

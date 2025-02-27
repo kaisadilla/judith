@@ -32,7 +32,7 @@ const second_player = Player {
     },
 }
 
-p.name = "Elder"
+--p.name = "Elder"
 
 const i1 = 1
 const i2 = 1

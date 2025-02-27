@@ -1,5 +1,6 @@
 ﻿using Judith.NET.analysis;
 using Judith.NET.analysis.binder;
+using Judith.NET.analysis.semantics;
 using Judith.NET.analysis.syntax;
 using System;
 using System.Collections.Generic;
@@ -138,7 +139,7 @@ public class AstTypePrinter : SyntaxVisitor {
         base.Visit(node);
     }
 
-    private string FQN (TypeInfo? typeInfo) {
+    private string FQN (TypeSymbol? typeInfo) {
         return typeInfo?.FullyQualifiedName ?? "null";
     }
 }

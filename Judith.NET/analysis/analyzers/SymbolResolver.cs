@@ -1,4 +1,5 @@
 ﻿using Judith.NET.analysis.binder;
+using Judith.NET.analysis.semantics;
 using Judith.NET.analysis.syntax;
 using Judith.NET.message;
 using System;
@@ -103,14 +104,15 @@ public class SymbolResolver : SyntaxVisitor {
         var boundReceiver = _cmp.Binder.GetBoundNodeOrThrow<BoundExpression>(node.Receiver);
         var type = boundReceiver.Type;
 
-        if (TypeInfo.IsResolved(type) == false) return;
-
-        if (node.AccessKind == AccessKind.Member) {
-
-        }
-        else { // AccessKind is ScopeResolution.
-
-        }
+        // TODO:
+        //if (TypeInfo.IsResolved(type) == false) return;
+        //
+        //if (node.AccessKind == AccessKind.Member) {
+        //    if (type.Kind == TypeKind.Struct)
+        //}
+        //else { // AccessKind is ScopeResolution.
+        //
+        //}
 
         Resolutions++;
         _nodeStates.Completed(node);

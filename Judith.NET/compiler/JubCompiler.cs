@@ -1,5 +1,6 @@
 ﻿using Judith.NET.analysis;
 using Judith.NET.analysis.binder;
+using Judith.NET.analysis.semantics;
 using Judith.NET.analysis.syntax;
 using Judith.NET.compiler.jub;
 using System;
@@ -343,7 +344,7 @@ public class JubCompiler : SyntaxVisitor {
         _localBlock.MarkInitialized(addr);
 
         CurrentFunc.Parameters.Add(
-            new(CurrentBlock, TypeInfo.UnresolvedType, node.Declarator.Identifier.Name)
+            new(CurrentBlock, _cmp.Native.Types.Unresolved, node.Declarator.Identifier.Name)
         ); // TODO: Bind parameters and resolve their types. UnresolvedType is just a placeholder.
     }
 

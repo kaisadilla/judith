@@ -1,4 +1,5 @@
 ﻿using Judith.NET.analysis.binder;
+using Judith.NET.analysis.semantics;
 using Judith.NET.analysis.syntax;
 using System;
 using System.Collections.Generic;
@@ -39,7 +40,9 @@ public class SymbolTableBuilder : SyntaxVisitor {
 
         var paramTypes = _cmp.Binder.GetParamTypes(node.Parameters);
 
-        var (symbol, overload) = _scope.Current.AddFunctionSymbol(name, paramTypes);
+        var (symbol, overload) = _scope.Current.AddFunctionSymbol(
+            name, _cmp.Native.Types.UnresolvedFunction, paramTypes
+        );
         var scope = _scope.Current.CreateInnerTable(
             ScopeKind.FunctionBlock, symbol, overload
         );
@@ -57,7 +60,9 @@ public class SymbolTableBuilder : SyntaxVisitor {
     public override void Visit (StructTypeDefinition node) {
         string name = node.Identifier.Name;
 
-        var symbol = (TypedefSymbol)_scope.Current.AddSymbol(SymbolKind.StructType, name);
+        TypeSymbol symbol = _scope.Current.AddSymbol(
+            TypeSymbol.Define(SymbolKind.StructType, name)
+        );
         var scope = _scope.Current.CreateInnerTable(ScopeKind.StructSpace, symbol);
         var boundNode = _cmp.Binder.BindStructTypeDefinition(node, symbol, scope);
 
@@ -118,7 +123,9 @@ public class SymbolTableBuilder : SyntaxVisitor {
     }
 
     public override void Visit (LocalDeclarator node) {
-        var symbol = _scope.Current.AddSymbol(SymbolKind.Local, node.Identifier.Name);
+        var symbol = _scope.Current.AddSymbol(
+            Symbol.Define(SymbolKind.Local, node.Identifier.Name)
+        );
 
         _cmp.Binder.BindLocalDeclarator(node, symbol);
 
@@ -127,7 +134,7 @@ public class SymbolTableBuilder : SyntaxVisitor {
 
     public override void Visit (Parameter node) {
         var symbol = _scope.Current.AddSymbol(
-            SymbolKind.Parameter, node.Declarator.Identifier.Name
+            Symbol.Define(SymbolKind.Parameter, node.Declarator.Identifier.Name)
         );
 
         _cmp.Binder.BindParameter(node, symbol);
@@ -136,7 +143,9 @@ public class SymbolTableBuilder : SyntaxVisitor {
     }
 
     public override void Visit (ObjectInitializer node) {
-        var bodyScope = _scope.Current.CreateAnonymousInnerTable(ScopeKind.ObjectInitializer); // TODO: Maybe we don't need it.
+        var bodyScope = _scope.Current.CreateAnonymousInnerTable(
+            ScopeKind.ObjectInitializer
+        ); // TODO: Maybe we don't need it.
 
         _cmp.Binder.BindObjectInitializer(node, bodyScope);
 
@@ -155,7 +164,7 @@ public class SymbolTableBuilder : SyntaxVisitor {
     ) {
         foreach (var node in nodes) {
             var symbol = _scope.Current.AddSymbol(
-                SymbolKind.MemberField, node.Identifier.Name
+                Symbol.Define(SymbolKind.MemberField, node.Identifier.Name)
             );
 
             _cmp.Binder.BindMemberField(node, symbol);

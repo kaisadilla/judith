@@ -1,4 +1,5 @@
 ﻿using Judith.NET.analysis;
+using Judith.NET.analysis.semantics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -40,11 +41,11 @@ public class BinaryFunction {
 }
 
 public class FunctionParameter {
-    public TypeInfo Type { get; private init; }
+    public TypeSymbol Type { get; private init; }
     public string Name { get; private init; }
     public int NameIndex { get; private init; }
 
-    public FunctionParameter (BinaryBlock file, TypeInfo type, string name) {
+    public FunctionParameter (BinaryBlock file, TypeSymbol type, string name) {
         Type = type;
         Name = name;
         NameIndex = file.ConstantTable.WriteStringASCII(Name);

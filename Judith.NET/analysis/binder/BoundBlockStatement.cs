@@ -1,4 +1,5 @@
-﻿using Judith.NET.analysis.syntax;
+﻿using Judith.NET.analysis.semantics;
+using Judith.NET.analysis.syntax;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,7 +17,7 @@ public class BoundBlockStatement : BoundNode {
     public new BlockStatement Node => (BlockStatement)base.Node;
 
     public BlockEvaluationKind EvaluationKind { get; set; }
-    public TypeInfo? Type { get; set; }
+    public TypeSymbol? Type { get; set; }
 
     public BoundBlockStatement (BlockStatement blockStmt) : base(blockStmt) { }
 }

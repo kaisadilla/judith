@@ -1,7 +1,9 @@
-﻿using Judith.NET.diagnostics.serialization;
+﻿using Judith.NET.analysis.semantics;
+using Judith.NET.diagnostics.serialization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System.Diagnostics.CodeAnalysis;
+using System.Xml.Linq;
 
 namespace Judith.NET.analysis;
 
@@ -202,26 +204,17 @@ public class SymbolTable {
     }
 
     /// <summary>
-    /// Adds a symbol to this table. An exception will occur if a symbol with
-    /// that name already exists in this table (but not its parents or children).
-    /// Returns the symbol that has been created.
+    /// Creates the symbol defined by the definer inside this table.
     /// </summary>
-    /// <param name="symbolKind">The kind of symbol to create.</param>
-    /// <param name="name">The unqualified name of the symbol.</param>
-    public Symbol AddSymbol (SymbolKind symbolKind, string name) {
-        if (Symbols.ContainsKey(name)) {
-            throw new Exception($"'{name}' is already defined in this table.");
-        }
+    /// <param name="createSymbol">The symbol definer function.</param>
+    public T AddSymbol<T> (Symbol.DefinerFunc<T> createSymbol) where T : Symbol {
+        var symbol = createSymbol(this);
 
-        Symbol symbol;
-        if (symbolKind == SymbolKind.StructType) {
-            symbol = new TypedefSymbol(this, name, QualifyName(name));
-        }
-        else {
-            symbol = new(this, symbolKind, name, QualifyName(name));
-        }
+        if (Symbols.ContainsKey(symbol.Name)) throw new Exception(
+            $"'{symbol.Name}' is already defined in this table."
+        );
 
-        Symbols[name] = symbol;
+        Symbols[symbol.Name] = symbol;
 
         return symbol;
     }
@@ -233,7 +226,7 @@ public class SymbolTable {
     /// <param name="name">The unqualified name of the function.</param>
     /// <param name="paramTypes">The type of each parameter, in order.</param>
     public (FunctionSymbol symbol, FunctionOverload overload) AddFunctionSymbol (
-        string name, List<TypeInfo> paramTypes
+        string name, TypeSymbol funcType, List<TypeSymbol> paramTypes
     ) {
         FunctionSymbol funcSymbol;
         if (Symbols.TryGetValue(name, out Symbol? symbol)) {
@@ -244,8 +237,8 @@ public class SymbolTable {
             funcSymbol = (FunctionSymbol)symbol;
         }
         else {
-            funcSymbol = new FunctionSymbol(this, name, QualifyName(name)) {
-                Type = TypeInfo.UnresolvedFunctionType,
+            funcSymbol = new FunctionSymbol(this, name, Qualify(name)) {
+                Type = funcType,
             };
             Symbols[name] = funcSymbol;
         }
@@ -260,7 +253,7 @@ public class SymbolTable {
     /// Returns the fully qualified name for an unqualified name in this table.
     /// </summary>
     /// <param name="name">An unqualified name.</param>
-    public string QualifyName (string name) {
+    public string Qualify (string name) {
         if (IsGlobalTable) return name;
         else return Qualifier + "/" + name;
     }

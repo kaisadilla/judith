@@ -1862,6 +1862,11 @@ const sb: SB = SB!("My StringBuilder") -- "SB" will be expanded to "StringBuilde
 
 #endregion
 
+#region Regex
+-- Judith features a native Regex type with its own syntax:
+const regex: Regex = /[0-9]{9}/g -- literals that start with "/" are regex literals.
+#endregion
+
 #region Other notes
 -- You can get the size of a type, as an int, with sizeof() operator:
 const size_of_string: Int = sizeof(String)
