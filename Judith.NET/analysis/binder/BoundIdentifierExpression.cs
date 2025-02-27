@@ -13,10 +13,12 @@ public enum IdentifierKind {
     Local,
 }
 
-public class BoundIdentifierExpression : BoundExpression {
+public class BoundIdentifierExpression : BoundExpression, IBoundIdentifyingExpression {
     public new IdentifierExpression Node => (IdentifierExpression)base.Node;
 
     public Symbol Symbol { get; private init; }
+
+    public TypeSymbol? AssociatedType { get; set; }
 
     public BoundIdentifierExpression (IdentifierExpression idExpr, Symbol symbol)
         : base(idExpr)

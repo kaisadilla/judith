@@ -298,31 +298,22 @@ public class TypeResolver : SyntaxVisitor {
         
         var boundProvider = Binder.GetBoundNodeOrThrow<BoundExpression>(node.Provider);
 
-        // If the provider hasn't been resolved, we can't resolve this node either.
-        if (TypeSymbol.IsResolved(boundProvider.Type) == false) {
-            boundProvider.Type = NativeTypes.Unresolved;
+        if (boundProvider is not IBoundIdentifyingExpression boundProvAsId) {
+            Messages.Add(CompilerMessage.Analyzers.TypeExpected(node.Provider.Line));
             return;
         }
 
-        Symbol symbol;
-        if (node.Provider.Kind == SyntaxKind.IdentifierExpression) {
-            symbol = ((BoundIdentifierExpression)boundProvider).Symbol;
-        }
-        else if (node.Provider.Kind == SyntaxKind.AccessExpression) {
-            //symbol = ((BoundAccessExpression)boundProvider).Symbol;
-            throw new NotImplementedException("Access not implemented.");
-        }
-        else {
-            throw new NotImplementedException("This can't happen.");
+        // If the provider hasn't been resolved, we can't resolve this node either.
+        if (TypeSymbol.IsResolved(boundProvAsId.Type) == false) {
+            boundNode.Type = NativeTypes.Unresolved;
+            return;
         }
 
-        if (symbol.Kind == SymbolKind.StructType) {
-            boundNode.Type = ((TypeSymbol)symbol).Type;
+        if (boundProvAsId.Type == NativeTypes.NoType) {
+            boundNode.Type = boundProvAsId.AssociatedType;
         }
         else {
-            Messages.Add(CompilerMessage.Analyzers.InvalidTypeForObjectInitialization(
-                symbol.FullyQualifiedName, node.Provider.Line
-            ));
+            boundNode.Type = boundProvAsId.Type;
         }
     }
 
@@ -377,7 +368,13 @@ public class TypeResolver : SyntaxVisitor {
 
         if (TypeSymbol.IsResolved(boundNode.Type)) return;
 
-        boundNode.Type = boundNode.Symbol.Type ?? NativeTypes.Unresolved;
+        if (boundNode.Symbol is TypeSymbol typeSymbol) {
+            boundNode.Type = _cmp.Native.Types.NoType;
+            boundNode.AssociatedType = typeSymbol;
+        }
+        else {
+            boundNode.Type = boundNode.Symbol.Type ?? NativeTypes.Unresolved;
+        }
     }
 
     public override void Visit (LiteralExpression node) {

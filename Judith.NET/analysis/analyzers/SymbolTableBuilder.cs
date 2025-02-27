@@ -63,6 +63,8 @@ public class SymbolTableBuilder : SyntaxVisitor {
         TypeSymbol symbol = _scope.Current.AddSymbol(
             TypeSymbol.Define(SymbolKind.StructType, name)
         );
+        symbol.Type = _cmp.Native.Types.NoType;
+
         var scope = _scope.Current.CreateInnerTable(ScopeKind.StructSpace, symbol);
         var boundNode = _cmp.Binder.BindStructTypeDefinition(node, symbol, scope);
 

@@ -130,7 +130,12 @@ public class SymbolResolver : SyntaxVisitor {
             return;
         }
 
-        _cmp.Binder.BindIdentifierExpression(node, symbol);
+        var boundNode = _cmp.Binder.BindIdentifierExpression(node, symbol);
+
+        if (symbol is TypeSymbol typeSymbol) {
+            boundNode.Type = _cmp.Native.Types.NoType;
+            boundNode.AssociatedType = typeSymbol;
+        }
 
         Resolutions++;
         _nodeStates.Completed(node);
