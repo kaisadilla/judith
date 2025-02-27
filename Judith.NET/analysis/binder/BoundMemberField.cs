@@ -11,7 +11,6 @@ public class BoundMemberField : BoundNode {
     public new MemberField Node => (MemberField)base.Node;
 
     public Symbol Symbol { get; private init; }
-    public TypeSymbol? Type { get; set; } = null;
 
     public BoundMemberField (MemberField node, Symbol symbol) : base(node) {
         Symbol = symbol;

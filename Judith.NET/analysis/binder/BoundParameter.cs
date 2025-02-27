@@ -12,7 +12,6 @@ public class BoundParameter : BoundNode {
     public new Parameter Node => (Parameter)base.Node;
 
     public Symbol Symbol { get; private init; }
-    public TypeSymbol? Type { get; set; } = null;
 
     public BoundParameter (Parameter param, Symbol symbol)
         : base(param) {

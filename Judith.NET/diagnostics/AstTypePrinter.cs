@@ -122,7 +122,7 @@ public class AstTypePrinter : SyntaxVisitor {
     public override void Visit (Parameter node) {
         var boundNode = _cmp.Binder.GetBoundNodeOrThrow<BoundParameter>(node);
 
-        TypedNodes.Add($"Parameter: {node.Declarator.Identifier.Name} - Type: {FQN(boundNode.Type)}");
+        TypedNodes.Add($"Parameter: {node.Declarator.Identifier.Name} - Type: {FQN(boundNode.Symbol.Type)}");
     }
 
     public override void Visit (FieldInitialization node) {
@@ -135,7 +135,7 @@ public class AstTypePrinter : SyntaxVisitor {
     public override void Visit (MemberField node) {
         var boundNode = _cmp.Binder.GetBoundNodeOrThrow<BoundMemberField>(node);
 
-        TypedNodes.Add($"MemberField: {node.Identifier.Name} - Type: {FQN(boundNode.Type)}");
+        TypedNodes.Add($"MemberField: {node.Identifier.Name} - Type: {FQN(boundNode.Symbol.Type)}");
         base.Visit(node);
     }
 

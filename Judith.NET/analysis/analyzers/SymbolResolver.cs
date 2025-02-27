@@ -153,7 +153,14 @@ public class SymbolResolver : SyntaxVisitor {
             return;
         }
 
-        _cmp.Binder.BindTypeAnnotation(node, symbol);
+        if (symbol is TypeSymbol typeSymbol) {
+            _cmp.Binder.BindTypeAnnotation(node, typeSymbol);
+        }
+        else {
+            Messages.Add(CompilerMessage.Analyzers.TypeExpected(node.Identifier.Line));
+            _cmp.Binder.BindTypeAnnotation(node, _cmp.Native.Types.Error);
+        }
+
 
         Resolutions++;
         _nodeStates.Completed(node);

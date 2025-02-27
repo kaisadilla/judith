@@ -15,8 +15,14 @@ public class SymbolJsonConverter : JsonConverter<Symbol> {
             ["Kind"] = JToken.FromObject(value.Kind, serializer),
             ["Name"] = JToken.FromObject(value.Name, serializer),
             ["FullyQualifiedName"] = JToken.FromObject(value.FullyQualifiedName, serializer),
-            ["Type"] = value.Type != null ? JToken.FromObject(value.Type, serializer) : null,
         };
+
+        if (value.Type == value) {
+            obj["Type"] = "(itself)";
+        }
+        else {
+            obj["Type"] = value.Type != null ? JToken.FromObject(value.Type, serializer) : null;
+        }
 
         if (value is FunctionSymbol funcSymbol) {
             obj["Overloads"] = JToken.FromObject(funcSymbol.Overloads, serializer);

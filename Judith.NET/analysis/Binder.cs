@@ -55,6 +55,17 @@ public class Binder {
         return typedBoundNode;
     }
 
+    public IBoundIdentifyingExpression GetBoundIdOrThrow (SyntaxNode node) {
+        if (TryGetBoundNode(node, out BoundExpression? typedBoundNode) == false) {
+            throw new($"'{node}' should be bound.");
+        }
+        if (typedBoundNode is not IBoundIdentifyingExpression boundId) {
+            throw new($"'{typedBoundNode}' is not an identifying expression.");
+        }
+
+        return boundId;
+    }
+
     public BoundFunctionDefinition BindFunctionDefinition (
         FunctionDefinition funcDef,
         FunctionSymbol symbol,
@@ -259,10 +270,10 @@ public class Binder {
     }
 
     public BoundTypeAnnotation BindTypeAnnotation (
-        TypeAnnotation typeAnnt, Symbol symbol
+        TypeAnnotation typeAnnt, TypeSymbol type
     ) {
         if (TryGetBoundNode(typeAnnt, out BoundTypeAnnotation? boundTypeAnnt) == false) {
-            boundTypeAnnt = new(typeAnnt, symbol);
+            boundTypeAnnt = new(typeAnnt, type);
             BoundNodes[typeAnnt] = boundTypeAnnt;
         }
 
@@ -545,7 +556,7 @@ public class Binder {
                 signature.Add(_cmp.Native.Types.Unresolved);
             }
             else {
-                signature.Add(boundParam.Type ?? _cmp.Native.Types.Unresolved);
+                signature.Add(boundParam.Symbol.Type ?? _cmp.Native.Types.Unresolved);
             }
         }
 

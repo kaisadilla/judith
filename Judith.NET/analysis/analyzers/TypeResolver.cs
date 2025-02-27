@@ -47,11 +47,10 @@ public class TypeResolver : SyntaxVisitor {
         Visit(node.Parameters);
         _scope.EndScope();
 
-        // If the type 
         if (TypeSymbol.IsResolved(boundNode.Overload.ReturnType) == false) {
             // If the return type is explicitly declared.
             if (node.ReturnTypeAnnotation != null) {
-                var type = GetTypeSymbol(node.ReturnTypeAnnotation);
+                var type = GetType(node.ReturnTypeAnnotation);
 
                 boundNode.Overload.ReturnType = type;
             }
@@ -113,7 +112,7 @@ public class TypeResolver : SyntaxVisitor {
                     boundLocalDecl.Symbol.Type = inheritedType;
                 }
                 else {
-                    var type = GetTypeSymbol(localDecl.TypeAnnotation);
+                    var type = GetType(localDecl.TypeAnnotation);
                     boundLocalDecl.Symbol.Type = type;
                 }
 
@@ -399,19 +398,18 @@ public class TypeResolver : SyntaxVisitor {
 
         var boundParam = Binder.GetBoundNodeOrThrow<BoundParameter>(node);
 
-        if (TypeSymbol.IsResolved(boundParam.Type)) return;
+        if (TypeSymbol.IsResolved(boundParam.Symbol.Type)) return;
 
         var boundAnnot = Binder.GetBoundNodeOrThrow<BoundTypeAnnotation>(
             node.Declarator.TypeAnnotation
         );
 
-        boundParam.Symbol.Type = boundAnnot.Symbol.Type;
-        boundParam.Type = boundParam.Symbol.Type;
+        boundParam.Symbol.Type = boundAnnot.Type;
     }
 
     public override void Visit (MemberField node) {
         var boundNode = Binder.GetBoundNodeOrThrow<BoundMemberField>(node);
-        if (TypeSymbol.IsResolved(boundNode.Type)) return;
+        if (TypeSymbol.IsResolved(boundNode.Symbol.Type)) return;
 
         Visit(node.TypeAnnotation);
 
@@ -419,25 +417,14 @@ public class TypeResolver : SyntaxVisitor {
             node.TypeAnnotation
         );
 
-        boundNode.Symbol.Type = boundAnnot.Symbol.Type;
-        boundNode.Type = boundNode.Symbol.Type;
+        boundNode.Symbol.Type = boundAnnot.Type;
     }
 
 
-
-
-    /// <summary>
-    /// Given a type annotation, returns the type info it refers to. Throws if
-    /// the type annotation is not bound.
-    /// </summary>
-    /// <param name="annot">The annotation to get the type from.</param>
-    private TypeSymbol GetTypeSymbol (TypeAnnotation annot) {
-        var boundAnnot = Binder.GetBoundNodeOrThrow<BoundTypeAnnotation>(
-            annot
-        );
-
-        return boundAnnot.Symbol.Type ?? NativeTypes.Unresolved;
+    private TypeSymbol GetType (TypeAnnotation node) {
+        return Binder.GetBoundNodeOrThrow<BoundTypeAnnotation>(node).Type;
     }
+
 
     private List<TypeSymbol> GetOverload (ArgumentList args) {
         List<TypeSymbol> overload = [];

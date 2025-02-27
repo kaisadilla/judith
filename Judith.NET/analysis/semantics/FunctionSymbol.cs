@@ -130,6 +130,6 @@ public class FunctionOverload {
 
     public string GetSignatureString () {
         //return Symbol.FullyQualifiedName + "("; 
-        return "placeholder"; // TODO: Replace with something like "(std/Vec3;II)V".
+        return "--placeholder"; // TODO: Replace with something like "(std/Vec3;II)V".
     }
 }

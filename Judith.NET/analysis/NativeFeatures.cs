@@ -45,6 +45,8 @@ public class NativeFeatures {
             Float = AddType(tbl, SymbolKind.AliasType, "Float"),
             Num = AddType(tbl, SymbolKind.AliasType, "Num"),
         };
+
+        Types.Init();
     }
 
     public bool IsNumericType (TypeSymbol type) {
@@ -118,7 +120,7 @@ public class NativeFeatures {
     }
 
     private TypeSymbol AddType (SymbolTable tbl, SymbolKind kind, string name) {
-        return (TypeSymbol)tbl.AddSymbol(TypeSymbol.Define(kind, name));
+        return tbl.AddSymbol(TypeSymbol.Define(kind, name));
     }
 
     public class TypeCollection {
@@ -162,5 +164,37 @@ public class NativeFeatures {
         public TypeSymbol Float { get; init; } // Default: F64
         public TypeSymbol Num { get; init; } // Default: Float
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+
+        public void Init () {
+            Unresolved.Type = NoType;
+            UnresolvedFunction.Type = NoType;
+
+            Error.Type = NoType;
+
+            NoType.Type = NoType;
+            Anonymous.Type = NoType;
+            Void.Type = NoType;
+
+            F32.Type = NoType;
+            F64.Type = NoType;
+
+            I8.Type = NoType;
+            I16.Type = NoType;
+            I32.Type = NoType;
+            I64.Type = NoType;
+
+            Ui8.Type = NoType;
+            Ui16.Type = NoType;
+            Ui32.Type = NoType;
+            Ui64.Type = NoType;
+
+            Bool.Type = NoType;
+            String.Type = NoType;
+
+            Byte.Type = NoType;
+            Int.Type = NoType;
+            Float.Type = NoType;
+            Num.Type = NoType;
+        }
     }
 }

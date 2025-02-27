@@ -11,9 +11,9 @@ namespace Judith.NET.analysis.binder;
 public class BoundTypeAnnotation : BoundNode {
     public new TypeAnnotation Node => (TypeAnnotation)base.Node;
 
-    public Symbol Symbol { get; private init; }
+    public TypeSymbol Type { get; private init; }
 
-    public BoundTypeAnnotation (TypeAnnotation node, Symbol symbol) : base(node) {
-        Symbol = symbol;
+    public BoundTypeAnnotation (TypeAnnotation node, TypeSymbol type) : base(node) {
+        Type = type;
     }
 }
