@@ -93,7 +93,11 @@ public class AstTypePrinter : SyntaxVisitor {
         TypedNodes.Add($"CallExpr: {node} - Type: {FQN(boundNode.Type)}");
     }
 
-    // TODO: AccessExpression
+    public override void Visit (AccessExpression node) {
+        var boundNode = _cmp.Binder.GetBoundNodeOrThrow<BoundAccessExpression>(node);
+
+        TypedNodes.Add($"AccessExpr: {boundNode.MemberSymbol.FullyQualifiedName} - Type: {FQN(boundNode.Type)}");
+    }
 
     public override void Visit (GroupExpression node) {
         var boundNode = _cmp.Binder.GetBoundNodeOrThrow<BoundGroupExpression>(node);

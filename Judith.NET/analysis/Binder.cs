@@ -205,6 +205,17 @@ public class Binder {
         return boundInitExpr;
     }
 
+    public BoundAccessExpression BindAccessExpression (
+        AccessExpression accessExpr, MemberSymbol memberSymbol
+    ) {
+        if (TryGetBoundNode(accessExpr, out BoundAccessExpression? boundAccessExpr) == false) {
+            boundAccessExpr = new(accessExpr, memberSymbol);
+            BoundNodes[accessExpr] = boundAccessExpr;
+        }
+
+        return boundAccessExpr;
+    }
+
     public BoundCallExpression BindCallExpression (CallExpression callExpr) {
         if (TryGetBoundNode(callExpr, out BoundCallExpression? boundCallExpression) == false) {
             boundCallExpression = new(callExpr);
@@ -538,9 +549,6 @@ public class Binder {
         return bound;
     }
     #endregion
-
-
-
 
     /// <summary>
     /// Returns the overload created by the parameter list given. Passing

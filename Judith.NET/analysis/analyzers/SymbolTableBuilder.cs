@@ -69,7 +69,7 @@ public class SymbolTableBuilder : SyntaxVisitor {
         var boundNode = _cmp.Binder.BindStructTypeDefinition(node, symbol, scope);
 
         _scope.BeginScope(scope);
-        VisitMembers(boundNode, node.MemberFields);
+        VisitMembers(symbol, node.MemberFields);
         _scope.EndScope();
 
         _nodeStates[node] = NodeState.Completed;
@@ -159,18 +159,19 @@ public class SymbolTableBuilder : SyntaxVisitor {
     /// classes...); creating a symbol for it and appending it to the container's
     /// list of members.
     /// </summary>
-    /// <param name="memberContainer">The node that contains members.</param>
+    /// <param name="typeSymbol">The type symbol that contains members.</param>
     /// <param name="nodes">The members contained.</param>
     private void VisitMembers (
-        IBoundMemberContainer memberContainer, List<MemberField> nodes
+        TypeSymbol typeSymbol, List<MemberField> nodes
     ) {
         foreach (var node in nodes) {
-            var symbol = _scope.Current.AddSymbol(
-                Symbol.Define(SymbolKind.MemberField, node.Identifier.Name)
+            // TODO: Check member methods.
+            var memberSymbol = _scope.Current.AddSymbol(
+                MemberSymbol.Define(SymbolKind.MemberField, node.Identifier.Name)
             );
 
-            _cmp.Binder.BindMemberField(node, symbol);
-            memberContainer.AddMember(new(symbol));
+            _cmp.Binder.BindMemberField(node, memberSymbol);
+            typeSymbol.MemberFields.Add(memberSymbol);
 
             _nodeStates[node] = NodeState.Completed;
         }

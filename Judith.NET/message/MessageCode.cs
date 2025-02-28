@@ -59,6 +59,9 @@ public enum MessageCode {
     TypeDoesntExist,
     TypeExpected,
     InvalidTypeForObjectInitialization,
+    MemberAccessOnlyOnInstances,
+    ScopeAccessNotOnInstances,
+    FieldDoesNotExist,
 
     // BlockTypeResolver
     InconsistentReturnBehavior,

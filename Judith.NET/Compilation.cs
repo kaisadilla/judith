@@ -56,14 +56,6 @@ public class Compilation {
         Messages.Add(symbolResolver.Messages);
         if (Messages.HasErrors) return;
 
-        // Identifies all nodes that define new types and add said types to
-        // the type table.
-        TypeTableBuilder typeTableBuilder = new(this);
-        foreach (var cu in Units) {
-            typeTableBuilder.Analyze(cu);
-        }
-        if (Messages.HasErrors) return;
-
         ResolveTypes();
         if (Messages.HasErrors) return;
         ResolveTypes();

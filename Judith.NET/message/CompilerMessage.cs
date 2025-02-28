@@ -467,6 +467,38 @@ public class CompilerMessage {
             );
         }
 
+        public static CompilerMessage MemberAccessOnlyOnInstances (int line) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.TypeResolver,
+                (int)MessageCode.MemberAccessOnlyOnInstances,
+                $"Only instances of a type can be accessed with '.' operator.",
+                line
+            );
+        }
+
+        public static CompilerMessage ScopeAccessNotOnInstances (int line) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.TypeResolver,
+                (int)MessageCode.MemberAccessOnlyOnInstances,
+                $"Scope resolution operator ('::') cannot be used on instances of a type.",
+                line
+            );
+        }
+
+        public static CompilerMessage FieldDoesNotExist (
+            string type, string member, int line
+        ) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.TypeResolver,
+                (int)MessageCode.FieldDoesNotExist,
+                $"Type '{type}' does not contain an instance member named '{member}'.",
+                line
+            );
+        }
+
         public static CompilerMessage InconsistentReturnBehavior (int line) {
             return new(
                 MessageKind.Error,

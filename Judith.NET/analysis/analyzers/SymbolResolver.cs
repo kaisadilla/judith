@@ -101,18 +101,7 @@ public class SymbolResolver : SyntaxVisitor {
         }
 
         Visit(node.Receiver);
-        var boundReceiver = _cmp.Binder.GetBoundNodeOrThrow<BoundExpression>(node.Receiver);
-        var type = boundReceiver.Type;
-
-        // TODO:
-        //if (TypeInfo.IsResolved(type) == false) return;
-        //
-        //if (node.AccessKind == AccessKind.Member) {
-        //    if (type.Kind == TypeKind.Struct)
-        //}
-        //else { // AccessKind is ScopeResolution.
-        //
-        //}
+        _cmp.Binder.GetBoundNodeOrThrow<BoundExpression>(node.Receiver);
 
         Resolutions++;
         _nodeStates.Completed(node);

@@ -9,10 +9,20 @@ using System.Threading.Tasks;
 namespace Judith.NET.analysis.binder;
 
 public class BoundAccessExpression : BoundExpression, IBoundIdentifyingExpression {
-    public BoundAccessExpression (SyntaxNode node) : base(node) {
+    public new AccessExpression Node => (AccessExpression)base.Node;
+
+    public TypeSymbol? AssociatedType { get; } = null;
+
+    /// <summary>
+    /// The symbol that is the member being accessed.
+    /// </summary>
+    public MemberSymbol MemberSymbol { get; }
+
+    public Symbol Symbol => MemberSymbol;
+
+    public BoundAccessExpression (AccessExpression node, MemberSymbol memberSymbol)
+        : base(node)
+    {
+        MemberSymbol = memberSymbol;
     }
-
-    public Symbol Symbol => throw new NotImplementedException();
-
-    public TypeSymbol? AssociatedType => throw new NotImplementedException();
 }

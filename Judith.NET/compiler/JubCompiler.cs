@@ -221,20 +221,25 @@ public class JubCompiler : SyntaxVisitor {
     public override void Visit (AssignmentExpression node) {
         RequireFunction();
 
-        if (node.Left.Kind != SyntaxKind.IdentifierExpression) {
-            throw new Exception("Can't assign to that."); // TODO: Compile error.
+        if (node.Left.Kind == SyntaxKind.IdentifierExpression) {
+            if (node.Left is not IdentifierExpression idExpr) {
+                throw new Exception("Invalid type.");
+            }
+
+            if (_localBlock.TryGetLocalAddr(idExpr.Identifier.Name, out int addr) == false) {
+                throw new Exception("Local not found");
+            }
+
+            EmitStore(addr, node.Line);
         }
-        if (node.Left is not IdentifierExpression idExpr) {
-            throw new Exception("Invalid type.");
+        else if (node.Left.Kind == SyntaxKind.AccessExpression) {
+            // TODO: Access expr.
+        }
+        else {
+            throw new Exception("Can't assign to that."); // TODO: Analysis compile error.
         }
 
         Visit(node.Right);
-
-        if (_localBlock.TryGetLocalAddr(idExpr.Identifier.Name, out int addr) == false) {
-            throw new Exception("Local not found");
-        }
-
-        EmitStore(addr, node.Line);
     }
 
     public override void Visit (BinaryExpression node) {

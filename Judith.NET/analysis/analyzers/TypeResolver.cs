@@ -21,6 +21,8 @@ public class TypeResolver : SyntaxVisitor {
     private readonly Compilation _cmp;
     private readonly ScopeResolver _scope;
 
+    private Dictionary<SyntaxNode, NodeState> _nodeStates = [];
+
     private Binder Binder => _cmp.Binder;
     private NativeFeatures.TypeCollection NativeTypes => _cmp.Native.Types;
 
@@ -348,7 +350,45 @@ public class TypeResolver : SyntaxVisitor {
         }
     }
 
-    // TODO: AccessExpression
+    public override void Visit (AccessExpression node) {
+        if (node.Receiver == null) {
+            throw new NotImplementedException("Implicit 'self' not yet supported.");
+        }
+
+        Visit(node.Receiver);
+
+        var boundReceiver = _cmp.Binder.GetBoundNodeOrThrow<BoundExpression>(node.Receiver);
+
+        if (TypeSymbol.IsResolved(boundReceiver.Type) == false) return;
+
+        if (node.AccessKind == AccessKind.Member) {
+            if (boundReceiver.Type == NativeTypes.NoType) {
+                Messages.Add(CompilerMessage.Analyzers.MemberAccessOnlyOnInstances(node.Line));
+                return;
+            }
+
+            if (boundReceiver.Type.TryGetMember(node.Member.Name, out MemberSymbol? member) == false) {
+                Messages.Add(CompilerMessage.Analyzers.FieldDoesNotExist(
+                    boundReceiver.Type.Name, node.Member.Name, node.Member.Line
+                ));
+                return;
+            }
+
+            if (TypeSymbol.IsResolved(member.Type) == false) return;
+
+            var boundNode = _cmp.Binder.BindAccessExpression(node, member);
+            boundNode.Type = member.Type;
+            // TODO: Mark as complete.
+        }
+        else {
+            if (boundReceiver.Type != NativeTypes.NoType) {
+                Messages.Add(CompilerMessage.Analyzers.ScopeAccessNotOnInstances(node.Line));
+                return;
+            }
+
+            throw new NotImplementedException("Scope resolution not yet supported.");
+        }
+    }
 
     public override void Visit (GroupExpression node) {
         Visit(node.Expression);
