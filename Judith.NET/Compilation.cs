@@ -18,6 +18,7 @@ public class Compilation {
     /// </summary>
     public List<CompilerUnit> Units { get; private set; } = new();
 
+    public TypeTable TypeTable { get; private set; }
     public NativeFeatures Native { get; private set; }
     public SymbolTable SymbolTable { get; private set; }
     public Binder Binder { get; private set; }
@@ -61,6 +62,13 @@ public class Compilation {
         ResolveTypes();
         if (Messages.HasErrors) return;
         ResolveTypes();
+        if (Messages.HasErrors) return;
+
+        TypeAnalyzer typeAnalizer = new(this);
+        foreach (var cu in Units) {
+            typeAnalizer.Analyze(cu);
+        }
+        Messages.Add(typeAnalizer.Messages);
         if (Messages.HasErrors) return;
 
         //Binder.ResolveIncomplete();

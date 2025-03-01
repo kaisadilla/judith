@@ -20,7 +20,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (CompilerUnit node) {
         return new {
-            Name = nameof(CompilerUnit),
+            Class = nameof(CompilerUnit),
+            node.Kind,
             TopLevelItems = node.TopLevelItems.Select(t => Visit(t)),
             ImplicitFunction = VisitIfNotNull(node.ImplicitFunction),
             Semantics = GetBoundOrNull(node),
@@ -29,7 +30,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (FunctionDefinition node) {
         return new {
-            Name = nameof(FunctionDefinition),
+            Class = nameof(FunctionDefinition),
+            node.Kind,
             node.IsImplicit,
             node.IsHidden,
             Identifier = Visit(node.Identifier),
@@ -42,7 +44,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object? Visit (StructTypeDefinition node) {
         return new {
-            Name = nameof(StructTypeDefinition),
+            Class = nameof(StructTypeDefinition),
+            node.Kind,
             node.IsHidden,
             Identifier = Visit(node.Identifier),
             MemberFields = node.MemberFields.Select(f => Visit(f)),
@@ -52,7 +55,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (BlockStatement node) {
         return new {
-            Name = nameof(BlockStatement),
+            Class = nameof(BlockStatement),
+            node.Kind,
             Nodes = node.Nodes.Select(n => Visit(n)),
             Semantics = GetBoundOrNull(node),
         };
@@ -60,7 +64,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (ArrowStatement node) {
         return new {
-            Name = nameof(ArrowStatement),
+            Class = nameof(ArrowStatement),
+            node.Kind,
             Statement = Visit(node.Statement),
             Semantics = GetBoundOrNull(node),
         };
@@ -68,7 +73,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (LocalDeclarationStatement node) {
         return new {
-            Name = nameof(LocalDeclarationStatement),
+            Class = nameof(LocalDeclarationStatement),
+            node.Kind,
             DeclaratorList = Visit(node.DeclaratorList),
             Initializer = VisitIfNotNull(node.Initializer),
             Semantics = GetBoundOrNull(node),
@@ -77,7 +83,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (ReturnStatement node) {
         return new {
-            Name = nameof(ReturnStatement),
+            Class = nameof(ReturnStatement),
+            node.Kind,
             Expression = VisitIfNotNull(node.Expression),
             Semantics = GetBoundOrNull(node),
         };
@@ -85,7 +92,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (YieldStatement node) {
         return new {
-            Name = nameof(YieldStatement),
+            Class = nameof(YieldStatement),
+            node.Kind,
             Expression = Visit(node.Expression),
             Semantics = GetBoundOrNull(node),
         };
@@ -93,7 +101,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (WhenStatement node) {
         return new {
-            Name = nameof(WhenStatement),
+            Class = nameof(WhenStatement),
+            node.Kind,
             Test = Visit(node.Test),
             Statement = Visit(node.Statement),
             Semantics = GetBoundOrNull(node),
@@ -102,7 +111,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (ExpressionStatement node) {
         return new {
-            Name = nameof(ExpressionStatement),
+            Class = nameof(ExpressionStatement),
+            node.Kind,
             Expression = Visit(node.Expression),
             Semantics = GetBoundOrNull(node),
         };
@@ -110,7 +120,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (IfExpression node) {
         return new {
-            Name = nameof(IfExpression),
+            Class = nameof(IfExpression),
+            node.Kind,
             Test = Visit(node.Test),
             Consequent = Visit(node.Consequent),
             Alternate = VisitIfNotNull(node.Alternate),
@@ -120,7 +131,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (MatchExpression node) {
         return new {
-            Name = nameof(MatchExpression),
+            Class = nameof(MatchExpression),
+            node.Kind,
             Discriminant = Visit(node.Discriminant),
             Cases = node.Cases.Select(c => Visit(c)),
             Semantics = GetBoundOrNull(node),
@@ -129,7 +141,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (LoopExpression node) {
         return new {
-            Name = nameof(LoopExpression),
+            Class = nameof(LoopExpression),
+            node.Kind,
             Body = Visit(node.Body),
             Semantics = GetBoundOrNull(node),
         };
@@ -137,7 +150,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (WhileExpression node) {
         return new {
-            Name = nameof(WhileExpression),
+            Class = nameof(WhileExpression),
+            node.Kind,
             Test = Visit(node.Test),
             Body = Visit(node.Body),
             Semantics = GetBoundOrNull(node),
@@ -146,7 +160,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (ForeachExpression node) {
         return new {
-            Name = nameof(ForeachExpression),
+            Class = nameof(ForeachExpression),
+            node.Kind,
             Declarators = node.Declarators.Select(d => Visit(d)),
             Enumerable = Visit(node.Enumerable),
             Body = Visit(node.Body),
@@ -156,7 +171,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (AssignmentExpression node) {
         return new {
-            Name = nameof(AssignmentExpression),
+            Class = nameof(AssignmentExpression),
+            node.Kind,
             Operator = Visit(node.Operator),
             Left = Visit(node.Left),
             Right = Visit(node.Right),
@@ -166,7 +182,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (BinaryExpression node) {
         return new {
-            Name = nameof(BinaryExpression),
+            Class = nameof(BinaryExpression),
+            node.Kind,
             Operator = Visit(node.Operator),
             Left = Visit(node.Left),
             Right = Visit(node.Right),
@@ -176,7 +193,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (LeftUnaryExpression node) {
         return new {
-            Name = nameof(LeftUnaryExpression),
+            Class = nameof(LeftUnaryExpression),
+            node.Kind,
             Operator = Visit(node.Operator),
             Expression = Visit(node.Expression),
             Semantics = GetBoundOrNull(node),
@@ -185,7 +203,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object? Visit (ObjectInitializationExpression node) {
         return new {
-            Name = nameof(ObjectInitializationExpression),
+            Class = nameof(ObjectInitializationExpression),
+            node.Kind,
             Provider = VisitIfNotNull(node.Provider),
             Initializer = Visit(node.Initializer),
             Semantics = GetBoundOrNull(node),
@@ -194,7 +213,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (CallExpression node) {
         return new {
-            Name = nameof(CallExpression),
+            Class = nameof(CallExpression),
+            node.Kind,
             Callee = Visit(node.Callee),
             Arguments = Visit(node.Arguments),
             Semantics = GetBoundOrNull(node),
@@ -203,17 +223,19 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (AccessExpression node) {
         return new {
-            Name = nameof(AccessExpression),
-            Operator = Visit(node.Operator),
-            Left = VisitIfNotNull(node.Receiver),
-            Right = Visit(node.Member),
+            Class = nameof(AccessExpression),
+            node.Kind,
+            node.AccessKind,
+            Receiver = VisitIfNotNull(node.Receiver),
+            Member = Visit(node.Member),
             Semantics = GetBoundOrNull(node),
         };
     }
 
     public override object Visit (GroupExpression node) {
         return new {
-            Name = nameof(GroupExpression),
+            Class = nameof(GroupExpression),
+            node.Kind,
             Expression = Visit(node.Expression),
             Semantics = GetBoundOrNull(node),
         };
@@ -221,7 +243,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (IdentifierExpression node) {
         return new {
-            Name = nameof(IdentifierExpression),
+            Class = nameof(IdentifierExpression),
+            node.Kind,
             Identifier = Visit(node.Identifier),
             Semantics = GetBoundOrNull(node),
         };
@@ -229,7 +252,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (LiteralExpression node) {
         return new {
-            Name = nameof(LiteralExpression),
+            Class = nameof(LiteralExpression),
+            node.Kind,
             Literal = Visit(node.Literal),
             Semantics = GetBoundOrNull(node),
         };
@@ -237,7 +261,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (Identifier node) {
         return new {
-            Name = nameof(Identifier),
+            Class = nameof(Identifier),
+            node.Kind,
             IdentifierName = node.Name,
             node.IsEscaped,
             node.IsMetaName,
@@ -248,7 +273,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (Literal node) {
         return new {
-            Name = nameof(Literal),
+            Class = nameof(Literal),
+            node.Kind,
             node.TokenKind,
             node.Source,
             OriginalSource = node.RawToken?.Lexeme,
@@ -258,7 +284,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (LocalDeclaratorList node) {
         return new {
-            Name = nameof(LocalDeclaratorList),
+            Class = nameof(LocalDeclaratorList),
+            node.Kind,
             node.DeclaratorKind,
             Declarators = node.Declarators.Select(d => Visit(d)),
             Semantics = GetBoundOrNull(node),
@@ -267,7 +294,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (LocalDeclarator node) {
         return new {
-            Name = nameof(LocalDeclarator),
+            Class = nameof(LocalDeclarator),
+            node.Kind,
             Identifier = Visit(node.Identifier),
             node.LocalKind,
             TypeAnnotation = VisitIfNotNull(node.TypeAnnotation),
@@ -277,7 +305,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (EqualsValueClause node) {
         return new {
-            Name = nameof(EqualsValueClause),
+            Class = nameof(EqualsValueClause),
+            node.Kind,
             Value = Visit(node.Value),
             Semantics = GetBoundOrNull(node),
         };
@@ -285,7 +314,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (TypeAnnotation node) {
         return new {
-            Name = nameof(TypeAnnotation),
+            Class = nameof(TypeAnnotation),
+            node.Kind,
             Identifier = Visit(node.Identifier),
             Semantics = GetBoundOrNull(node),
         };
@@ -293,7 +323,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (Operator node) {
         return new {
-            Name = nameof(Operator),
+            Class = nameof(Operator),
+            node.Kind,
             node.OperatorKind,
             Source = node.RawToken?.Lexeme,
             Semantics = GetBoundOrNull(node),
@@ -302,7 +333,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (ParameterList node) {
         return new {
-            Name = nameof(ParameterList),
+            Class = nameof(ParameterList),
+            node.Kind,
             Parameters = node.Parameters.Select(p => Visit(p)),
             Semantics = GetBoundOrNull(node),
         };
@@ -310,7 +342,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (Parameter node) {
         return new {
-            Name = nameof(Parameter),
+            Class = nameof(Parameter),
+            node.Kind,
             Declarator = Visit(node.Declarator),
             DefaultValue = VisitIfNotNull(node.DefaultValue),
             Semantics = GetBoundOrNull(node),
@@ -319,21 +352,24 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (ArgumentList node) {
         return new {
-            Name = nameof(ArgumentList),
+            Class = nameof(ArgumentList),
+            node.Kind,
             Arguments = node.Arguments.Select(a => Visit(a)),
         };
     }
 
     public override object Visit (Argument node) {
         return new {
-            Name = nameof(Argument),
+            Class = nameof(Argument),
+            node.Kind,
             Expression = Visit(node.Expression),
         };
     }
 
     public override object Visit (MatchCase node) {
         return new {
-            Name = nameof(MatchCase),
+            Class = nameof(MatchCase),
+            node.Kind,
             node.IsElseCase,
             Tests = node.Tests.Select(t => Visit(t)),
             Consequent = Visit(node.Consequent),
@@ -343,7 +379,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object? Visit (ObjectInitializer node) {
         return new {
-            Name = nameof(ObjectInitializer),
+            Class = nameof(ObjectInitializer),
+            node.Kind,
             Assignments = node.FieldInitializations.Select(a => Visit(a)),
             Semantics = GetBoundOrNull(node),
         };
@@ -351,7 +388,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object? Visit (FieldInitialization node) {
         return new {
-            Name = nameof(FieldInitialization),
+            Class = nameof(FieldInitialization),
+            node.Kind,
             FieldName = Visit(node.FieldName),
             Initializer = VisitIfNotNull(node.Initializer),
             Semantics = GetBoundOrNull(node),
@@ -360,7 +398,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object? Visit (MemberField node) {
         return new {
-            Name = nameof(MemberField),
+            Class = nameof(MemberField),
+            node.Kind,
             node.Access,
             node.IsStatic,
             node.IsMutable,
@@ -373,7 +412,8 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
 
     public override object Visit (P_PrintStatement node) {
         return new {
-            Name = nameof(P_PrintStatement),
+            Class = nameof(P_PrintStatement),
+            node.Kind,
             Expression = Visit(node.Expression),
             Semantics = GetBoundOrNull(node),
         };

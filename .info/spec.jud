@@ -38,15 +38,13 @@ const game = awesome_game::Game!()
 -- conflicts:
 import awesome_game
 
-typedef struct Game {
-    -- ...
-}
+typedef struct Game end
 
 const game = Game!() -- Error, as Game here is referring to the Game struct we
                      -- just defined, which doesn't have a constructor.
 const game = awesome_game::Game!() -- Fine, it's pointing to the correct Game type.
 
--- The global namespace is literally named "global" and can be explicitly referred
+-- The global module is literally named "global" and can be explicitly referred
 -- to:
 module awesome_game
 const global_game_struct = global::Game{
@@ -435,7 +433,7 @@ const crash: (c: Num) => Void = c => System::exit()
 -- STRINGS --
 -------------
 -- Strings can be created with double quotes or backticks:
-var valid_string: string = "This is valid."
+var valid_string: String = "This is valid."
 valid_string = `This is also valid.`
 -- By convention, double quotes are preferred, while backticks are used for
 -- strings that contain double quotes.
@@ -455,7 +453,7 @@ const not_broken: String = "This string is \
                             not broken." -- Equals "This string is not broken."
 
 -- Raw string:
--- Raw strings are delimited by, at least, two double quotes on each end.
+-- Raw strings are delimited by, at least, three double quotes on each end.
 -- The content inside these quotes must be in new lines, and that content must
 -- be indented one level deeper than the closing quotes. Indentation inside the
 -- raw string is not part of the string.
@@ -1896,4 +1894,23 @@ qnameof(my_proj::hr::Person.name) -- equivalent to string "my_proj::hr::Person.n
 -- events
 -- function type syntax: (Int, String) => Void
 
+#endregion
+
+-- WORK IN PROGRESS:
+-- From this line forward, all features listed are just ideas that may be discarded
+-- or greatly changed.
+
+#region Char
+-- "Char" is a special type that represents a string that contains exactly one
+-- character.
+const separator: Char = ","
+-- From the compiler's perspective, a value of type Char is just a String value,
+-- but the analyzer will enforce that Char can only be assigned Strings that are
+-- guaranteed to contain exactly one character (this is, either literals with
+-- only one character, or expressions that resolve to Char).
+-- This is because Judith strings are encoded in UTF-8, which means that a Char
+-- cannot be mapped to any specific integer size.
+const some_char: Char = "This is a string"[5] -- returns "i" as Char.
+-- Characters can be assigned to strings:
+const some_str: String = separator -- valid.
 #endregion

@@ -70,4 +70,7 @@ public enum MessageCode {
     ReturnNotAllowed,
     YieldNotAllowed,
     NotAllPathsYieldValue,
+
+    // TypeAnalyzer
+    CannotAssignType,
 }

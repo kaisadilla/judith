@@ -32,15 +32,16 @@ const second_player = Player {
     },
 }
 
-p.name = "Elder"
+-- p.name = "Elder"
+__p_print second_player.profile.name
 
-const i1 = 1
-const i2 = 1
-const cycles = 20
-
-fib_recur(i1, i2, cycles)
-print_str("")
-print_str("Fibonacci for you!")
+-- const i1 = 1
+-- const i2 = 1
+-- const cycles = 20
+-- 
+-- fib_recur(i1, i2, cycles)
+-- print_str("")
+-- print_str("Fibonacci for you!")
 
 --func fib (var a, b, const cycles: Num)
 --    var i = 0
@@ -56,42 +57,42 @@ print_str("Fibonacci for you!")
 --    end
 --end
 
-func fib_recur (a, b, cycles: Num)
-    if cycles <= 0 then return end
-
-    print(a)
-    fib_recur(b, a + b, cycles - 1)
-end
-
-func print (n: Num)
-    __p_print n
-end
-
-func print_str (str: String)
-    __p_print str
-end
-
-func both_ret ()
-    if true then
-        return
-    else
-        return
-    end
-end
-
-func some_ret ()
-    if true then
-        return
-    end
-end
-
-func some_ret2 ()
-    if true then
-        return
-    else
-        __p_print "No ret"
-    end
-end
+-- func fib_recur (a, b, cycles: Num)
+--     if cycles <= 0 then return end
+-- 
+--     print(a)
+--     fib_recur(b, a + b, cycles - 1)
+-- end
+-- 
+-- func print (n: Num)
+--     __p_print n
+-- end
+-- 
+-- func print_str (str: String)
+--     __p_print str
+-- end
+-- 
+-- func both_ret ()
+--     if true then
+--         return
+--     else
+--         return
+--     end
+-- end
+-- 
+-- func some_ret ()
+--     if true then
+--         return
+--     end
+-- end
+-- 
+-- func some_ret2 ()
+--     if true then
+--         return
+--     else
+--         __p_print "No ret"
+--     end
+-- end
 
 -- var a = 1
 -- var b = 1

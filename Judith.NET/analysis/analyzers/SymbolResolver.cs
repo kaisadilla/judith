@@ -101,7 +101,6 @@ public class SymbolResolver : SyntaxVisitor {
         }
 
         Visit(node.Receiver);
-        _cmp.Binder.GetBoundNodeOrThrow<BoundExpression>(node.Receiver);
 
         Resolutions++;
         _nodeStates.Completed(node);

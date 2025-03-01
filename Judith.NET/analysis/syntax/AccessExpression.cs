@@ -29,6 +29,9 @@ public class AccessExpression : Expression {
         else {
             throw new($"Invalid access operator: '{op.OperatorKind}'.");
         }
+
+        if (Receiver != null) Children.Add(Receiver);
+        Children.Add(Operator, Member);
     }
 
     public override void Accept (SyntaxVisitor visitor) {

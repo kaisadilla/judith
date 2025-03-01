@@ -1,4 +1,5 @@
-﻿using Judith.NET.analysis.syntax;
+﻿using Judith.NET.analysis.semantics;
+using Judith.NET.analysis.syntax;
 using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
@@ -25,7 +26,7 @@ public enum MessageOrigin {
     TypeResolver,
     BlockTypeResolver,
     ImplicitNodeAnalyzer,
-    Compiler,
+    TypeAnalyzer,
 }
 
 public class CompilerMessage {
@@ -536,6 +537,19 @@ public class CompilerMessage {
                 MessageOrigin.ImplicitNodeAnalyzer,
                 (int)MessageCode.NotAllPathsYieldValue,
                 "Not all paths yield a value.",
+                line
+            );
+        }
+
+        public static CompilerMessage CannotAssignType (
+            TypeSymbol target, TypeSymbol value, int line
+        ) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.TypeAnalyzer,
+                (int)MessageCode.CannotAssignType,
+                $"Cannot assign type '{value.FullyQualifiedName}' to target of " +
+                $"type '{target.FullyQualifiedName}'.",
                 line
             );
         }

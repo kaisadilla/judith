@@ -23,6 +23,18 @@ public class TypeResolver : SyntaxVisitor {
 
     private Dictionary<SyntaxNode, NodeState> _nodeStates = [];
 
+    /// <summary>
+    /// The amount of nodes that were partially or fully resolved in the last
+    /// pass.
+    /// </summary>
+    public int Resolutions { get; private set; } = 0;
+    /// <summary>
+    /// The amount of nodes that are still unresolved.
+    /// </summary>
+    public int IncompleteNodes => _nodeStates.Values.Count(
+        v => v != NodeState.Completed
+    );
+
     private Binder Binder => _cmp.Binder;
     private NativeFeatures.TypeCollection NativeTypes => _cmp.Native.Types;
 
@@ -40,6 +52,8 @@ public class TypeResolver : SyntaxVisitor {
     }
 
     public override void Visit (FunctionDefinition node) {
+        bool resolved = true;
+
         var boundNode = Binder.GetBoundNodeOrThrow<BoundFunctionDefinition>(node);
 
         VisitIfNotNull(node.ReturnTypeAnnotation);
@@ -63,6 +77,13 @@ public class TypeResolver : SyntaxVisitor {
                 );
 
                 boundNode.Overload.ReturnType = boundBody.Type;
+            }
+
+            if (TypeSymbol.IsResolved(boundNode.Overload.ReturnType)) {
+                Resolutions++;
+            }
+            else {
+                resolved = false;
             }
         }
 
