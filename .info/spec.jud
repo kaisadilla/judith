@@ -614,7 +614,7 @@ jumptable name do -- the jumptable "do" forms a single, shared scope.
     case "Sylvia":
         Console::log("Your work day has been reduced!") -- Both "Kevin" and
                                                         -- "Sylvia" make it here.
-        goto "Alice" -- "Kevin" and "Sylvia" jump back to "Alice"'s section
+        goto case "Alice" -- "Kevin" and "Sylvia" jump back to "Alice"'s section
                      -- and get fired anyway :(
 end
 -- The main reason "jumptable" is not named "switch" is to discourage developers
@@ -649,8 +649,8 @@ const _, num = get_info(player_id) -- valid assignment, first value is assigned 
 -- initialized from a list of values (i.e. any collection that can be initialized
 -- with [a, b, c] syntax).
 func add_many_numbers (...nums: List<Num>)
-    var sum = 0;
-    for n in nums
+    var sum = 0
+    for n in nums do
         sum += n
     end
     return sum
@@ -670,7 +670,8 @@ func build_person (person_ctor: Person!) -- "Person!" means "ctor signature for 
 end
 -- named constructors can also be used for ctor parameters:
 func build_person (ctor person_ctor: Person::make_kevin!)
-    const person = Person!(person_ctor) -- matches any valid Person::make_kevin!() signature.
+    -- matches any valid Person::make_kevin!() signature.
+    const person = Person::make_kevin!(person_ctor) 
 end
 
 ----------------
@@ -684,7 +685,7 @@ generator get_single_digit_numbers () -- return type: IEnumerable<Num>
     end
 end
 
-const gen: IEnumerable<Num> = get_single_digit_numers()
+const gen: IEnumerable<Num> = get_single_digit_numbers()
 const a = gen.next() -- equals 0
 const b = gen.next() -- equals 1
 
@@ -757,7 +758,7 @@ const scores: List<Num> = [3, 5, 9, 15]
 -- Lists indices start at 0.
 scores[0] -- Returns 3.
 scores[4] -- Returns 'undefined', as only indices 0, 1, 2 and 3 exist in the list.
-scores[-1] -- Returns the first value from the end,
+scores[^1] -- Returns the first value from the end,
            -- that is the value at index 3: 15
 scores[1..3] -- Returns the values in the range given,
              -- that is values at 1 and 2: [5, 9]

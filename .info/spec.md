@@ -386,6 +386,13 @@ These operations are defined for numbers and return other numbers of the same ty
 * `5 %m 2`: Modulo: returns 5 mod 2.
 * `5 %r 2`: Remainder: returns the remainder of 5 / 2, corresponds to % in C.
 
+By default, arithmetic operations are checked and will throw NumberOverflowException when an underflow or overflow would occur. If done inside an `unchecked` context (using `unchecked()` expression or `unchecked` block modifier), then the underflow or overflow will be allowed to occur.
+
+```judith
+const a: Int = Int::MAX + 1 -- throws NumberOverflowException.
+const a: Int = unchecked(Int::MAX + 1) -- equals -2,147,483,648.
+```
+
 ## Bitwise operations
 These operations are defined for numbers and return other numbers of the same type. These operators can be overloaded for other types.
 
@@ -524,11 +531,631 @@ json_obj?.[inquired_value] -- if "json_obj" is null or undefined, returns that.
 
 Note that `undefined` cannot be assigned to a value, so any expression that returns `undefined` will be transformed into `null` when assigned.
 
+# Control structures
+## If
+```judith
+if element == 'Water' then
+    -- statements
+elsif element == 'Earth' then
+    -- statements
+else
+    -- statements
+end
+```
+
+The body of an `if`, `elsif` or `else` block can be an arrow body:
+```judith
+if element == 'Water' => my_water_func()
+elsif element == 'Earth' => my_earth_func()
+else => my_other_func()
+```
+
+Arrow and block bodies cannot be combined.
+
+## Match
+Match is a powerful structure that can be used for pattern matching. Match is exhaustive, meaning that every possibility must be explicitly handled for a match expression to be correct.
+```judith
+match country do
+    'Germany' then -- when country equals 'Germany'.
+        -- statements
+    end
+    'France' then
+        -- statements
+    end
+    'Italy', 'Spain', 'Sweden', 'Greece' then -- when country equals any of these
+                                              -- four values
+        -- statements
+    end
+    else -- any other value not explicitly handled above.
+        -- statements
+    end
+```
+
+Match can also match types:
+```judith
+match animal do
+    is Dog then -- When 'animal' is of type 'Dog'.
+        animal.bark() -- Here, 'animal' is narrowed to 'Dog'.
+    end
+    is Cat then
+        animal.meow() -- Here, 'animal' is narrowed to 'Cat'.
+    end
+    is Rabbit, is Squirrel, is Rat then -- When animal is any of these types.
+        animal.jump() -- Here, 'animal' is narrowed to 'Rabbit | Squirrel | Rat'.
+                      -- We can use 'jump' because all 3 types have that method.
+    end
+    else end -- An empty else block, for when we don't wanna do anything with
+             -- values that aren't explicitly handled.
+```
+
+Match can match expressions:
+```judith
+match score do
+    < 5 => Console::log("Terrible score.")
+    -- If the number is < 5, it will match the previous statement and won't reach
+    -- this part:
+    < 10 => Console::log("Decent score!")
+    else => Console::log("AWESOME SCORE!!)
+```
+
+Match can match destructured objects:
+```judith
+const values = [3, 0]
+
+match score do
+    [0, y] => Console::log("first value is zero and the second is " + y)
+    [x, 0] => Console::log("second value is zero and the first is " + y)
+    else => Console::log("Contains no zeroes!")
+end
+```
+
+Match clauses can have guards:
+```judith
+const values = [3, 0]
+
+match score do
+    [0, y] => Console::log("first value is zero and the second is " + y)
+    [x, 0] => Console::log("second value is zero and the first is " + y)
+    else => Console::log("Contains no zeroes!")
+end
+```
+
+Match clauses can have `when` guards:
+```judith
+match num do
+    n when n > 0 => Console::log("Congratulations on having points.")
+    n when n < 0 => Console::log(f"How did you manage to get {n}?")
+    else => Console::log("Zero points exactly")
+end
+```
+
+## Do
+Do is a simple block that executes one. While `do` itself doesn't add anything to a program, it can be used to define blocks with modifiers such as `unsafe` or `unchecked`. Like other control structures, `do` is an expression and can yield a result.
+
+```judith
+do
+    -- statements
+end
+```
+
+## Loop
+Defines an infinite loop, can only be stopped with `break`.
+
+```judith
+loop
+    -- statements
+end
+```
+
+## While
+
+```judith
+while i < 32 do
+    -- statements
+end
+```
+
+## Foreach
+Foreach loops execute once for each item in a collection. The part before "in" is an initialization, not an assignment, it will always initialize a new local even if you omit "const".
+```judith
+for item in array do
+    -- statements
+end
+```
+
+### Ranges
+Ranges are a special syntax designed to work well with foreach loops. Ranges are lists that contain a set of numbers.
+```judith
+const range = Range(0, 10) -- 'start' is inclusive, 'end' is exclusive.
+```
+
+Ranges have a custom syntax built into the language:
+```judith
+const range = 0..10 -- same as Range(0, 10)
+```
+
+Range can have a step:
+```judith
+const range = Range(9, -1, -1) -- third argument is the step (-1).
+const range = 9..-1 step -1 -- same as above.
+```
+
+Loop through a range form A to B:
+```judith
+for i in 0..20 do
+    -- statements
+end
+```
+
+Loop through 20, 18, 16, 14, 12, 10, 8, 6, 4, 2:
+```judith
+for i in 20..0 step -2 do
+    -- statements
+end
+```
+
+## Arrow bodies
+All structures can use arrow bodies anywhere where a block body is valid.
+
+## Control structures as expressions
+Control structures in Judith are expressions, not statements. This means that they evaluate to a value that can be then assigned. This is determined by the `yield` keyword, which works in the same way as `return` does inside a function. Just like functions, control structures may not `yield` any value, in which case they evaluate to the type `Void` which cannot be assigned.
+```judith
+const msg = if score > 10 then
+    yield "Congratulations! You beat the game!"
+else
+    yield "Sorry, try again."
+end
+```
+
+When using arrow bodies, the expression that makes up the body is considered the yield value:
+```judith
+const msg = if score > 10 => "Congratulations! You beat the game!"
+    else => "Sorry, try again."
+```
+## Statement structures
+Judith features a few control structures that are statements rather than expressions:
+
+## When
+`when` is the short-form version of `if`.
+```judith
+return when result === null
+```
+When statements only execute when the condition given is met. Unlike `if`, When  statements can't have alternates.
+
+When statements are statements, not expressions, and as such they don't evaluate to anything nor they can be used in places where an expression is expected.
+
+## Jumptable
+Jumptables are the equivalent to C's `switch`.
+```judith
+jumptable name do -- the jumptable "do" forms a single, shared scope.
+    case "Christian": -- each case is the entry point for a given value
+    case "Jennifer": -- this means that a new entry point doesn't stop the
+                     -- previous value from executing.
+    case "Alice":
+        Console::log("You are fired.") -- "Christian", "Jennifer" and "Alice"
+                                       -- will make it here.
+        break -- break exits the block as normal, so the next Console::log won't
+              -- be reached by these three.
+    case "Kevin":
+        Console::log("You are promoted and...")
+        -- there's nothing here, so "Kevin" will jump into "Sylvia"'s section
+    case "Sylvia":
+        Console::log("Your work day has been reduced!") -- Both "Kevin" and
+                                                        -- "Sylvia" make it here.
+        goto case "Alice" -- "Kevin" and "Sylvia" jump back to "Alice"'s section
+                     -- and get fired anyway :(
+end
+```
+
+Jumptables are not named `switch` to discourage developers coming from languages like C from using it over `match`. Jumptables are a niche feature that is seldom needed to express logic concisely.
+
+# Functions
+Functions are defined by the keyword `func`:
+
+```judith
+func get_value_plus_10 (const value: Num) : Num
+    return value + 10
+end
+```
+
+Functions can return more than one value:
+
+```judith
+func get_info (id: Guid) : String, Num
+    -- statements
+    return name, num
+end
+```
+
+When a function returns more than one value, you assign it like this:
+
+```judith
+const name, num = get_info(player_id) -- valid
+const name = get_info(player_id) -- valid, 'num' is discarded
+const num: Num = get_info(player_id) -- ERROR, first value is 'name' of type
+                                     -- 'String'.
+const _, num = get_info(player_id) -- valid, first value is assigned to discard.
+```
+
+## Variadic functions
+Variadic functions can take any number of arguments. To define a variadic function, its last parameter has to use the spread operator, and the type of said parameter has to be a type that can be initialized as a list (i.e. any type that can be initialized with [a, b, c] syntax).
+
+```judith
+func add_many_numbers (...nums: List<Num>) : Num
+    var sum = 0
+    for n in nums do sum += n end
+    return sum
+end
+```
+
+You can call a variadic function by passing each value as a parameter:
+
+```judith
+const sum = add_many_numbers(3, 5, 2, 4, -7, 9, 4, 11)
+```
+
+Or you can ignore that it's a variadic function and pass it a collection compatible with its variadic parameter, as if it was a normal parameter (in this case, List<Num>):
+
+
+```judith
+const my_list: List<Num> = [1, -2, 5, 6.6, 0.4, 2]
+const sum = add_many_numbers(my_list)
+```
+
+Functions can omit the `const` keyword in their parameters, but not their type annotation. Functions can also omit the return type annotation:
+
+```judith
+func add (a, b: Num) -- 'a' and 'b' are implicitly 'const'.
+    return a + b -- add(a, b) infers that it returns 'Num' from here.
+end
+```
+
+## Constructor parameters
+Function can have constructor parameters. A constructor parameter expands to any valid set of parameters that can construct an object:
+
+```judith
+func build_person (person_ctor: Person!)
+    const p = Person!(person_ctor)
+    -- statements
+end
+```
+
+Named constructors can also be used:
+
+```judith
+func build_person (person_ctor: Person::make_kevin!)
+    const kevin = Person::make_kevin!(person_ctor)
+    -- statements
+end
+```
+
+## Generators
+Generators are a special type of function that uses `yield` statements to return values, one by one, when iterated
+
+```judith
+generator get_single_digit_numbers () -- return type: IEnumerable<Num>
+    for i in 0..10 do
+        yield i
+    end
+end
+
+const gen: IEnumerable<Num> = get_single_digit_numbers()
+const a = gen.next() -- equals 0
+const b = gen.next() -- equals 1
+
+for i in gen do -- equals 2, then 3, 4, 5, 6, 7, 8, 9
+    -- statements
+end
+```
+
+## First-class functions
+Functions in Judith are first-class, which means they can be treated like any other value (assigned to locals and fields, passed as parameters, etc.).
+
+A function's type is defined by its signature:
+
+```judith
+func add (a, b: Num) : Num
+    return a + b
+end
+
+func multiply (a, b: Num) : Num
+    return a + b
+end
+
+func negate (a: Num) : Num
+    return -a
+end
+```
+
+These types are expressed like `(param types) => return type`
+
+```judith
+var binary_op: (Num, Num) => Num = add -- valid assignment
+binary_op = multiply -- valid, as multiple matches the signature used as type.
+binary_op = negate -- ERROR - negate's signature is '(Num) => Num'.
+```
+
+You can call a value of a function type as if it was a function:
+
+```judith
+binary_op(5, 8) -- Returns '40', as "binary_op" points to "multiply()".
+```
+
+# Local shadowing
+Judith allows local fields to be shadowed:
+
+```judith
+var score: Num = 6
+score = 8
+const score: String = score.str() -- starting here, "score" will refer to this
+                                  -- new String local.
+
+score = 8 ERROR: Score is constant and its type is 'String'.
+```
+
+This special case
+
+```judith
+var score: Num = 6
+score = 8
+const score = score
+```
+Can be simplified to:
+
+```judith
+var score: Num = 6
+score = 8
+const score -- skipping initialization assumes it's initialized with the value
+            -- of the local that it's being shadowed.
+```
+
+Shadowing a constant with a variable is allowed, but results in a compiler warning.
+
+# Arrays and collections
+## List
+Lists are the most basic collection in Judith. They are a dynamically sized collection of values of a given type.
+
+```judith
+const scores: List<Num> = [3, 5, 9, 15]
+
+-- List indices start at 0:
+scores[0] -- Returns 3.
+scores[4] -- Returns 'undefined', as only indices 0 through 3 exist in the list.
+scores[^1] -- Returns the first value from the end, that is the value at
+           -- index 3: 15.
+scores[1..3] -- Returns the values in the range given, that is values at 1 and
+             -- 2: [5, 9].
+```
+
+## Array
+While `List<_T>` is recommended for most cases, the type `Array<_T, _count>` provides a fixed-size array, equivalent to C# arrays or C++ `std::array<T, c>`.
+
+```judith
+const scores: Array<Int, 4> = [3, 5, 9, 15]
+```
+
+## Array types
+See [User-defined types § Array type](#types-array).
+
+## Dictionary
+Dictionaries are the basic collection of key-value pairs.
+
+```judith
+const scores: Dictionary<String, Num> = [
+    "Kevin" = 7,
+    "Ryan" = 5,
+    "Steve" = 11,
+    "Alice" = 8,
+]
+```
+
+Dictionaries are accessed by key:
+```judith
+scores["Ryan"] -- returns 5.
+scores["Regina] -- returns 'undefined'.
+```
+
+## Collection initializer expression
+The collection initializer expression `[ ... ]` is used to initialize any type that implements the necessary indexers:
+
+### List initializer expression
+A collection initializer expression behaves as a list when it contains values separated by commas (e.g. `[5, 7, 9, 11]`). In this case, this expression translates to a nameless constructor that takes a List<_T> as its only parameter.
+
+```judith
+const some_type: MyType<int> = [5, 7, 9]
+```
+
+Is equivalent to
+
+```judith
+const some_type = SomeType<int>!([5, 7, 9])
+```
+
+### Dictionary initializer expression
+If the collection initializer expression contains key-value pairs (defined as `key_expr = value_expr`), then this expression is translated to repeated calls to the `set [T]` operator.
+
+```judith
+const my_dict = ["Kevin" = 7, "Ryan" = 5]
+```
+
+Is equivalent to
+
+```judith
+const my_dict = !()
+my_dict["Kevin"] = 7
+my_dict["Ryan"] = 5
+```
+
+# Casting and narrowing
+## Type casting
+Type casting in Judith is restricted to operations that change types between compatible types. There's various types of casting:
+
+### Upcasting (`:`)
+Upcasting allows a value of a subtype B to be casted to a supertype A. As B is guaranteed to be also of type A, this cast is performed at compile time at no cost.
+
+```judith
+const dog = Dog!()
+const animal: Animal = dog:Animal -- valid cast, as 'Dog' is always an 'Animal'.
+```
+
+### Downcasting (`:?`, `:!`)
+Downcasting allows a value of a supertype A to be casted to a subtype B. Since a value of type A is not guaranteed to be also of type B, this cast is performed at runtime. The way invalid casts are handled depends on the operator used:
+
+#### Safe downcasting operator (`:?`)
+With the safe downcasting operator, the cast will return `null` when it fails, avoiding errors. However, due to this, this expression evaluates to a nullable type, even when used on a non-nullable one:
+
+```judith
+const animal = Cat!()
+const dog: Dog? = animal:?Dog -- will be null, as animal's type is 'Cat'.
+```
+
+#### Unsafe downcasting operator (`:!`)
+With the unsafe downcasting operator, the cast will throw a `InvalidCastException` exception when it fails. This expression preserves the nullability of the original type:
+
+```judith
+const dog: Dog = animal:!Dog -- will throw, as animal's type is 'Cat'.
+```
+
+### Number casting
+Number casting allows converting between different numeric types (Num, Int, Byte, Ui32, etc.). This type of casting uses the same operators as upcasting and downcasting (`:`, `:?`, `:!`).
+
+Number casting always occurs at runtime, but each casting operator offers the same guarantees as it does with other types.
+
+```judith
+const num: Num = 13
+const integer: Int? = num:?Int -- cast fails if num is too big for Int.
+const num2: Num = integer:Num -- Errors cannot occur, every Int can be a Num.
+```
+
+Keep in mind that, in the example above, it is possible for an integer type casted to a floating-point type to lose precision, which is considered acceptable and not an error when transforming an integer into a float.
+
+When casting is done in an unchecked context, every numeric cast uses `:`, as every cast in this context is a valid cast, even if the results make no mathematical sense.
+
+When casting is done in a checked context, then the need to use `:` or `:?` / `:!` is determined by the following rules. In case two rules contradict each other, downcasting operators prevail over upcasting ones:
+
+| Cast                                               | Operator     |
+|------                                              |--------------|
+| Smaller size to bigger size*                       | `:`          |
+| Bigger* size to smaller size                       | `:?` or `:!` |
+| Signed integer to unsigned integer, and vice versa | `:?` or `:!` |
+| Integer to float                                   | `:`          |
+| Integer to decimal                                 | `:`          |
+| Float to integer                                   | `:?` or `:!` |
+| Float to decimal                                   | `:`          |
+| Decimal to integer                                 | `:?` or `:!` |
+| Decimal to float                                   | `:?` or `:!` |
+
+\* BigInt is considered an integer of infinite size, so it's always bigger than any other integer type.
+
+### Null-forgiving casting
+Nullable types can be casted into their non-nullable counterparts by appending the null-forgiving operator `!` at their end. Casting a `null` value in this way will throw a `NullValueException`.
+
+```judith
+const person: Person? = null
+const person_2: Person = person! -- will throw, as 'person' is null.
+
+Console::log(person!.name) -- will throw.
+```
+
+Unsafe casting operations are extremely discouraged, as when, left unhandled, can crash a program and, when handled, can be slower than safe casting operations when they fail; as they throw exceptions rather than producing a sentinel `null`.
+
+## <a name="types-narrowing">Type narrowing</a>
+Narrowing is the process of refining a broader type into a more specific one based on control flow. While traveling through a possible execution branch of a block of code, when a certain property of a value's type is asserted, that property remains true for the remainder of that branch.
+
+### Type checking (`is`)
+With the `is` keyword, a value can be asserted to be (or not to be) of a given type:
+
+```judith
+type Animal = Dog | Cat | Rabbit | Mouse
+
+if animal is Dog
+    animal.bark() -- 'animal' is of type 'Dog' here.
+end
+```
+
+Inside the `if` scope, the local `animal` of type `Animal` is asserted to be of type `Dog`, so it gets promoted to such type, which means calling `Dog.bark` becomes valid.
+
+
+```judith
+if animal is not Dog
+    animal:?Dog?.bark() -- ERROR: 'animal' is of type Cat | Rabbit | Mouse here.
+end
+```
+
+Similarly, inside this `if` scope, we have asserted that `animal` is not of type `Dog`. While we don't know its exact type yet, we know it's not a `Dog` type and, as such, it gets promoted to a union type of the remaining possibilities. `Dog` is a subtype of `Animal`, but not of this union type (that explicitly excludes it), so `animal` inside this scope cannot be downcasted to `Dog`.
+
+### Member checking (`has`)
+With the `has` keyword, a value can be asserted to have (or not to have) access to a given member. In the following example, `Animal` is defined as `Dog | Cat | Rabbit | Kangaroo | Mouse | Tiger`. Among these types, only `Rabbit` and `Kangaroo` contain the `jump` member method:
+
+```judith
+if animal has "jump"
+    animal.jump(3) -- 'animal' here is 'Rabbit | Kangaroo', as they are the only
+                   -- possible types that have a "jump" member.
+end
+```
+
+### Null checking (`=== null`, `!== null`)
+Checking for `null` values also contributes to type narrowing:
+
+```judith
+const animal: Animal? = get_animal()
+return when animal === null
+
+animal.eat() -- 'animal' here is promoted to 'Animal'.
+```
+
+### Discriminator member (`a.b == c`, `a.b != c`)
+When the value of a member in two different types doesn't admit the same types of values, testing the value contained in that member also helps discard types that wouldn't admit such value:
+
+
+```judith
+typedef Circle kind: "circle", radius: Num end
+typedef Square kind: "square", side: Num end
+
+func get_area (shape: Circle | Square)
+    if shape.kind == "circle" then
+        return Math::PI * shape.radius * shape.radius -- 'shape' is 'Circle'.
+    end
+end
+```
+
+Here, `shape` is inferred to be of type `Circle` inside the `if` scope, as it's the only possible type in `Circle | Square` that can have a `kind` member with the value of `"Circle"`.
+
+Keep in mind that values of an unsealed interface cannot be narrowed down, as the amount of available subtypes is not known at compile time.
+
+When matching types, unreachable paths do not require superfluous code:
+
+```judith
+typedef Id = String | Num
+
+func get_person (id: Id) : Person
+    return get_person_by_string(id) when id is String
+    return get_person_by_num(id) when id is Num
+    
+    -- no need to return anything
+end
+```
+
+In this example, even though there's no "general" return statement, the compiler recognizes that it's impossible for the function not to have exited after the second return statement, so it doesn't require the developer to write a superfluous `return` afterwards.
+
+# User-defined types
+Developers can define their own types with the `typedef` keyword.
+
+## Alias type
+
+
+
+
+
+
+
+
+
 # TODO
 
-TODO: Operators § Null-conditional operators
 TODO: Types § Type narrowing
 TODO: <a name="typecasting-numbers">Type casting § Number casting</a>
+TODO: <a name="types-array">User-defined types § Array type</a>
 TODO: <a name="appendix-char">Appendix § Char</a>
 TODO: <a name="appendix-regex">Appendix § Regex</a>
 TODO: <a name="reflection">Reflection</a>
