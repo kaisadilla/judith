@@ -198,7 +198,7 @@ Judith has two features that make working with nullable types easy: null-conditi
 Null-conditional operators are a variant of access operators that allow safe access to nullable values, returning `null` if that access is not possible:
 Console::log(person?.name) -- valid, will print either the name, or `null`.
 
-See [Operations § Access operations § Null-conditional operations](#op-access-nullable) for a full explanation of these operators.
+_See [Operations § Access operations § Null-conditional operations](#op-access-nullable) for a full explanation of these operators._
 
 ### Type narrowing:
 Type narrowing in Judith allows locals to be promoted to non-nullable versions of themselves:
@@ -208,7 +208,25 @@ if person !== null then
 end
 ```
 
-See [Types § Type narrowing](#types-narrowing) for a full explanation of Type narrowing.
+_See [Types § Type narrowing](#types-narrowing) for a full explanation of Type narrowing._
+
+## Const type
+Just like nullable types, const types are a version of the type that is always immutable. As such, const types can only be assigned to constant locals and fields:
+
+```judith
+var name: const String = "Kevin" -- ERROR: a variable can't be 'const String'.
+const name: const String = "Kevin" -- ok.
+```
+
+Const types allow passing references to members of a constant value without breaking immutability.
+
+```judith
+const player: Player = { username = "XxXx", person: { ... } }
+var person = player.person -- ERROR: this would allow mutating 'person', which is
+                           -- a member of constant 'player'.
+const person = player.person -- Valid. Because 'player' is constant, the type of
+                             -- its member 'person' becomes 'const Person'.
+```
 
 # Primitives
 Primitives are the basic types of Judith. These types are not defined in the language itself, but implemented by the compiler and the VM.
@@ -226,7 +244,7 @@ By default, a 64-bit IEEE 754 floating point number.
 const score: Num = 36.8
 ```
 
-For a full explanation of number literals, see [Literals § Numbers](#literals-numbers).
+_For a full explanation of number literals, see [Literals § Numbers]_(#literals-numbers).
 
 ### String
 A string of characters.
@@ -234,7 +252,7 @@ A string of characters.
 const name: String = "Iulius"
 ```
 
-For a full explanation of string literals, see [Literals § Strings](#literals-strings).
+_For a full explanation of string literals, see [Literals § Strings]_(#literals-strings).
 
 ### Char
 A string containing exactly one character.
@@ -242,7 +260,7 @@ A string containing exactly one character.
 const separator: Char = ","
 ```
 
-For a full explanation of the type `Char`, see [Appendix § Char](#appendix-char).
+_For a full explanation of the type `Char`, see [Appendix § Char](#appendix-char)._
 
 ### Regex
 A regular expression:
@@ -250,7 +268,7 @@ A regular expression:
 const regex: Regex = /[0-9]{9}/g
 ```
 
-For a full explanation of the type `Regex`, see [Appendix § Regex](#appendix-regex).
+_For a full explanation of the type `Regex`, see [Appendix § Regex](#appendix-regex)._
 
 ## Numeric types
 When the format of a numeric value is relevant, developers can use specific numeric types.
@@ -334,7 +352,9 @@ const score: Ui64 = -5 -- ERROR: "-5" cannot be interpreted as a `Ui64`.
 
 In practice, this means that developers don't need to worry about the implicit type of a numeric literal as the compiler will take care of that job.
 
-While numeric literals themselves will be reinterpreted as needed, values of a numeric type cannot be implicitly converted (e.g. once score of type `Num` is defined, you cannot assign the value of `score` to a local of type `Int`). For a full explanation of number conversion, see [Type casting § Number casting](#typecasting-numbers).
+While numeric literals themselves will be reinterpreted as needed, values of a numeric type cannot be implicitly converted (e.g. once score of type `Num` is defined, you cannot assign the value of `score` to a local of type `Int`).
+
+_For a full explanation of number conversion, see [Type casting § Number casting](#typecasting-numbers)._
 
 ## <a name="literals-strings"></a> Strings
 String literals can be defined with either double quotes or backticks:
@@ -504,7 +524,7 @@ const crash: (c: Num) => Void = c => System::exit()
 ```
 
 ### Runtime member access operator: `.[]`
-See [Reflection](#reflection).
+_See [Reflection](#reflection)._
 
 ### <a name="op-access-nullable">Null-conditional operations</a>
 Each of the access operators have a null-conditional counterpart (except for the scope resolution operator). The null-conditional version of an operators will return the value being accessed if that value is `null` or `undefined`. Otherwise, it will access the value as normal. These operators are `?.`, `?[]`, `?->`, `?()` and `?.[]`.
@@ -777,6 +797,19 @@ const num: Num = get_info(player_id) -- ERROR, first value is 'name' of type
 const _, num = get_info(player_id) -- valid, first value is assigned to discard.
 ```
 
+Functions can return `const` values. These values cannot be assigned to mutable locals or fields:
+
+```judith
+func get_immutable_person (id: String) : const Person
+    -- statements
+    return person
+end
+
+var p = get_immutable_person("kevin") -- ERROR: 'const String' cannot be assigned
+                                      -- to a variable.
+const p: const Person = get_immutable_person("kevin") -- ok.
+```
+
 ## Variadic functions
 Variadic functions can take any number of arguments. To define a variadic function, its last parameter has to use the spread operator, and the type of said parameter has to be a type that can be initialized as a list (i.e. any type that can be initialized with [a, b, c] syntax).
 
@@ -935,7 +968,7 @@ const scores: Array<Int, 4> = [3, 5, 9, 15]
 ```
 
 ## Array types
-See [User-defined types § Array type](#types-array).
+_See [User-defined types § Array type](#user-types-array)._
 
 ## Dictionary
 Dictionaries are the basic collection of key-value pairs.
@@ -1142,11 +1175,389 @@ In this example, even though there's no "general" return statement, the compiler
 Developers can define their own types with the `typedef` keyword.
 
 ## Alias type
+An alias type is a type that maps to another type. Aliases can be implicit or explicit.
 
+### Implicit alias
+Implicit aliases allow the defined type to be used as if it was the original type.
 
+```judith
+typedef UniqueId = Int
+const id: UniqueId = 32 -- valid, as UniqueId is Int.
+const integer: Int = id -- valid, as UniqueId can be used as an Int.
+```
 
+The compiler in this example sees `UniqueId` as `Int`.
 
+### Explicit alias
+Explicit aliases are equivalent to the type they are derived from, but a value whose type is the alias type cannot be used as if it was the original type.
 
+```judith
+typedef expl UniqueId = Int
+const id: UniqueId = 32 -- valid, as UniqueId is initialized like Int.
+const integer: Int = id -- ERROR: cannot assign 'UniqueId' to 'Int'.
+const integer: Int = id:Int -- valid, explicit cast is allowed.
+```
+
+## Union type
+A union type defines a type that is the union of several types. As such, a relationship is established between the Union type and the types it's derived from, where all of the derived types are also the Union type, and the Union type could be any of the derived types.
+
+```judith
+typedef Id = Num | String
+var id: Id = 36 -- valid, as "Num" is an "Id".
+id = "string_id -- valid, as "String" is also an "Id".
+```
+
+We can downcast a union into any of its conforming types:
+
+```judith
+const num: Num = Id:?Num
+```
+
+Unions of string literals will raise a warning, as a set is preferred:
+
+```judith
+typedef Countries = "Germany" | "Sweden" | "UK" -- WARNING: define a set instead.
+```
+
+Unions with literal `null` will raise a warning, as it would make them inferior versions of a nullable type:
+
+```judith
+typedef Animal = Dog | Cat | null -- WARNING: Don't include 'null'.
+```
+
+## Literal type
+A literal type is just a literal used as a type
+
+```judith
+var country: "Germany" = "Germany" -- This value can only equal "Germany"
+country = "France" -- error, String is not assignable to "Germany".
+```
+
+## Set
+A set type is defined as a group of string literals. Literals used in a set use single quotes rather than double quotes.
+
+```judith
+typedef set Country
+    'Germany'
+    'Sweden'
+    'France'
+    'Italy'
+    'Japan'
+end
+
+var country: Country = 'Germany'
+country = "Great Britain" -- invalid, as "Great Britain" is not part of the set.
+```
+
+Set types cannot be used as a `String`, but can be upcasted into one:
+
+```judith
+const country_name: String = country:String
+```
+
+## <a name="user-types-array">Array type</a>
+An array type is a type that defines an array where the type of each value inside it is explicitly defined.
+
+```judith
+const info: [String, Num] = ["Kevin", 36]
+info[0] -- inferred to be of type "String".
+info[1] -- inferred to be of type "Num".
+info[2] -- inferred to be "undefined".
+
+const n = get_num()
+info[n] -- inferred to be of type "String | Num | undefined".
+```
+
+## Object type
+An object type is a struct-like type defined by its member fields:
+
+```judith
+const anon = {
+    username = "x__the_best__x",
+    score = 500_000_000,
+} -- type is inferred as "{username: String, score: Num}"
+
+anon.username -- valid, evaluates to a String.
+anon.id -- invalid, 'anon' doesn't contain field 'id'.
+```
+
+## Struct
+Structs define an object that contains a number of member fields. They are used to define POD (plain old data) types.
+
+```judith
+typedef struct Person
+    name: String
+    age: Num
+    country: Country
+    salary: Decimal
+end
+```
+
+Structs are then constructed like objects
+
+```judith
+const person = Person {
+    name = "Kevin",
+    age = 28,
+    country = 'Germany',
+    salary = 103_000d,
+}
+```
+
+Structs can have default values and optional keys:
+
+```judith
+typedef struct Person
+    name: String -- regular, mandatory field.
+    country: Country = 'Other' -- optional field that, if not assigned, will
+                               -- be initialized to the value 'Other'.
+    age?: Num -- optional field. This field may or may not exist in a given
+              -- instance. When it doesn't exist, its value is "undefined".
+    salary: Decimal? -- regular, mandatory field of nullable type "Decimal?".
+end
+```
+
+Structs have a default constructor that contains all of its fields in order:
+
+```judith
+const p = Person!("Kevin", 28, 'Germany', 103_000d)
+```
+
+Structs can extend other structs:
+
+```judith
+typedef struct Employee
+    Person -- Including the name of another struct (without defining a member)
+           -- means Employee will have all of the fields of that struct.
+    role: CompanyRole
+    antiquity: Num
+    salary: Num -- this name clashes with Person.salary, and it doesn't even
+                -- have the same type. In this case, both "salary" members exist.
+end
+
+const employee: Employee = -- init
+employee.country -- Valid access, "country" is a member of Employee (via Person).
+employee.salary -- Type: Num, this is the "salary" defined by Employee.
+employee:Person.salary -- We can still cast employee to person to access
+                       -- Person.salary (type: Decimal).
+```
+
+## Interface
+If structs hold data, interfaces define behavior. Objects cannot be of an interface type, but instead interfaces are implemented into types to give them new functionalities.
+
+```judith
+-- By convention, interfaces are prefixed with the letter "I".
+typedef interface ISummarizable
+    -- Abstract methods: methods declared by the interface that must be
+    -- implemented by the type.
+    func summary () : Void
+    
+    -- As any other method, these methods may be pure or impure.
+    impure func mark_as_read () : Void
+
+    -- As interfaces cannot have member fields, any member data that wants to
+    -- be guaranteed must be exposed through a getter method:
+    func is_read () : Bool
+
+    -- Concrete methods: methods provided by the interface. These methods are
+    -- inherited by the types that implement the interface, so there's no need
+    -- to cast them back to the interface type to use them (unless they collide
+    -- with members of that type).
+    func extended_summary () : Bool
+        -- Note that the interface still has access to a "self". This "self" is
+        -- the object this method is being called off, casted to the interface
+        -- type.
+        return .summary() + " (Read more...)"
+    end
+end
+```
+
+Interfaces are implemented like this:
+
+```judith
+-- Here we define two structs for two different kinds of objects: newspaper
+-- articles and blog posts.
+typedef struct Article
+    headline: String
+    country: Country
+    author: Person
+    content: String
+    is_read: Bool
+end
+
+typedef struct Post
+    username: String
+    content: String
+    comments: Num
+    is_read: Bool
+end
+
+-- Now, we'll implement ISummarizable for both types:
+impl ISummarizable for Article
+    func summary ()
+        -- Here we are implementing ISummarizable methods for instances of
+        -- Article specifically, so "self" is of type Article. Thus, .content
+        -- refers to Article.content, not ISummarizable.content (which doesn't
+        -- exist).
+        return .content.substr(100) + "..."
+    end
+
+    func get_is_read ()
+        return .is_read
+    end
+
+    impure func mark_as_read ()
+        .is_read = true
+    end
+
+    -- Note that extended_summary cannot be implemented, as that's a method
+    -- owned and implemented by ISummarizable.
+end
+
+impl ISummarizable for Post
+    -- ...
+end
+```
+
+Interfaces are used like this:
+
+```judith
+const article: Article = --{}
+const post: Post = --{}
+
+Console::log(article.summary()) -- valid, we are calling ISummarizable.summary()
+Console::log(post.summary()) -- valid, we are calling ISummarizable.summary()
+```
+
+Interface types become the supertype of any type that implements them, and can be casted as such:
+
+```judith
+const summarizable: ISummarizable = article -- valid, article is ISummarizable
+article:ISummarizable -- upcast at compile time.
+summarizable:?Article -- downcast at runtime, fails if summarizable is a Post.
+```
+
+If member identifier collisions occur between two interfaces implemented by a specific type (e.g. Post implements two different interfaces that define "summary()"), then that ambiguity is resolved by upcasting the object:
+
+```judith
+post:ISummarizable.summary() -- calling ISummarizable.summary()
+post:IOther.summary() -- calling IOther.summary()
+```
+
+If the collision occurs between the type itself and an interface, then the type itself takes precedence. If Post contained summary() itself then:
+
+```judith
+post.summary() -- calling Post.summary()
+post:ISummarizable.summary() -- calling ISummarizable.summary()
+```
+
+Note that, as interfaces are open-ended by design, it is not possible to exhaustively test an interface type, because nothing guarantees that new subtypes of the interface will be created by other libraries or at runtime.
+
+## Class
+Classes are the most complex type in Judith. They represent state machines, whose behavior is encapsulated and controlled by the class. For this purpose, classes feature privacy rules.
+
+```judith
+typedef class Person
+    -- Fields contained by the class. Fields are variable inside the class, but
+    -- are exposed as constant to the outside. This means that code from the
+    -- outside can read their value, but cannot assign new values to it nor call
+    -- any impure method in them.
+    name: String
+
+    -- A member field can be hidden from the outside altogether with the "hid"
+    -- keyword. A hidden field will not be visible at all from outside the class.
+    hid birth_year: Num?
+
+    -- A member field can be exposed as a variable to the outside, allowing
+    -- code from the outside to mutate its state or assign a new value to it.
+    -- This can be achieved with the "pub" keyword, that makes it public.
+    pub country: Country
+
+    -- A member field can be marked as mutable with the "mut" keyword. A mutable
+    -- field can be mutated even by pure methods. Semantically, mutable members
+    -- are not considered part of the object's state, so they should not have
+    -- any effect on the object's behavior.
+    -- note that "mut" is not compatible with "static" or "const", as it wouldn't
+    -- have any effect.
+    mut times_age_was_read: Num = 0 -- Default initializer.
+
+    -- Sometimes fields contain references to objects not owned by the class.
+    -- Semantically, these objects should not be mutated from inside the class.
+    -- To achieve this effect, using const types can help enforce this constraint,
+    -- as const types cannot be mutated even by impure functions.
+    -- Additionally, this approach allows consumers of the class to use const
+    -- values to initialize the class.
+    -- Note that this doesn't mean 'company' cannot change. As 'company' is a
+    -- reference, there's no guarantee that whoever owns the reference won't
+    -- mutate it. As such, it shouldn't be considered part of the class's state.
+    company: const Company
+
+    -- static members do not belong to any instance, but rather the class itself.
+    static people_created: Num = 0
+
+    -- Classes may include constructors inside their own definition:
+    ctor (name: String, birth_year: Num?, country: Country, company: Company)
+        -- The instance a method or constructor is running on is contained in
+        -- a special local named "self".
+        self.name = name
+        -- "self" can be implied by simply using the accessor token "." on nothing.
+        .birth_year = birth_year
+        .country = country
+        .company = company
+
+        -- similarly, the class itself can be implied by using the scope
+        -- resolution token "::" on nothing. "::people_created" is the same as
+        -- "Person::people_created".
+        ::people_created += 1
+    end
+
+    -- Classes can define their own methods. By default, functions are pure,
+    -- which mean they cannot mutate their own member fields.
+    func print_name ()
+        Console::log(.name)
+        .name = "New name" -- error: pure function cannot mutate the instance.
+    end
+
+    func get_age () : Num
+        -- Methods defined inside the class can access hidden members.
+        const age = .calc_age()
+
+        -- Mutable fields can be mutated even by pure functions.
+        .times_age_was_read += 1
+
+        -- Static fields are not part of any instance's state, so they can be
+        -- mutated freely even by pure functions. This specific line doesn't
+        -- make much sense, but it's for demonstrative purposes.
+        ::people_created += 1
+
+        return age
+    end
+
+    -- The keyword "impure" can be used to define an impure method, which can
+    -- mutate the instance's members. These methods cannot be called on instances
+    -- assigned to constants, but only those assigned to variables.
+    impure func relocate (new_country: Country)
+        -- Valid assignment, as this is an impure function
+        .country = new_country
+    end
+
+    hid func calc_age () : Num
+        return Date::now().year() - .birth_year
+    end
+
+    -- Since static members are not part of any instance's state, they do not
+    -- have the concept of "purity".
+    static func print_people_created ()
+        Console::log(::people_created)
+    end
+end
+```
+
+Classes are created through their constructors. Unlike structs, they cannot be created by manually assigning them values to their fields with an object initialization expression.
+
+```judith
+var kevin = Person!("Kevin", 1975, 'Germany')
+```
 
 
 
@@ -1155,7 +1566,6 @@ Developers can define their own types with the `typedef` keyword.
 
 TODO: Types § Type narrowing
 TODO: <a name="typecasting-numbers">Type casting § Number casting</a>
-TODO: <a name="types-array">User-defined types § Array type</a>
 TODO: <a name="appendix-char">Appendix § Char</a>
 TODO: <a name="appendix-regex">Appendix § Regex</a>
 TODO: <a name="reflection">Reflection</a>

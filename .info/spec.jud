@@ -987,7 +987,7 @@ const integer: Int = id:Int -- Valid: explicit aliases can be upcasted to their
 -- A union type defines a value as one type from a group of valid types. It's
 -- defined with the bitwise OR operator (|)
 typedef Id = Num | String
-const id: Id = 36 -- valid assignment, as "Num" is a possible kind of Id.
+var id: Id = 36 -- valid assignment, as "Num" is a possible kind of Id.
 id = "string_id" -- valid assignment, as "String" is also a possible kind of Id.
 
 -- We can downcast unions into any of the types that conform it.
@@ -1013,7 +1013,7 @@ typedef Animal = Dog | Cat | null -- Warning: don't include "null" in union type
 -- A set is defined by a group of literals. Any literal inside that group is
 -- a valid member of the set. Note that String literals used in sets use single
 -- quotes rather than double quotes.
-typedef set Countries
+typedef set Country
     'Germany',
     'Sweden',
     'France',
@@ -1021,7 +1021,7 @@ typedef set Countries
     'Japan'
 end
 
-const country: Countries = 'Germany' -- valid, as 'Germany' is part of the set.
+const country: Country = 'Germany' -- valid, as 'Germany' is part of the set.
 country = "Great Britain" -- invalid, as 'Great Britain' is not part of the set.
 
 -- Sets can contain literals of different types
@@ -1038,7 +1038,7 @@ yes_expr = 2 -- invalid, '2' is not part of the set.
 -- Sets are also implicitly union types, and as such any member shared among all
 -- members of the set can be accessed, and sets can be downcasted into types
 -- that are part of the set.
-country.substr(4) -- valid, as all members of Countries have the substr() member.
+country.substr(4) -- valid, as all members of Country have the substr() member.
 const my_num: Num = yes_expr?:Num -- also valid.
 #endregion
 
