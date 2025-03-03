@@ -2161,12 +2161,55 @@ const emp = new Employee()
 Console::log(emp.str()) -- outputs "A very good employee".
 ```
 
+## <a name="appendix-char">`Char` type</a>
+`Char` is a special type that represents a `String` that contains exactly one character.
+
+```judith
+const separator: Char = ","
+```
+
+From the compiler's perspective, a value of type `Char` is just a string, but the analyzer will enforce that `Char` can only be assigned strings that are guaranteed to contain exactly one character (that is, either literals with only one character, or expressions that resolve to Char).
+This is because Judith strings are encoded in UTF-8, which means a Char cannot be mapped to any specific integer size.
+
+```judith
+const some_char: Char = "This is a string"[5] -- returns "i" as Char.
+```
+
+`Char` can be implicitly converted to `String`, but not the other way around:
+
+```judith
+const some_str: String = some_char -- valid
+const char_2: Char = some_str -- ERROR: 'String' may not be assigned to 'Char'.
+```
+
+Casting a string literal into `Char` is valid, although it should never be needed:
+
+```judith
+const separator = ";":Char
+```
+
+## nameof() and qnameof()
+Sometimes, the name of a field, definition, etc. in the source code is needed as a `String`. This makes code more brittle, as the string doesn't have any connection to the identifier it's referring to. To avoid this problem, the expression `nameof()` produces a string literal at compile time whose content is the name of the identifier it contains:
+
+```judith
+nameof(std::collections::List) -- equals "List"
+nameof(List.count) -- equals "count"
+
+const numbers = [1, 2, 3]
+nameof(numbers) -- equals "numbers"
+nameof(numbers.count) -- equals "count"
+```
+
+Although a lot less common, the qualification of the name can be obtained with `qnameof()`. The amount of qualifiers included will be as many as used in the expression:
+
+```judith
+qnameof(Person.name) -- equals "Person.name"
+qnameof(my_proj::hr::Person.name) -- equals "my_proj::hr::Person.name
+```
 
 
 # TODO
 
-TODO: Types § Type narrowing
-TODO: <a name="appendix-char">Appendix § Char</a>
 TODO: <a name="appendix-regex">Appendix § Regex</a>
 
 
