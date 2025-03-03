@@ -45,7 +45,7 @@ module awesome_game::physics -- this file will have access to awesome_game, too.
 
 Members of a module can also be accessed explicitly, using their fully qualified name:
 ```judith
-const game = awesome_game::Game!()
+const game = new awesome_game::Game()
 ```
 
 Explicitly accessing members like this may be necessary to resolve name conflicts:
@@ -54,9 +54,9 @@ import awesome_game
 
 typedef struct Game end
 
-const game = Game!() -- error, as Game here is referring to the Game struct we
+const game = new Game() -- error, as Game here is referring to the Game struct we
                      -- just defined, which doesn't have a constructor.
-const game = awesome_game::Game!() -- Fine, it's referring to the correct type.
+const game = new awesome_game::Game() -- Fine, it's referring to the correct type.
 ```
 
 The global module can be accessed with the name `global`:
@@ -234,12 +234,14 @@ Primitives are the basic types of Judith. These types are not defined in the lan
 ## Basic primitives
 ### Bool
 Either `true` or `false`.
+
 ```judith
 const is_enabled: Bool = true
 ```
 
 ### Num
 By default, a 64-bit IEEE 754 floating point number.
+
 ```judith
 const score: Num = 36.8
 ```
@@ -248,6 +250,7 @@ _For a full explanation of number literals, see [Literals § Numbers]_(#literals
 
 ### String
 A string of characters.
+
 ```judith
 const name: String = "Iulius"
 ```
@@ -256,6 +259,7 @@ _For a full explanation of string literals, see [Literals § Strings]_(#literals
 
 ### Char
 A string containing exactly one character.
+
 ```judith
 const separator: Char = ","
 ```
@@ -264,6 +268,7 @@ _For a full explanation of the type `Char`, see [Appendix § Char](#appendix-cha
 
 ### Regex
 A regular expression:
+
 ```judith
 const regex: Regex = /[0-9]{9}/g
 ```
@@ -507,7 +512,7 @@ people[1] - returns "Kevin", because List<_T> defines [i: Int] => _T.
 ### Unwrap operator: `->`
 This operator can be implemented by types that wrap a value, to give raw access to that value:
 ```judith
-const boxed_num = Box<Num>!(5)
+const boxed_num = new Box<Num>(5)
 boxed_num->str() -- accesses Num.str()
 boxed_num.str() -- accesses Box<Num>.str()
 ```
@@ -847,8 +852,8 @@ end
 Function can have constructor parameters. A constructor parameter expands to any valid set of parameters that can construct an object:
 
 ```judith
-func build_person (person_ctor: Person!)
-    const p = Person!(person_ctor)
+func build_person (person_ctor: new Person)
+    const p = new Person(person_ctor)
     -- statements
 end
 ```
@@ -856,10 +861,27 @@ end
 Named constructors can also be used:
 
 ```judith
-func build_person (person_ctor: Person::make_kevin!)
-    const kevin = Person::make_kevin!(person_ctor)
+func build_person (person_ctor: new Person::make_kevin)
+    const kevin = new Person::make_kevin(person_ctor)
     -- statements
 end
+```
+
+## In parameters
+`in` parameters take ownership of the reference they are given, meaning that once a reference is passed as an in parameter, the local holding that value (if any) cannot be used anymore. This allows functions to guarantee that a reference they get will not be accessed or mutated from the outside afterwards.
+
+```judith
+func set_world (in var world: World)
+    -- statements
+end
+```
+
+The `in` keyword must be used on the call expression, too, to make it clear that whatever is being passed as an argument cannot be accessed anymore
+
+```judith
+var world = new World("test", world_settings)
+set_world(in world)
+world.start() -- ERROR local 'world' is no longer accessible.
 ```
 
 ## Generators
@@ -1001,7 +1023,7 @@ const some_type: MyType<int> = [5, 7, 9]
 Is equivalent to
 
 ```judith
-const some_type = SomeType<int>!([5, 7, 9])
+const some_type = new SomeType<int>([5, 7, 9])
 ```
 
 ### Dictionary initializer expression
@@ -1014,7 +1036,7 @@ const my_dict = ["Kevin" = 7, "Ryan" = 5]
 Is equivalent to
 
 ```judith
-const my_dict = !()
+const my_dict = new Dictionary<String, Num>()
 my_dict["Kevin"] = 7
 my_dict["Ryan"] = 5
 ```
@@ -1027,7 +1049,7 @@ Type casting in Judith is restricted to operations that change types between com
 Upcasting allows a value of a subtype B to be casted to a supertype A. As B is guaranteed to be also of type A, this cast is performed at compile time at no cost.
 
 ```judith
-const dog = Dog!()
+const dog = new Dog()
 const animal: Animal = dog:Animal -- valid cast, as 'Dog' is always an 'Animal'.
 ```
 
@@ -1038,7 +1060,7 @@ Downcasting allows a value of a supertype A to be casted to a subtype B. Since a
 With the safe downcasting operator, the cast will return `null` when it fails, avoiding errors. However, due to this, this expression evaluates to a nullable type, even when used on a non-nullable one:
 
 ```judith
-const animal = Cat!()
+const animal = new Cat()
 const dog: Dog? = animal:?Dog -- will be null, as animal's type is 'Cat'.
 ```
 
@@ -1320,7 +1342,7 @@ end
 Structs have a default constructor that contains all of its fields in order:
 
 ```judith
-const p = Person!("Kevin", 28, 'Germany', 103_000d)
+const p = new Person("Kevin", 28, 'Germany', 103_000d)
 ```
 
 Structs can extend other structs:
@@ -1495,7 +1517,12 @@ typedef class Person
     -- static members do not belong to any instance, but rather the class itself.
     static people_created: Num = 0
 
-    -- Classes may include constructors inside their own definition:
+    -- Classes can include constructors inside their own definition.
+    -- Note that any field that doesn't have a default initializer must be
+    -- initialized in the constructor.
+    -- Also note that classes do not have any default constructor. If a class
+    -- has a constructor that takes zero arguments and does nothing, it must
+    -- still be defined.
     ctor (name: String, birth_year: Num?, country: Country, company: Company)
         -- The instance a method or constructor is running on is contained in
         -- a special local named "self".
@@ -1556,8 +1583,133 @@ end
 Classes are created through their constructors. Unlike structs, they cannot be created by manually assigning them values to their fields with an object initialization expression.
 
 ```judith
-var kevin = Person!("Kevin", 1975, 'Germany')
+var kevin = new Person("Kevin", 1975, 'Germany')
+
+Console::log(kevin.name) -- valid, as "name" is visible from the outside.
+kevin.name == "George" -- invalid, as "name" is constant to the outside.
+kevin.country = 'Italy' -- valid, as "country" is variable to the outside.
+
+kevin.print_name() -- valid call, will print "Kevin"
+kevin.calc_age() -- invalid call, calc_age is a hidden member.
+kevin.relocate('France') -- valid call, impure functions (that mutate state)
+                         -- can be called in variables.
+kevin.print_people_created() -- invalid call, "kevin" object doesn't have a member
+                             -- with that name, as that method belongs to Person.
+
+const kevin -- redeclare it as a constant
+kevin.relocate('France') -- error, relocate is an impure function that would
+                         -- mutate this constant.
+kevin.print_name() -- still valid, as it's a pure function.
+
+Person::print_people_created() -- valid, as this method belongs to Person.
 ```
+
+Classes can implement interfaces in their own declaration, allowing that interface declaration to access private members:
+
+```judith
+typedef class Announcement
+    organization: Organization
+    text: String
+    is_read: Bool
+
+    impl ISummarizable
+        func summary ()
+            return .text.substr(100) + "..."
+        end
+
+        func get_is_read ()
+            return .is_read
+        end
+
+        impure func mark_as_read ()
+            .is_read = true
+        end
+    end
+
+    -- constructor, methods and stuff.
+end
+```
+
+Classes also act as namespaces, allowing types and symbols to be defined inside them. This is a convenient way to create types that only make sense when dealing with a specific class, without polluting the module with them or forcing weird type names such as "Vehicle_Type".
+
+```judith
+typedef class Vehicle
+    typedef set Type
+        'Car',
+        'Boat',
+        'Airplane',
+        'Train',
+    end
+
+    typedef struct Id
+        registrar: String,
+        license: Num,
+    end
+
+    type: Type -- This is Vehicle::Type
+    id: Id -- This is Vehicle::Id
+end
+```
+
+These types are not special nor restricted in any way. They are used as normal, as if the class they are defined in was their namespace:
+
+```judith
+const vehicleType: Vehicle::Type = 'Boat';
+const id: Vehicle::Id = {
+    registrar: "Kevin",
+    license: 42069,
+};
+```
+
+### Methods
+Methods are functions that are members of a type, and implicitly take an instance of that class as their first parameter (named `self`). This parameter can ommited when using member access syntax (i.e. `self.length` can be expressed as `.length`) In practice, "method" is simply what instance function members are called.
+
+# Extension methods and constructors
+Extension methods are methods implemented into types from outside their definition. Being defined outside means they do not have access to any hidden fields. They are implemented with the `impl` keyword, followed by the function as normal - with the small difference that the function's name includes the type the method belongs to.
+
+```judith
+impl func Person::print_name ()
+    Console::log(.name) -- "self" here is of type "Person".
+    .name = "MUTATED" -- invalid, as "self" is a constant and cannot be mutated.
+end
+```
+
+Extension constructors are defined in just the same way:
+
+```judith
+impl ctor Person (name: String, country: Country, birth_year: Num)
+    .name = name -- Inside constructors, "self" is a VARIABLE reference to the
+                  -- object being constructed.
+    .country = country
+    .age = Date::now().year() - birth_year
+    .salary = null
+end
+
+-- Works just like any other constructor!
+const person = new Person("Kevin", 'Germany', 1977)
+```
+
+Named extension constructors are also possible:
+
+```judith
+impl ctor Person::kevin ()
+    .name = "Kevin"
+    .country = 'Germany'
+    .salary = null
+end
+```
+
+While only classes can define constructors inside their own body, extension constructors can be defined for any type. Even a type as basic and primitive as a bool!:
+
+```judith
+impl ctor Bool (str: String)
+    self = if str == "true" => true else => false
+end
+```
+
+# Operator overloading
+
+
 
 
 
