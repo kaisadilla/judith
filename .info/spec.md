@@ -72,7 +72,7 @@ Namespaces are similar to modules, but they cannot be imported explicitly. They 
 namespace Math
     symbol PI = 3.1415
 
-    func pow (a, b: Num)
+    func pow (a, b: Num) : Num
         var r = a
         for i in 1..b do
             r *= a
@@ -167,9 +167,9 @@ const name: String = "Kevin" -- local of type String.
 name = 3 -- ERROR: Num cannot be assigned to local of type String.
 ```
 
-Even though locals always have a type in Judith, that type may be inferred from context:
+Even though locals always have a type in Judith, that type may be infered from context:
 ```judith
-var score = 12 -- "score" is of type Num, as inferred from its initialization.
+var score = 12 -- "score" is of type Num, as infered from its initialization.
 var score = "Alyce" -- ERROR: String cannot be assigned to local of type Num.
 ```
 
@@ -311,7 +311,8 @@ Judith features some pseudo-types. These types represent concepts relating to ty
 
 * `Void`: Used to represent the absence of a type where a type has to be referenced. For example, the signature of a function that doesn't return any value needs `Void` to indicate its return type: `(Int, Int) => Void`.
 * `Unknown`: Denotes the type of a value whose type is not known. A value of type `Unknown` does not allow any operation on it, other than operations that are always available regarding of type (such as testing its type with `is`, or the `str()` method). `Unknown` can be used normally as the type of a local.
-* `Never`: Denotes a type that cannot exist. This type can appear when narrowing down a type until no type is left. For example, after exhausting all possible types of a union type, in the next test the value will be of type `Never`, as it can never reach that test. `Never` cannot be used as a type anywhere.
+* `Never`: Denotes a type that cannot exist. This type can appear when narrowing down a type until no type is left. For example, after exhausting all possible types of a union type, in the next test the value will be of type `Never`, as it can never reach that test. `Never` cannot be used as the type of a value.
+* `Auto`: Denotes a type that is infered from context in places where a type cannot be omitted. This is used for a few syntactic features where the decision to infer type is opt-in rather than opt-out (notably return types in functions).
 * `Null`: A type whose only possible value is `null`.
 * `<error-type>`: This type appears when something that is not a type is used as a type. In general, developers will see this type when trying to reference types that don't exist.
 
@@ -359,7 +360,7 @@ In practice, this means that developers don't need to worry about the implicit t
 
 While numeric literals themselves will be reinterpreted as needed, values of a numeric type cannot be implicitly converted (e.g. once score of type `Num` is defined, you cannot assign the value of `score` to a local of type `Int`).
 
-_For a full explanation of number conversion, see [Type casting § Number casting](#typecasting-numbers)._
+_For a full explanation of number conversion, see [Type casting § Number casting](#casting-numbers)._
 
 ## <a name="literals-strings"></a> Strings
 String literals can be defined with either double quotes or backticks:
@@ -407,7 +408,7 @@ These operations are defined for numbers and return other numbers of the same ty
 * `5 - 2`: Substraction.
 * `5 * 2`: Multiplication.
 * `5 / 2`: Division.
-* `5 %i 2`: Integer division.
+* `5 %i 2`: Floor division.
 * `5 %m 2`: Modulo: returns 5 mod 2.
 * `5 %r 2`: Remainder: returns the remainder of 5 / 2, corresponds to % in C.
 
@@ -429,7 +430,7 @@ These operations are defined for numbers and return other numbers of the same ty
 * `5 >> 2`: Right shift.
 * `5 >>> 2`: Zero-fill right shift.
 
-## Logical operations
+## <a name="operations-logical">Logical operations</a>
 These operations work in terms of "truthy" and "falsey" values. `false`, `0`, `null` and `undefined` are considered falsey, while everything else is considered truthy. This means that empty strings, arrays and objects are considered truthy (as they are still objects, why would they be considered falsey?).
 
 * `not a`: Boolean not: returns `true` if the value is falsey, and `false` otherwise.
@@ -528,8 +529,8 @@ const crash: (c: Num) => Void = c => System::exit()
 (init ?? crash)(12) -- dynamically calls whatever this expression resolves to.
 ```
 
-### Runtime member access operator: `.[]`
-_See [Reflection](#reflection)._
+### Dynamic access operator: `.[]`
+_See [Reflection § Dynamic access operator](#reflection-dao)._
 
 ### <a name="op-access-nullable">Null-conditional operations</a>
 Each of the access operators have a null-conditional counterpart (except for the scope resolution operator). The null-conditional version of an operators will return the value being accessed if that value is `null` or `undefined`. Otherwise, it will access the value as normal. These operators are `?.`, `?[]`, `?->`, `?()` and `?.[]`.
@@ -783,23 +784,12 @@ func get_value_plus_10 (const value: Num) : Num
 end
 ```
 
-Functions can return more than one value:
+Functions may return a value, or no value at all. In this case, their return type is `Void`.
 
 ```judith
-func get_info (id: Guid) : String, Num
-    -- statements
-    return name, num
+func hello_world () : Void
+    Console::log("Hello world")
 end
-```
-
-When a function returns more than one value, you assign it like this:
-
-```judith
-const name, num = get_info(player_id) -- valid
-const name = get_info(player_id) -- valid, 'num' is discarded
-const num: Num = get_info(player_id) -- ERROR, first value is 'name' of type
-                                     -- 'String'.
-const _, num = get_info(player_id) -- valid, first value is assigned to discard.
 ```
 
 Functions can return `const` values. These values cannot be assigned to mutable locals or fields:
@@ -813,6 +803,22 @@ end
 var p = get_immutable_person("kevin") -- ERROR: 'const String' cannot be assigned
                                       -- to a variable.
 const p: const Person = get_immutable_person("kevin") -- ok.
+```
+
+If a function's return type is ommited, it is assumed to be `Void`.
+
+```judith
+func add (a, b: Num)
+    return a + b -- ERROR: 'add' doesn't return a value.
+end
+```
+
+To infer the return type of a function, an explicit 'Auto' must be used.
+
+```judith
+func add (a, b: Num) : Auto -- infered to be 'Num'
+    return a + b
+end
 ```
 
 ## Variadic functions
@@ -882,6 +888,17 @@ The `in` keyword must be used on the call expression, too, to make it clear that
 var world = new World("test", world_settings)
 set_world(in world)
 world.start() -- ERROR local 'world' is no longer accessible.
+```
+
+## Return type `Never`
+The return type of a function can be `Never`. This means that the function never returns (because it always throws an error, contains an infinite loop, etc). `return` statements are explicitly forbidden inside `Never` and, if the function has a path that can return, it will result in a compile error.
+
+```judith
+func start () : Never
+    loop {
+        -- statements
+    }
+end
 ```
 
 ## Generators
@@ -1041,6 +1058,9 @@ my_dict["Kevin"] = 7
 my_dict["Ryan"] = 5
 ```
 
+## Collections, enumerables, iterators and more
+TODO
+
 # Casting and narrowing
 ## Type casting
 Type casting in Judith is restricted to operations that change types between compatible types. There's various types of casting:
@@ -1071,7 +1091,7 @@ With the unsafe downcasting operator, the cast will throw a `InvalidCastExceptio
 const dog: Dog = animal:!Dog -- will throw, as animal's type is 'Cat'.
 ```
 
-### Number casting
+### <a name="casting-numbers">Number casting</a>
 Number casting allows converting between different numeric types (Num, Int, Byte, Ui32, etc.). This type of casting uses the same operators as upcasting and downcasting (`:`, `:?`, `:!`).
 
 Number casting always occurs at runtime, but each casting operator offers the same guarantees as it does with other types.
@@ -1174,7 +1194,7 @@ func get_area (shape: Circle | Square)
 end
 ```
 
-Here, `shape` is inferred to be of type `Circle` inside the `if` scope, as it's the only possible type in `Circle | Square` that can have a `kind` member with the value of `"Circle"`.
+Here, `shape` is infered to be of type `Circle` inside the `if` scope, as it's the only possible type in `Circle | Square` that can have a `kind` member with the value of `"Circle"`.
 
 Keep in mind that values of an unsealed interface cannot be narrowed down, as the amount of available subtypes is not known at compile time.
 
@@ -1282,12 +1302,12 @@ An array type is a type that defines an array where the type of each value insid
 
 ```judith
 const info: [String, Num] = ["Kevin", 36]
-info[0] -- inferred to be of type "String".
-info[1] -- inferred to be of type "Num".
-info[2] -- inferred to be "undefined".
+info[0] -- infered to be of type "String".
+info[1] -- infered to be of type "Num".
+info[2] -- infered to be "undefined".
 
 const n = get_num()
-info[n] -- inferred to be of type "String | Num | undefined".
+info[n] -- infered to be of type "String | Num | undefined".
 ```
 
 ## Object type
@@ -1297,7 +1317,7 @@ An object type is a struct-like type defined by its member fields:
 const anon = {
     username = "x__the_best__x",
     score = 500_000_000,
-} -- type is inferred as "{username: String, score: Num}"
+} -- type is infered as "{username: String, score: Num}"
 
 anon.username -- valid, evaluates to a String.
 anon.id -- invalid, 'anon' doesn't contain field 'id'.
@@ -1674,6 +1694,14 @@ impl func Person::print_name ()
 end
 ```
 
+Extension static functions are also allowed:
+
+```judith
+impl static func Person::turn_into_array (person: Person) : Auto
+    return [.name, .age, .country, .salary]
+end
+```
+
 Extension constructors are defined in just the same way:
 
 ```judith
@@ -1708,19 +1736,438 @@ end
 ```
 
 # Operator overloading
+Some operators in Judith can be overloaded. This is done with the `oper` keyword, which defines a function that acts as the overloaded operation. Most operators are defined as functions, but a few of them are defined as member methods. Binary operations can be made symmetric with the `symm` keyword. When an overloaded operator is marked as symmetric, it means that the order of the factors can be inversed to fit the function, if a better fit is not found. For example, a symmetric operation of `Vec2 + Quaternion` will allow `quaternion + vec2` by transforming it into `vec2 + quaternion`.
+
+## Arithmetic operators
+`+`, `-`, `*`, `/`, `%i`, `%m` and `%r`
+
+These operators take two values of any type and return a new value of any type.
+
+```judith
+symm oper + (a: Fraction, b: Num) : Fraction
+    return {
+        num: a + (b * den),
+        den: den,
+    }
+end
+```
+
+## Unary operators
+`-` and `~`.
+
+```judith
+oper - (a: Vec3)
+    return new Vec3(-a.x, -a.y, -a.z)
+end
+```
+
+## Value equals and approximate
+`==`, `!=`, `~~` and `!~`
+
+These operators take two values of any type and return a `Bool`.
+
+Overloading `==` will implicitly overload `!=` as `not (a == b)`. The same will occur with `~~` and `!~` as `not (a ~~ b)`. Overloading `!=` and `!~` is still allowed, so a more efficient operation can be implemented (or a different behavior, if it makes sense).
+
+```judith
+symm oper == (a, b: Vec3)
+    return a.x == b.x and a.y == b.y and a.z == b.z
+end
+```
+
+## Comparison operators
+`<`, `<=`, `>` and `>=`
+
+These operators take two values of any type and return a `Bool`.
+
+Overloading just some of these operators is enough to get the full set. Overloading just `<` will define `<=` as `a < b or a == b`, `>` as `not (a < b or a == b)` and `>=` as `not (a < b)`. Same goes for `>`. In every case, though, more of these operators can be overloaded to refine their behavior.
+
+```judith
+symm oper < (a, b: Vec3)
+    return a.mod < b.mod
+end
+```
+
+## Accessor operators
+Operators `[]` and `->` can be overloaded as member methods of a type.
+
+### Indexing operator
+This operator can take any number of arguments of any type, and return a value of any type.
+
+```judith
+class SomeCollection
+    -- ...
+
+    oper [] (a, b: Int) -- can be called as collection[5, 10]
+        return .arr[(a * .width) + b]
+    end
+end
+```
+
+### Unwrap operator
+This operator doesn't take any argument, and returns a value of any type.
+
+```judith
+class NumWrapper
+    -- ...
+
+    oper ->
+        return .val
+    end
+end
+```
+
+## Operators that can't be overloaded.
+Any operator not listed above cannot be overloaded. Among them, these are some of the most notable non-overloadable operators:
+
+* Reference equals: `===` and `!==`.
+* Call: `()`.
+* Dynamic access operator: `.[]`
+* Object constructor: `{}`.
+* Logical operators: `and` and `or`.
+* Range: `..`.
+* Null-coalescing operator: `??`.
+
+# Templates
+TODO
+
+# Destructuring and spreading
+Destructuring is a feature that allows the developer to unpack values from collections and values that contain members. Destructuring uses the ellipsis operator (`...`), which should not be confused with the range operator (`..`).
+
+Destructuring can be done in two ways: by destructuring content, or by destructuring members:
+
+## Content destructuring (`[a, b...]`)
+Content destructuring assigns values contained in an enumerable collection, in whichever order that collection enumerates them. A type is a enumerable collection if it imlpements the IEnumerable interface.
+
+```judith
+const countries = ['Japan', 'China', 'South Korea', 'Taiwan']
+
+const [ japan, china ] = ...countries -- The first two elements of the arrea are
+                                      -- assigned to the declared locals.
+```
+
+The last local declared can capture all remaining values if expressed with `...`, like this:
+
+```judith
+const [ japan, china, ...others ] = ...countries 
+```
+
+Here, the value of others is an array that contains `['South Korea', 'Taiwan']`.
+
+## Member destructuring (`{a, b...}`)
+Member destructuring assigns values contained in member fields of a type. Unlike content destructuring, this is resolved at compile time.
+
+```judith
+const person = Person {
+    name: "Kevin",
+    age: 39,
+    country: 'Germany'
+}
+
+const { name, age } = ...person -- The members Person.name and Person.age are
+                                -- assigned to name and age.
+```
+
+Locals created by member destructuring do not need to use the original member's name:
+
+```judith
+const { name => person_name } = ...person
+```
+
+It is a compile-time error to destructure a member that doesn't exist.
+
+```judith
+const { name, city } = ...person -- ERROR: Person.city doesn't exist
+const { name } = ...2 -- ERROR: Num.name doesn't exist
+```
+
+When destructuring a member method, the method remains bound to the instance they were destructured from
+
+```judith
+const { get_nth_birthday } = ...person -- ok.
+get_nth_birthday(80) -- calls person.get_nth_birthday
+```
+
+Just like with content destructuring, you can capture all remaining members with a `...` local. In this case, the remaining local will be an object type.
+
+```judith
+const { name, ...rest } -- 'rest' contains { age = 39, country = 'Germany' }.
+```
+
+## Spread
+Spreading works similarly to destructuring, and allows developers to spread the contents of a collection or members of a value into a place that expects multiple values. Whether a spread is a content spread or a member spread depends on the context in which they are used:
+
+```judith
+const europe = ['Germany', 'France', 'Italy']
+const eurasia = [...europe, 'China', 'Japan', 'Thailand']
+```
+
+In the example above, `europe` is being spread in a place that expects values. As such, a content spread occurs and the 3 members in the `europe` array become the 3 first members of the `eurasia` array.
+
+```judith
+const person = Person { name = "Kevin", age = 32, email = "kevin@gmail.com" }
+const contact_info = { email = "kevin@kevin.kev", phone = "555-31-21-11" }
+
+const full_person = {
+    name = "someone",
+    ...person, -- person.name replaces the declared name field
+    ...contact_info, -- contact_info.email replaces person.email
+    address = "Hermann-Hesse-Straße 1"
+}
+```
+
+When composing a new object by destructuring others, each new initialization takes precedence over all previous initializations. In this example, even though we assigned a value to `name` in the first line, spreaing person's fields (`...person`) overrides this initialization with the value of `person.name`. Then, `...contact.info` overrides the initialization of `email` provided by `person.email`.
+
+The spread operator is useful to create shallow copies of collections and objects, and constness is enforced here.
+
+```judith
+const europe = ['Germany', 'France', 'Italy']
+var europe_copy = [...europe] -- valid, as everything copied is a value type.
+
+const people = [new Person(...), new Person(...)]
+var people_copy = [...people] -- ERROR - cannot assign const reference type to var.
+```
+
+# Reflection
+Judith supports reflection natively when compiled to certain targets (notably JASM). Although Judith is statically-typed and doesn't use source names in regular execution, these names are still stored as metadata, which allows for their resolution at runtime.
+
+Let's assume this definition:
+
+```judith
+typedef struct Person
+    name: String
+    age: Num
+end
+```
+
+## <a name="reflection-dao">Dynamic access operator (`.[]`)</a>
+The dynamic index operator `.[]` can be used on any object to try to retrieve the value of the given member.
+
+```judith
+const p = new Person("Kevin", 36) -- the struct type defined above.
+p.["age"] -- access field "age" via reflection at runtime, returns '36'.
+```
+
+When resolving a member that doesn't exist, a special value is returned: `undefined`. `undefined` is not `null`, but instead a sentinel value that indicates that whatever is being accessed doesn't exist (in other words, it's not defined).
+
+```judith
+person.["favorite_dish"] -- returns "undefined", since that field doesn't exist.
+```
+
+Member methods can also be accessed via reflection:
+
+```judith
+person.["get_birthday"]?() -- has to be called with '?()' as it may be undefined.
+```
+
+Extension methods, however, cannot be found via reflection, as they are not part of an object's definition.
+
+```judith
+impl func Person::print_name () end
+person.["print_name"] -- "undefined", as "print_name" is not part of Person.
+```
+
+The dynamic access operator is resolved at runtime, so any expression is valid:
+
+```judith
+const field = "age"
+person.[field] -- returns 36, which is the value of 'person.age'
+```
+
+However, since non-`Dynamic` objects cannot have non-`String` members, using a non-`String` expression in a dynamic access in anything other than a `Dynamic` object will result in a compile-time warning, as the value is guaranteed to be `undefined`.
+
+
+The return value of this operation is `unknown | undefined`, as it is not possible to determine at compile time if the value is defined or not, nor the type of the value if it would be defined.
+
+```judith
+const val = person.[field]
+const collective_years_of_experience: Num = 164
+
+if val is Num then
+    collective_years_of_experience += val -- valid, because 'val' has been narrowed
+                                          -- down to 'Num'.
+else
+    val *= 2 -- ERROR - 'val' here is 'unknown | undefined'.
+end
+```
+
+Note that dynamically accessing a value of type unknown is a valid operation:
+
+```judith
+if val !== undefined then
+    val.["month"] -- may or may not work, depending on the type "val" belongs to.
+end
+```
+
+You cannot, however, dynamically access `undefined`, as `undefined` cannot have members:
+
+```judith
+val.["month"] - ERROR: cannot dynamically access "undefined".
+```
+
+You can, however, use the null-conditional version of the dynamic access operator to safely chain accesses:
+
+```judith
+val.["person"]?.["age"] -- if val.["person"] returns "undefined" or "null", then
+                        -- ?.["age"] won't be called, and the result will be
+                        -- "undefined" or "null" (depending on the value of
+                        -- val.["person"]).
+```
+
+## Querying information about an object
+Judith allows querying an object for information about its types and composition at runtime. Let's define a type to query information about it:
+
+```judith
+typedef class Person
+    name: String
+    last_name: String
+    age: Num
+    country: Country
+
+    static count: Num
+
+    func print_age ()
+        -- statements
+    end
+
+    static func print_count ()
+        -- statements
+    end
+end
+```
+
+Use `membersof()` to retrieve a list of all members of the given instance or type:
+
+```judith
+const p = new Person()
+
+membersof(p) -- returns ["name", "last_name", "age", "country", "print_age"]
+membersof(Person) -- returns ["count", "print_count"]
+```
+
+Usually, this expression is not that useful, since it mixes methods with fields, which you don't usually want to treat in the same way. To refine your query, you can use `fieldsof()` and `methodsof()` to retrieve fields and methods separately:
+
+```judith
+fieldsof(p) -- returns ["name", "last_name", "age", "country"]
+fieldsof(Person) -- returns ["count"]
+methodsof(p) -- returns ["print_age"]
+methodsof(Person) -- returns ["print_count"]
+```
+
+You can use `typeof()` to receive a `TypeMetadata` object that contains information about the specific type of that object (even when it's assigned to a local of a different type).
+
+```judith
+typedef Employee = Person | String
+const employee: Employee = new Person()
+typeof(employee) -- returns the TypeMetadata of 'Person', not 'Employee'.
+membersof(employee) -- returns its members as 'Person', not as 'Employee'.
+```
+
+When trying to retrieve the metadata of a specific type, rather than the type of the instance, you can use `typeof()` directly on the type:
+
+```judith
+const type_data = typeof(Employee) -- the TypeMetadata of 'Employee'.
+```
+
+Note that extension methods, constructors and interfaces will not be returned by these operations, as they aren't actually bound to their types.
+
+# Dynamic objects
+Judith features a special type of object called `Dynamic`. Dynamic objects work differently to others, as their members are late-bound (i.e. they are resolved at runtime). These objects are designed for interoperability with dynamic languages and services that don't follow type-friendly standards. They should not be used as a way to bypass the type system.
+
+Since these objects are late-bound, they are significantly less performant than a statically-typed object.
+
+The `Dynamic` type is special in that it is not allowed to have any extension methods, constructors or interfaces implemented into it.
+
+```judith
+const anything: String = "absolutely"
+const person = new Person("Kevin")
+
+const my_obj: Dynamic = {
+    [anything] = "can", -- at runtime, creates a field named "absolutely"
+    go = "here" -- 'go' acts as a string defining this field's key.
+    [7] = 31 -- any type of value can act as a key.
+    [person] = "even references" -- absurd but technically valid.
+}
+```
+
+Since their values are late-bound, they can only be accessed with the dynamic access operator (`.[]`).
+
+```judith
+my_obj.go -- error, "my_obj" doesn't have members.
+my_obj["go"] -- valid, returns "here"
+```
+
+# Hidden elements (`hid`)
+The keyword `hid` allows developers to restrict the visibility of an object. When used inside a class, as mentioned above, makes the member invisible to the outside. The same applies to namespace members. When used on a top-level item (such as a function, a symbol or a typedef), it confines that definition to the file in which it is defined.
 
 
 
+# Appendix
+
+## Condition evaluation
+Structures that evaluate a condition (such as `if` or `while`) use truthy and falsey values, as defined in [Operations § Logical operations](operations-logical).
+
+```judith
+const zero: Num = 0
+const empty_str: String = ""
+const kw_false: Bool = false
+const kw_null: String? = null
+const obj: Object = {}
+
+if zero => Console::log("Zero!") -- false, 0 doesn't pass the test.
+if empty_str => Console::log("Empty string!") -- true, "" passes the test.
+if kw_false => Console::log("Empty string!") -- false, false fails the test.
+if kw_null => Console::log("Empty string!") -- false, null fails the test.
+if obj.a => Console::log("Empty string!") -- false, obj.a is "undefined" and that
+                                          -- fails the test.
+```
+
+### Nullable booleans and numbers
+A special situation occurs with nullable types that can contain falsey values other than `null` or `undefined`. This is the case with `Bool?`, which can be `false`; and numeric types, which can be `0`. In this case, without a explicit comparison, it is not possible to determine if the user was trying to test for a `null` or for a `false` / `0`. As such, the compiler will emit a warning, suggesting the use of an explicit comparison.
+
+```judith
+const val: Bool? = false
+
+if val then end -- WARNING: Use a explicit comparison.
+if val == true then end -- No warning.
+```
+
+## `.str()` method
+`str()` is a special method that is always defined for every type, even `Undefined` and `Dynamic`. As such, it is _always_ available, even on `Unknown` types or nullable ones, and never produces an error.
+
+By default, `str()` is defined internally in the JuVM, and its behavior depends on the value on which it's called:
+
+* Primitive types: will return a string containing the value itself. E.g. `5` will return `"5"`, `false` will return `"false"` and `undefined` will return `"undefined"`.
+* Array types: will return a string that starts with `[`, then enumerates every element of the array (as a string), separated by commas and spaces, and ends with `]`. E.g. `[3,5,2]` will produce `"[3, 5, 2]"`.
+* Dictionary types: same as array types, but will return key value pairs in a `key => value` format. E.g. `["Kevin"=>500,"John"=>200]` will return `"[\"Kevin\" => 500, \"John\" => 200]"`.
+* Object types, regardless of their kind (struct, class, etc.): will produce a string wrapped with `{` and `}`, that maps member names to the string representation of their values. If the member is a function, it will be mapped to a signature (or array of signatures, if overloaded) and, if the member is a field of a reference type, it will be mapped to the name of the type inside angle brackets (`<>`). The string will be formatted. For example, a local of type `Employee` may produce:
+```judith
+"Employee {
+    name = \"Kevin\",
+    salary = 75000,
+    company = <Company>,
+    get_name = () => String,
+    promote = [() => Void, (PromotionReason) => Void]
+}"
+```
+
+`str()` can be defined manually as an extension method. In this case, this definition will override the internal definition of the JuVM:
+
+```judith
+impl func Employee::str ()
+    return "A very good employee"
+end
+
+const emp = new Employee()
+Console::log(emp.str()) -- outputs "A very good employee".
+```
 
 
 
 # TODO
 
 TODO: Types § Type narrowing
-TODO: <a name="typecasting-numbers">Type casting § Number casting</a>
 TODO: <a name="appendix-char">Appendix § Char</a>
 TODO: <a name="appendix-regex">Appendix § Regex</a>
-TODO: <a name="reflection">Reflection</a>
 
 
 
