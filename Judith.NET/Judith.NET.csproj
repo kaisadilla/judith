@@ -12,6 +12,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="res\test - Copy.judith">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="res\test.judith">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

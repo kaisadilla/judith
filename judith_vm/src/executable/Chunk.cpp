@@ -1,15 +1,13 @@
 #include "executable/Chunk.hpp"
 
 Chunk::Chunk(
-    void** constants,
-    byte* constantTypes,
+    byte** strings,
     size_t size,
     u_ptr<byte[]> code,
     bool containsLines,
     u_ptr<i32[]> lines
 ) :
-    constants(constants),
-    constantTypes(constantTypes),
+    strings(strings),
     size(size),
     code(std::move(code)),
     containsLines(containsLines),

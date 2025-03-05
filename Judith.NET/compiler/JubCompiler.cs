@@ -162,7 +162,7 @@ public class JubCompiler : SyntaxVisitor {
 
         Visit(node.Test);
 
-        var thenJump = EmitJump(OpCode.JFalse, node.Test.Line);
+        var thenJump = EmitJump(OpCode.JFALSE, node.Test.Line);
 
         _scope.BeginThenScope(node);
         _localBlock.BeginScope();
@@ -172,7 +172,7 @@ public class JubCompiler : SyntaxVisitor {
 
         int elseJump = -1;
         if (node.Alternate != null) {
-            elseJump = EmitJump(OpCode.Jmp, node.Test.Line);
+            elseJump = EmitJump(OpCode.JMP, node.Test.Line);
         }
 
         PatchJump(thenJump);
@@ -196,7 +196,7 @@ public class JubCompiler : SyntaxVisitor {
         // Check condition
         Visit(node.Test);
         // Prepare a jump to skip the body if the test fails.
-        var falseJump = EmitJump(OpCode.JFalse, node.Test.Line);
+        var falseJump = EmitJump(OpCode.JFALSE, node.Test.Line);
 
         // Compile the body.
         _scope.BeginScope(node);
@@ -206,7 +206,7 @@ public class JubCompiler : SyntaxVisitor {
         _scope.EndScope();
 
         // Emit a jump back to the start of the loop.
-        EmitJumpBack(OpCode.Jmp, loopStart, node.Test.Line);
+        EmitJumpBack(OpCode.JMP, loopStart, node.Test.Line);
         // Point the skip body jump here.
         PatchJump(falseJump);
     }
@@ -215,7 +215,7 @@ public class JubCompiler : SyntaxVisitor {
         RequireFunction();
         // TODO: Compile expression.
 
-        CurrentFunc.Chunk.WriteInstruction(OpCode.Ret, node.Line);
+        CurrentFunc.Chunk.WriteInstruction(OpCode.RET, node.Line);
     }
 
     public override void Visit (AssignmentExpression node) {
@@ -280,7 +280,7 @@ public class JubCompiler : SyntaxVisitor {
                 $"Function reference for '{boundNode.Symbol.FullyQualifiedName}' not found."
             );
 
-            CurrentFunc.Chunk.WriteInstruction(OpCode.Call, node.Line);
+            CurrentFunc.Chunk.WriteInstruction(OpCode.CALL, node.Line);
             CurrentFunc.Chunk.WriteUint32((uint)funcRefIndex, node.Line);
         }
     }
@@ -295,36 +295,33 @@ public class JubCompiler : SyntaxVisitor {
         // TODO: When type alias desugaring is added, this compares directly to
         // F64, F32, I64, I32, etc.
         if (boundNode.Type == _cmp.Native.Types.Num) {
-            int index = CurrentBlock.ConstantTable.WriteFloat64(boundNode.Value.AsFloat);
-
-            if (index <= byte.MaxValue) {
-                CurrentFunc.Chunk.WriteInstruction(OpCode.Const, node.Line);
-                CurrentFunc.Chunk.WriteByte((byte)index, node.Line);
-            }
-            else {
-                CurrentFunc.Chunk.WriteInstruction(OpCode.ConstLong, node.Line);
-                CurrentFunc.Chunk.WriteInt32(index, node.Line);
-            }
+            EmitF64Const(boundNode.Value.AsFloat, node.Line);
+        }
+        else if (boundNode.Type == _cmp.Native.Types.Int) {
+            EmitI64Const(boundNode.Value.AsInteger, node.Line);
         }
         else if (boundNode.Type == _cmp.Native.Types.Bool) {
             if (boundNode.Value.AsBoolean == true) {
-                CurrentFunc.Chunk.WriteInstruction(OpCode.IConst1, node.Line);
+                CurrentFunc.Chunk.WriteInstruction(OpCode.I_CONST_1, node.Line);
             }
             else {
-                CurrentFunc.Chunk.WriteInstruction(OpCode.Const0, node.Line);
+                CurrentFunc.Chunk.WriteInstruction(OpCode.CONST_0, node.Line);
             }
         }
         else if (boundNode.Type == _cmp.Native.Types.String) {
-            int index = CurrentBlock.ConstantTable.WriteStringASCII(boundNode.Value.AsString!);
+            int index = CurrentBlock.StringTable.WriteStringUtf8(boundNode.Value.AsString!);
 
             if (index <= byte.MaxValue) {
-                CurrentFunc.Chunk.WriteInstruction(OpCode.ConstStr, node.Line);
+                CurrentFunc.Chunk.WriteInstruction(OpCode.STR_CONST, node.Line);
                 CurrentFunc.Chunk.WriteByte((byte)index, node.Line);
             }
             else {
-                CurrentFunc.Chunk.WriteInstruction(OpCode.ConstStrLong, node.Line);
+                CurrentFunc.Chunk.WriteInstruction(OpCode.STR_CONST_L, node.Line);
                 CurrentFunc.Chunk.WriteInt32(index, node.Line);
             }
+        }
+        else {
+            throw new NotImplementedException("Can't compile value of this type yet.");
         }
     }
 
@@ -362,7 +359,7 @@ public class JubCompiler : SyntaxVisitor {
             ThrowUnboundNode(node.Expression);
         }
 
-        CurrentFunc.Chunk.WriteInstruction(OpCode.Print, node.Line);
+        CurrentFunc.Chunk.WriteInstruction(OpCode.PRINT, node.Line);
 
         if (boundExpr.Type == _cmp.Native.Types.Num) {
             CurrentFunc.Chunk.WriteByte((byte)ConstantType.Float64, node.Expression.Line);
@@ -415,10 +412,10 @@ public class JubCompiler : SyntaxVisitor {
         }
 
         if (op == OperatorKind.LogicalAnd) {
-            jumpList.Add(EmitJump(OpCode.JFalseK, expr.Line));
+            jumpList.Add(EmitJump(OpCode.JFALSE_K, expr.Line));
         }
         else { // OperatorKind.LogicalOr
-            jumpList.Add(EmitJump(OpCode.JTrueK, expr.Line));
+            jumpList.Add(EmitJump(OpCode.JTRUE_K, expr.Line));
         }
 
         Visit(expr.Right);
@@ -432,34 +429,34 @@ public class JubCompiler : SyntaxVisitor {
 
         switch (node.Operator.OperatorKind) {
             case OperatorKind.Add:
-                _Instr(OpCode.FAdd);
+                _Instr(OpCode.F_ADD);
                 return;
             case OperatorKind.Subtract:
-                _Instr(OpCode.FSub);
+                _Instr(OpCode.F_SUB);
                 return;
             case OperatorKind.Multiply:
-                _Instr(OpCode.FMul);
+                _Instr(OpCode.F_MUL);
                 return;
             case OperatorKind.Divide:
-                _Instr(OpCode.FDiv);
+                _Instr(OpCode.F_DIV);
                 return;
             case OperatorKind.Equals:
-                _Instr(OpCode.Eq);
+                _Instr(OpCode.EQ);
                 return;
             case OperatorKind.NotEquals:
-                _Instr(OpCode.Neq);
+                _Instr(OpCode.NEQ);
                 return;
             case OperatorKind.LessThan:
-                _Instr(OpCode.FLt);
+                _Instr(OpCode.F_LT);
                 return;
             case OperatorKind.LessThanOrEqualTo:
-                _Instr(OpCode.FLe);
+                _Instr(OpCode.F_LE);
                 return;
             case OperatorKind.GreaterThan:
-                _Instr(OpCode.FGt);
+                _Instr(OpCode.F_GT);
                 return;
             case OperatorKind.GreaterThanOrEqualTo:
-                _Instr(OpCode.FGe);
+                _Instr(OpCode.F_GE);
                 return;
             case OperatorKind.LogicalAnd:
                 break;
@@ -485,6 +482,50 @@ public class JubCompiler : SyntaxVisitor {
         return tNode;
     }
 
+    private void EmitF64Const (double f64, int line) {
+        RequireFunction();
+
+        if (f64 == 0) {
+            CurrentFunc.Chunk.WriteInstruction(OpCode.CONST_0, line);
+        }
+        else if (f64 == 1) {
+            CurrentFunc.Chunk.WriteInstruction(OpCode.F_CONST_1, line);
+        }
+        else if (f64 == 2) {
+            CurrentFunc.Chunk.WriteInstruction(OpCode.F_CONST_2, line);
+        }
+        else {
+            CurrentFunc.Chunk.WriteInstruction(OpCode.CONST_LL, line);
+            CurrentFunc.Chunk.WriteFloat64(f64, line);
+        }
+    }
+
+    private void EmitI64Const (long i64, int line) {
+        RequireFunction();
+
+        if (i64 == 0) {
+            CurrentFunc.Chunk.WriteInstruction(OpCode.CONST_0, line);
+        }
+        else if (i64 == 1) {
+            CurrentFunc.Chunk.WriteInstruction(OpCode.I_CONST_1, line);
+        }
+        else if (i64 == 2) {
+            CurrentFunc.Chunk.WriteInstruction(OpCode.I_CONST_2, line);
+        }
+        else if (i64 >= sbyte.MinValue && i64 <= sbyte.MaxValue) {
+            CurrentFunc.Chunk.WriteInstruction(OpCode.CONST, line);
+            CurrentFunc.Chunk.WriteSByte((sbyte)i64, line);
+        }
+        else if (i64 >= int.MinValue && i64 <= int.MaxValue) {
+            CurrentFunc.Chunk.WriteInstruction(OpCode.CONST_L, line);
+            CurrentFunc.Chunk.WriteInt32((int)i64, line);
+        }
+        else {
+            CurrentFunc.Chunk.WriteInstruction(OpCode.CONST_LL, line);
+            CurrentFunc.Chunk.WriteInt64(i64, line);
+        }
+    }
+
     /// <summary>
     /// Writes the STORE instruction required for the address given.
     /// </summary>
@@ -494,22 +535,22 @@ public class JubCompiler : SyntaxVisitor {
         RequireFunction();
 
         if (addr == 0) {
-            CurrentFunc.Chunk.WriteInstruction(OpCode.Store0, line);
+            CurrentFunc.Chunk.WriteInstruction(OpCode.STORE_0, line);
         }
         else if (addr == 1) {
-            CurrentFunc.Chunk.WriteInstruction(OpCode.Store1, line);
+            CurrentFunc.Chunk.WriteInstruction(OpCode.STORE_1, line);
         }
         else if (addr == 2) {
-            CurrentFunc.Chunk.WriteInstruction(OpCode.Store2, line);
+            CurrentFunc.Chunk.WriteInstruction(OpCode.STORE_2, line);
         }
         else if (addr == 3) {
-            CurrentFunc.Chunk.WriteInstruction(OpCode.Store3, line);
+            CurrentFunc.Chunk.WriteInstruction(OpCode.STORE_3, line);
         }
         else if (addr == 4) {
-            CurrentFunc.Chunk.WriteInstruction(OpCode.Store4, line);
+            CurrentFunc.Chunk.WriteInstruction(OpCode.STORE_4, line);
         }
         else if (addr <= byte.MaxValue) {
-            CurrentFunc.Chunk.WriteInstruction(OpCode.Store, line);
+            CurrentFunc.Chunk.WriteInstruction(OpCode.STORE, line);
             CurrentFunc.Chunk.WriteByte((byte)addr, line);
         }
         else {
@@ -528,22 +569,22 @@ public class JubCompiler : SyntaxVisitor {
         RequireFunction();
 
         if (addr == 0) {
-            CurrentFunc.Chunk.WriteInstruction(OpCode.Load0, line);
+            CurrentFunc.Chunk.WriteInstruction(OpCode.LOAD_0, line);
         }
         else if (addr == 1) {
-            CurrentFunc.Chunk.WriteInstruction(OpCode.Load1, line);
+            CurrentFunc.Chunk.WriteInstruction(OpCode.LOAD_1, line);
         }
         else if (addr == 2) {
-            CurrentFunc.Chunk.WriteInstruction(OpCode.Load2, line);
+            CurrentFunc.Chunk.WriteInstruction(OpCode.LOAD_2, line);
         }
         else if (addr == 3) {
-            CurrentFunc.Chunk.WriteInstruction(OpCode.Load3, line);
+            CurrentFunc.Chunk.WriteInstruction(OpCode.LOAD_3, line);
         }
         else if (addr == 4) {
-            CurrentFunc.Chunk.WriteInstruction(OpCode.Load4, line);
+            CurrentFunc.Chunk.WriteInstruction(OpCode.LOAD_4, line);
         }
         else if (addr <= byte.MaxValue) {
-            CurrentFunc.Chunk.WriteInstruction(OpCode.Load, line);
+            CurrentFunc.Chunk.WriteInstruction(OpCode.LOAD, line);
             CurrentFunc.Chunk.WriteByte((byte)addr, line);
         }
         else {

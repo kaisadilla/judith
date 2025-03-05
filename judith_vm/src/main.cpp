@@ -8,7 +8,17 @@
 #include <BlockReader.hpp>
 #include <VM.hpp>
 
+#if defined(_WIN32) || defined(_WIN64)
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
+
 int main () {
+#if defined(_WIN32) || defined(_WIN64)
+    SetConsoleOutputCP(CP_UTF8);
+#endif
+
     Assembly assembly = readAssembly();
 
     std::cout << "\n\n===== DISASSEMBLE =====" << std::endl;

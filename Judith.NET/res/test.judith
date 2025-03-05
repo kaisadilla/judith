@@ -1,181 +1,36 @@
-typedef struct Person
-    name: String
-    age: Num
+﻿const i1 = 1
+const i2 = 1
+const cycles = 20
+
+fib_recur(i1, i2, cycles)
+print_str("")
+print_str("Fiboňácĉi for you!")
+
+func _old_fib (var a, b, const cycles: Num)
+    var i = 0
+
+    while i < cycles do
+        const next = a + b
+        a = b
+        b = next
+
+        print(next)
+
+        i = i + 1
+    end
 end
 
-typedef struct Player
-    id: Num
-    username: String
-    is_active: Bool
-    profile: Person
+func fib_recur (a, b, cycles: Num)
+    if cycles <= 0 then return end
+
+    print(a)
+    fib_recur(b, a + b, cycles - 1)
 end
 
-const p = Person {
-    name = "Kevin",
-    age = 32,
-}
+func print (n: Num)
+    __p_print n
+end
 
-const first_player = Player {
-    id = 315,
-    username = "kevin_32",
-    is_active = true,
-    profile = p,
-}
-
-const second_player = Player {
-    id = 7_314,
-    username = ">>old-player<<",
-    is_active = false,
-    profile = {
-        name = "Josh",
-        age = 51,
-    },
-}
-
--- p.name = "Elder"
-__p_print second_player.profile.name
-
--- const i1 = 1
--- const i2 = 1
--- const cycles = 20
--- 
--- fib_recur(i1, i2, cycles)
--- print_str("")
--- print_str("Fibonacci for you!")
-
---func fib (var a, b, const cycles: Num)
---    var i = 0
---
---    while i < cycles do
---        const next = a + b
---        a = b
---        b = next
---
---        print(next)
---
---        i = i + 1
---    end
---end
-
--- func fib_recur (a, b, cycles: Num)
---     if cycles <= 0 then return end
--- 
---     print(a)
---     fib_recur(b, a + b, cycles - 1)
--- end
--- 
--- func print (n: Num)
---     __p_print n
--- end
--- 
--- func print_str (str: String)
---     __p_print str
--- end
--- 
--- func both_ret ()
---     if true then
---         return
---     else
---         return
---     end
--- end
--- 
--- func some_ret ()
---     if true then
---         return
---     end
--- end
--- 
--- func some_ret2 ()
---     if true then
---         return
---     else
---         __p_print "No ret"
---     end
--- end
-
--- var a = 1
--- var b = 1
--- 
--- print_le_sum(a, b)
--- 5 + 5
--- -- funcname()
--- -- funcname(a,)
--- -- member.access("string",)
--- 
--- var i = 0
--- while i < 100 do
---     __p_print b
--- 
---     const temp = a + b
---     a = b
---     b = temp
--- 
---     i = i + 1
--- end
--- 
--- __p_print "That's what Fibonacci said."
--- 
--- return
--- 
--- func ignore1 () end
--- func ignore2 () end
--- func ignore3 (a: String) end
--- 
--- func print_le_sum (const a, b: Num)
---     __p_print (a + b)
---     return
--- end
--- 
--- func ignore4 () end
-
---const val1: Num = 11
---const val7 = 11
---const val2 = 7 * 3
---const val3 = 5 / 3 + 2
---const val4 = (4 + 1) + 1 * 16
---const val5 = val2
---const val6 = val5 + val3
---__p_print val1
---__p_print val2 + val3
---__p_print val6 + val5 + val4
-
---const my_str = "Dbl quotes"
---const my_str2 = `Backticks`
---__p_print my_str
---
---const i = 3
---if i + 3 then
---    const my_str3 = my_str2
---end
---const my_str3 = "Indeed"
-
--- const a = 3 > 5
--- const b = 1
--- const c = 1
--- const d = b == c
--- 
--- __p_print a
--- __p_print b
--- __p_print c
--- __p_print d
--- __p_print c > -5
-
---__p_print "first" and "second"
---__p_print "first" or "second"
---
---__p_print 1 and 3 and 5 + 7 and 9
---__p_print 10 or 20 or 30
---__p_print 100 and 200 or 300 and 400
---__p_print false or 9 * 3
---__p_print true or 9 * 3
---__p_print false and 9 * 3
---__p_print true and 9 * 3
---
---if 3 > 5 then
---    __p_print "This is impossible!"
---else
---    __p_print "This always prints!"
---end
---
---__p_print "This can be printed."
+func print_str (str: String)
+    __p_print str
+end

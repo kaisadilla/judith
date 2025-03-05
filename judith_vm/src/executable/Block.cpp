@@ -1,17 +1,15 @@
 #include "executable/Block.hpp"
 
 Block::Block(
-    u_ptr<byte[]> constantTable,
-    size_t constantCount,
-    u_ptr<void*[]> constants,
-    u_ptr<byte[]> constantTypes,
+    u_ptr<byte[]> stringTable,
+    size_t stringCount,
+    u_ptr<byte*[]> strings,
     Function* functions,
     size_t functionCount
 ) :
-    constantTable(std::move(constantTable)),
-    constantCount(constantCount),
-    constants(std::move(constants)),
-    constantTypes(std::move(constantTypes)),
+    stringTable(std::move(stringTable)),
+    stringCount(stringCount),
+    strings(std::move(strings)),
     functions(functions),
     functionCount(functionCount)
 {}

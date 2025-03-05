@@ -7,6 +7,7 @@
 #define READ_U16() (ip += 2, *(ip - 2) | (*(ip - 1) << 8))
 #define READ_I32() (ip += 4, *(ip - 4) | (*(ip - 3) << 8) | (*(ip - 2) << 16) | (*(ip - 1) << 24))
 #define READ_U32() (ip += 4, *(ip - 4) | (*(ip - 3) << 8) | (*(ip - 2) << 16) | (*(ip - 1) << 24))
+#define READ_I64() (ip += 8, *(i64*)(ip - 8))
 
 #define F_BINARY_OP(op) \
     do { \
@@ -67,18 +68,36 @@ void VM::execute (const Function& func) {
         case OpCode::NOOP:
             break;
 
+        case OpCode::NATIVE:
+            break;
+
         case OpCode::CONST:
-            pushValue({ .asInt64 = *(i64*)chunk.constants[READ_BYTE()] });
+            pushValue({ .asInt64 = *(i64*)READ_BYTE() });
 
             break;
 
-        case OpCode::CONST_LONG:
-            pushValue({ .asInt64 = *(i64*)chunk.constants[READ_I32()] });
+        case OpCode::CONST_L:
+            pushValue({ .asInt64 = *(i64*)READ_I32() });
+
+            break;
+
+        case OpCode::CONST_L_L:
+            pushValue({ .asInt64 = READ_I64() });
 
             break;
 
         case OpCode::CONST_0:
             pushValue({ .asInt64 = 0});
+
+            break;
+
+        case OpCode::F_CONST_1:
+            pushValue({ .asFloat64 = 1});
+
+            break;
+
+        case OpCode::F_CONST_2:
+            pushValue({ .asFloat64 = 2});
 
             break;
 
@@ -92,11 +111,11 @@ void VM::execute (const Function& func) {
 
             break;
 
-        case OpCode::CONST_STR: {
+        case OpCode::STR_CONST: {
             #define STRLEN (*(ui64*)strval)
             #define STRHEAD ((char*)(strval + sizeof(ui64)))
 
-            byte* strval = (byte*)chunk.constants[READ_BYTE()];
+            byte* strval = (byte*)chunk.strings[READ_BYTE()];
             std::string str(STRHEAD, STRLEN);
             pushValue({ .asStringPtr = internString(str) });
             break;
@@ -106,8 +125,8 @@ void VM::execute (const Function& func) {
         }
             break;
 
-        case OpCode::CONST_STR_LONG:
-            pushValue({ .asInt64 = *(i64*)chunk.constants[READ_I32()] });
+        case OpCode::STR_CONST_L:
+            pushValue({ .asInt64 = *(i64*)chunk.strings[READ_I32()] });
 
             break;
 
@@ -253,11 +272,6 @@ void VM::execute (const Function& func) {
             //loadLocal(READ_U16());
             break;
 
-        case OpCode::PRINT:
-            printValue(READ_BYTE(), popValue());
-            std::cout << "\n";
-            break;
-
         case OpCode::JMP: {
             ip += READ_SBYTE();
             break;
@@ -308,6 +322,11 @@ void VM::execute (const Function& func) {
             execute(*(assembly->assemblyFunctions[index]));
             break;
         }
+
+        case OpCode::PRINT:
+            printValue(READ_BYTE(), popValue());
+            std::cout << "\n";
+            break;
 
         default:
             std::cerr << "[ERROR] UNKNOWN OPCODE: " << std::hex << (int)instruction

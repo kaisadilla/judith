@@ -16,20 +16,18 @@
 static std::vector<FunctionRef> readFuncRefTable (Buffer& reader, size_t bufferSize);
 static void readBlock(Buffer& reader, size_t bufferSize, std::vector<Block>&blocks);
 
-void readConstantTable (
+void readStringTable (
     Buffer& reader,
     size_t bufferSize,
-    u_ptr<byte[]>& constantTable,
-    size_t & constantCount,
-    u_ptr<void*[]>& constants,
-    u_ptr<byte[]>& constantTypes
+    u_ptr<byte[]>& stringTable,
+    size_t & stringCount,
+    u_ptr<byte*[]>& strings
 );
 
 void readFunctionTable (
     Buffer& reader,
     size_t bufferSize,
-    const u_ptr<void*[]>& constants,
-    const u_ptr<byte[]>& constantTypes,
+    const u_ptr<byte*[]>& strings,
     Function*& functions,
     size_t & functionCount
 );
@@ -105,132 +103,93 @@ static std::vector<FunctionRef> readFuncRefTable (Buffer& reader, size_t bufferS
 }
 
 static void readBlock(Buffer& reader, size_t bufferSize, std::vector<Block>& blocks) {
-    u_ptr<byte[]> constantTable;
-    size_t constantCount;
-    u_ptr<void*[]> constants;
-    u_ptr<byte[]> constantTypes;
+    u_ptr<byte[]> stringTable;
+    size_t stringCount;
+    u_ptr<byte*[]> strings;
 
     // Read constant table and output it to the variables above.
-    readConstantTable(
-        reader, bufferSize, constantTable, constantCount, constants, constantTypes
-    );
+    readStringTable(reader, bufferSize, stringTable, stringCount, strings);
 
     bool hasImplicitFunc = reader.readBool(); // has_implicit
 
     Function* functions;
     size_t functionCount;
 
-    readFunctionTable(
-        reader, bufferSize, constants, constantTypes, functions, functionCount
-    );
+    readFunctionTable(reader, bufferSize, strings, functions, functionCount);
 
     blocks.emplace_back(
-        std::move(constantTable),
-        constantCount,
-        std::move(constants),
-        std::move(constantTypes),
+        std::move(stringTable),
+        stringCount,
+        std::move(strings),
         functions,
         functionCount
     );
 }
 
-void readConstantTable (
+void readStringTable (
     Buffer& reader,
     size_t bufferSize,
-    u_ptr<byte[]>& constantTable,
-    size_t& constantCount,
-    u_ptr<void*[]>& constants,
-    u_ptr<byte[]>& constantTypes
+    u_ptr<byte[]>& stringTable,
+    size_t& stringCount,
+    u_ptr<byte*[]>& strings
 ) {
-    constantCount = (size_t)reader.readUInt32_LE(); // constant_count
+    stringCount = (size_t)reader.readUInt32_LE(); // string_count
 
     std::vector<byte> alignedConstantVector;
     std::vector<size_t> cIndices;
-    std::vector<byte> cTypes;
 
-    for (int i = 0; i < constantCount; i++) {
+    for (int i = 0; i < stringCount; i++) {
         // Read the type of the next constant in the file's table.
-        byte type = reader.readUInt8();
+        ui64 stringSize = reader.readUInt64_LE();
         // Get the byte offset we are in the file (after reading the type byte).
         size_t offset = reader.getReadOffset();
         // This constant's index in alignedConstantVector is its current size.
         cIndices.push_back(alignedConstantVector.size());
-        cTypes.push_back(type);
 
         // We'll always check that the file is big enough to contain the bytes
         // we will read next with CHECK_SIZE(n). This prevents corrupt or malicious
         // files from stepping into bad memory. The current implementation of
         // buffer returns 0 in this case, but we still check here.
-        switch (type) {
-        case ConstantType::ERROR:
-            throw std::runtime_error("ERROR type found in the constant table!");
+        CHECK_SIZE(stringSize);
 
-        case ConstantType::INT_64:
-        case ConstantType::FLOAT_64:
-        case ConstantType::UNSIGNED_INT_64:
-            CHECK_SIZE(8);
+        // Push string size:
+        byte* sizePtr = (byte*)&stringSize;
+        alignedConstantVector.insert(
+            alignedConstantVector.end(), sizePtr, sizePtr + sizeof(size_t)
+        );
 
-            // Push the next 8 bytes in the file.
-            for (int i = 0; i < 8; i++) {
-                alignedConstantVector.push_back(reader.readUInt8());
-            }
-
-            break;
-        case ConstantType::STRING_ASCII: {
-            // Read the size, in bytes, of the string.
-            size_t stringSize = reader.readUInt64_LE();
-            offset = reader.getReadOffset();
-            CHECK_SIZE(stringSize);
-
-            // Push string size:
-            byte* sizePtr = (byte*)&stringSize;
-            alignedConstantVector.insert(
-                alignedConstantVector.end(), sizePtr, sizePtr + sizeof(size_t)
-            );
-
-            // Push all the bytes in the string.
-            for (int i = 0; i < stringSize; i++) {
-                alignedConstantVector.push_back(reader.readUInt8());
-            }
-
-            // Pad the end of the value to preserve alignment.
-            while (alignedConstantVector.size() % 8 != 0) {
-                alignedConstantVector.push_back(0);
-            }
-
-            break;
+        // Push all the bytes in the string.
+        for (int i = 0; i < stringSize; i++) {
+            alignedConstantVector.push_back(reader.readUInt8());
         }
-        default:
-            throw std::runtime_error("Unknown type found in the constant table.");
+
+        // Pad the end of the value to preserve alignment.
+        while (alignedConstantVector.size() % 8 != 0) {
+            alignedConstantVector.push_back(0);
         }
     }
 
     // Create a persistent array for the table.
-    constantTable = make_u<byte[]>(alignedConstantVector.size());
+    stringTable = make_u<byte[]>(alignedConstantVector.size());
     // Copy the constant table there.
-    std::copy(alignedConstantVector.begin(), alignedConstantVector.end(), constantTable.get());
-
-    // Create a persistent array for the types.
-    constantTypes = make_u<byte[]>(cTypes.size());
-    std::copy(cTypes.begin(), cTypes.end(), constantTypes.get());
+    std::copy(alignedConstantVector.begin(), alignedConstantVector.end(), stringTable.get());
 
     // This array will map each index in the file's constant table to an address
     // within constantTable, so values can be looked up directly.
-    constants = make_u<void* []>(cIndices.size());
+    strings = make_u<byte* []>(cIndices.size());
 
     for (size_t i = 0; i < cIndices.size(); i++) {
         // The element #i in the file's constant table is at constantTable[index].
         size_t index = cIndices[i];
         // the address of constantTable[index] becomes the pointer to the value.
-        constants[i] = (void*)(&constantTable[index]);
+        strings[i] = (byte*)(&stringTable[index]);
     }
 }
 
 void readFunctionTable (
     Buffer& reader,
     size_t bufferSize,
-    const u_ptr<void* []>& constants,
-    const u_ptr<byte[]>& constantTypes,
+    const u_ptr<byte* []>& strings,
     Function*& functions,
     size_t& functionCount
 ) {
@@ -270,8 +229,7 @@ void readFunctionTable (
 
         // TODO: Check this.
         new (&functions[f]) Function(maxLocals, Chunk(
-            constants.get(),
-            constantTypes.get(),
+            strings.get(),
             size,
             std::move(code),
             containsLines,

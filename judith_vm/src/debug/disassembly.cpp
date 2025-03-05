@@ -37,37 +37,11 @@ static std::string idStr (const char* id) {
     return str.str();
 }
 
-static std::string constant (Chunk& chunk, size_t constIndex) {
-    byte type = chunk.constantTypes[constIndex];
-
-    switch (type) {
-        case ConstantType::ERROR:
-            return "<error-type>";
-        case ConstantType::INT_64: {
-            i64 ival = *(i64*)chunk.constants[constIndex];
-            return std::format("{}", ival);
-        }
-        case ConstantType::FLOAT_64: {
-            f64 fval = *(f64*)chunk.constants[constIndex];
-            return std::format("{}", fval);
-        }
-        case ConstantType::UNSIGNED_INT_64: {
-            ui64 uval = *(ui64*)chunk.constants[constIndex];
-            return std::format("{}", uval);
-        }
-        case ConstantType::STRING_ASCII: {
-            byte* strval = (byte*)chunk.constants[constIndex];
-            ui64 strlen = *(ui64*)strval;
-            byte* strStart = strval + sizeof(ui64);
-            return '"' + std::string((char*)strStart, strlen) + '"';
-        }
-        case ConstantType::BOOL: {
-            return "<bool-not-implemented>";
-        }
-        default:
-            return "<unknown-type>";
-    }
-
+static std::string stringConstant (Chunk& chunk, size_t constIndex) {
+    byte* strval = (byte*)chunk.strings[constIndex];
+    ui64 strlen = *(ui64*)strval;
+    byte* strStart = strval + sizeof(ui64);
+    return '"' + std::string((char*)strStart, strlen) + '"';
 }
 
 static std::string constTypeStr (byte type) {
@@ -148,31 +122,83 @@ static size_t u32Instruction (std::ostringstream& str, Chunk& chunk, const char*
     return index + 5;
 }
 
-static size_t constantInstruction (std::ostringstream& str, Chunk& chunk, const char* name, size_t index) {
+static size_t constantInstruction (
+    std::ostringstream& str, Chunk& chunk, const char* name, size_t index
+) {
     if (index + 1 >= chunk.size) {
         std::cerr << "Constant instruction at index " << index << " overflows the code array.";
         return index + 2;
     }
 
-    byte constIndex = chunk.code[index + 1];
+    byte val = chunk.code[index + 1];
 
-    str << idStr(name) << " " << hexIntStr(constIndex) << " ; " << constant(chunk, constIndex);
+    str << idStr(name) << " " << hexIntStr(val) << " ; " << (int)val;
 
     return index + 2;
 }
 
-static size_t constantLongInstruction (std::ostringstream& str, Chunk& chunk, const char* name, size_t index) {
+static size_t constantLongInstruction (
+    std::ostringstream& str, Chunk& chunk, const char* name, size_t index
+) {
     if (index + 4 >= chunk.size) {
         std::cerr << "Constant long instruction at index " << index << " overflows the code array.";
         return index + 5;
     }
 
-    i32 constIndex = chunk.code[index + 1]
+    i32 val = chunk.code[index + 1]
         + (chunk.code[index + 2] << 8)
-        + (chunk.code[index + 2] << 16)
-        + (chunk.code[index + 2] << 24);
+        + (chunk.code[index + 3] << 16)
+        + (chunk.code[index + 4] << 24);
 
-    str << idStr(name) << " " << hexIntLongStr(constIndex) << " ; " << constant(chunk, constIndex);
+    str << idStr(name) << " " << hexIntLongStr(val) << " ; " << val;
+
+    return index + 5;
+}
+
+static size_t constantLongLongInstruction (
+    std::ostringstream& str, Chunk& chunk, const char* name, size_t index
+) {
+    if (index + 4 >= chunk.size) {
+        std::cerr << "Constant long instruction at index " << index << " overflows the code array.";
+        return index + 9;
+    }
+
+    i64 val = *(i64*)(&chunk.code[index]);
+
+    str << idStr(name) << " " << hexIntLongStr(val) << " ; " << val;
+
+    return index + 9;
+}
+
+static size_t stringConstantInstruction (
+    std::ostringstream& str, Chunk& chunk, const char* name, size_t index
+) {
+    if (index + 1 >= chunk.size) {
+        std::cerr << "Constant instruction at index " << index << " overflows the code array.";
+        return index + 2;
+    }
+
+    byte strIndex = chunk.code[index + 1];
+
+    str << idStr(name) << " " << hexIntStr(strIndex) << " ; " << stringConstant(chunk, strIndex);
+
+    return index + 2;
+}
+
+static size_t stringConstantLongInstruction (
+    std::ostringstream& str, Chunk& chunk, const char* name, size_t index
+) {
+    if (index + 4 >= chunk.size) {
+        std::cerr << "Constant long instruction at index " << index << " overflows the code array.";
+        return index + 5;
+    }
+
+    i32 strIndex = chunk.code[index + 1]
+        + (chunk.code[index + 2] << 8)
+        + (chunk.code[index + 3] << 16)
+        + (chunk.code[index + 4] << 24);
+
+    str << idStr(name) << " " << hexIntLongStr(strIndex) << " ; " << stringConstant(chunk, strIndex);
 
     return index + 5;
 }
@@ -254,18 +280,24 @@ static size_t disassembleInstruction (std::ostringstream& str, Chunk& chunk, siz
 
     case OpCode::CONST:
         return constantInstruction(str, chunk, "CONST", index);
-    case OpCode::CONST_LONG:
+    case OpCode::CONST_L:
         return constantLongInstruction(str, chunk, "CONST_L", index);
+    case OpCode::CONST_L_L:
+        return constantLongLongInstruction(str, chunk, "CONST_LL", index);
     case OpCode::CONST_0:
         return simpleInstruction(str, chunk, "CONST_0", index);
+    case OpCode::F_CONST_1:
+        return simpleInstruction(str, chunk, "F_CONST_1", index);
+    case OpCode::F_CONST_2:
+        return simpleInstruction(str, chunk, "F_CONST_2", index);
     case OpCode::I_CONST_1:
         return simpleInstruction(str, chunk, "I_CONST_1", index);
     case OpCode::I_CONST_2:
         return simpleInstruction(str, chunk, "I_CONST_2", index);
-    case OpCode::CONST_STR:
-        return constantInstruction(str, chunk, "CONST_STR", index);
-    case OpCode::CONST_STR_LONG:
-        return constantLongInstruction(str, chunk, "CONST_STR_L", index);
+    case OpCode::STR_CONST:
+        return stringConstantInstruction(str, chunk, "STR_CONST", index);
+    case OpCode::STR_CONST_L:
+        return stringConstantLongInstruction(str, chunk, "STR_CONST_L", index);
 
     case OpCode::RET:
         return simpleInstruction(str, chunk, "RET", index);

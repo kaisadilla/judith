@@ -10,7 +10,7 @@ namespace Judith.NET.compiler.jub;
 
 public class BinaryBlock {
     public string Name { get; private init; }
-    public ConstantTable ConstantTable { get; private set; } = new();
+    public StringTable StringTable { get; private set; } = new();
     public List<BinaryFunction> Functions { get; private set; } = new();
     public bool HasImplicitFunction { get; set; } = false;
 
@@ -36,7 +36,7 @@ public class BinaryFunction {
 
     public BinaryFunction (BinaryBlock file, string name) {
         Name = name;
-        NameIndex = file.ConstantTable.WriteStringASCII(Name);
+        NameIndex = file.StringTable.WriteStringUtf8(Name);
     }
 }
 
@@ -48,6 +48,6 @@ public class FunctionParameter {
     public FunctionParameter (BinaryBlock file, TypeSymbol type, string name) {
         Type = type;
         Name = name;
-        NameIndex = file.ConstantTable.WriteStringASCII(Name);
+        NameIndex = file.StringTable.WriteStringUtf8(Name);
     }
 }

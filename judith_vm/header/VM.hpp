@@ -137,7 +137,7 @@ public:
             std::cout << value.asUint64;
             break;
         case ConstantType::STRING_ASCII:
-            std::cout << value.asStringPtr->string;
+            std::cout.write(value.asStringPtr->string.get(), value.asStringPtr->length);
             break;
         case ConstantType::BOOL:
             std::cout << value.asFloat64;

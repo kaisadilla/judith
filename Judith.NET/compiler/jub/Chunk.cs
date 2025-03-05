@@ -50,6 +50,28 @@ public class Chunk {
         WriteByte((byte)((u32 >> 24) & 0xff), line);
     }
 
+    public void WriteInt64 (long i64, int line) {
+        byte[] bytes = BitConverter.GetBytes(i64);
+        if (BitConverter.IsLittleEndian == false) {
+            Array.Reverse(bytes);
+        }
+
+        foreach (var b in bytes) {
+            WriteByte(b, line);
+        }
+    }
+
+    public void WriteFloat64 (double f64, int line) {
+        byte[] bytes = BitConverter.GetBytes(f64);
+        if (BitConverter.IsLittleEndian == false) {
+            Array.Reverse(bytes);
+        }
+
+        foreach (var b in bytes) {
+            WriteByte(b, line);
+        }
+    }
+
     public void ExpandByte (int index, IEnumerable<byte> values, int line) {
         Code.InsertRange(index, values);
 

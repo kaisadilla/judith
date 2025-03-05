@@ -23,6 +23,7 @@ public class Compilation {
         SymbolTable = SymbolTable.CreateGlobalTable();
         Binder = new(this);
         Native = new(SymbolTable);
+        TypeTable = new();
     }
 
     public void Analyze () {

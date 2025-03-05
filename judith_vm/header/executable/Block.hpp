@@ -6,23 +6,18 @@
 struct Block {
 public:
     /// <summary>
-    /// A pointer to the start of the raw constant table.
+    /// A pointer to the start of the raw string table.
     /// </summary>
-    u_ptr<byte[]> constantTable;
+    u_ptr<byte[]> stringTable;
     /// <summary>
-    /// The size (amount of bytes) in the constant table.
+    /// The size (amount of bytes) in the string table.
     /// </summary>
-    size_t constantCount;
+    size_t stringCount;
     /// <summary>
     /// An array where each element is a pointer to the constant at that index
     /// in the table.
     /// </summary>
-    u_ptr<void*[]> constants; // pointers here are owned by constantTable.
-    /// <summary>
-    /// An array where each element is a byte representing the constant type
-    /// at that index in the table.
-    /// </summary>
-    u_ptr<byte[]> constantTypes;
+    u_ptr<byte*[]> strings; // pointers here are owned by stringTable.
     /// <summary>
     /// An array with the functions that exist in this block.
     /// </summary>
@@ -34,10 +29,9 @@ public:
 
 public:
     Block(
-        u_ptr<byte[]> constantTable,
-        size_t constantCount,
-        u_ptr<void*[]> constants,
-        u_ptr<byte[]> constantTypes,
+        u_ptr<byte[]> stringTable,
+        size_t stringCount,
+        u_ptr<byte*[]> strings,
         Function* functions,
         size_t functionCount
     );

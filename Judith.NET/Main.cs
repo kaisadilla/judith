@@ -7,7 +7,9 @@ using Judith.NET.diagnostics;
 using Judith.NET.message;
 using Newtonsoft.Json;
 using System.Diagnostics;
+using System.Text;
 
+Console.OutputEncoding = Encoding.UTF8;
 Console.WriteLine("> juc test.judith");
 Console.WriteLine();
 

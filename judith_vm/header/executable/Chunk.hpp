@@ -7,12 +7,7 @@ struct Chunk {
     /// A pointer to the constant pointer array of the Block that contains this
     /// Chunk.
     /// </summary>
-    void** constants;
-    /// <summary>
-    /// A pointer to the constant type array of the Block that contains this
-    /// Chunk.
-    /// </summary>
-    byte* constantTypes;
+    byte** strings;
 
     size_t size;
     u_ptr<byte[]> code;
@@ -21,8 +16,7 @@ struct Chunk {
     u_ptr<i32[]> lines;
 
     Chunk(
-        void** constants,
-        byte* constantTypes,
+        byte** strings,
         size_t size,
         u_ptr<byte[]> code,
         bool containsLines,

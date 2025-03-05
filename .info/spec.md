@@ -302,9 +302,9 @@ An arbitrarily large integer. Judith considers it as a signed integer of infinit
 
 ### Aliased numeric types
 * `Byte`: An alias for the size of a byte, by default `Ui8`.
-* `Int`: An alias for an int of the native size in the platform, usually `I64`.
-* `Float`: An alias for a float of the native size in the platform, usually `F64`.
-* `Num`: The "basic primitive" for a number is actually just an alias for `F64`.
+* `Int`: An alias for an int of the native size in the platform, usually `I64`. Suffix: `i` (can be omitted).
+* `Float`: An alias for a float of the native size in the platform, usually `F64`. Suffix: `f` (can be omitted).
+* `Num`: The "basic primitive" for a number is actually just an alias for `F64`. Suffix: none.
 
 ## Pseudotypes
 Judith features some pseudo-types. These types represent concepts relating to types that aren't directly types and, as such, their usage varies:
@@ -358,9 +358,9 @@ const score: Ui64 = -5 -- ERROR: "-5" cannot be interpreted as a `Ui64`.
 
 In practice, this means that developers don't need to worry about the implicit type of a numeric literal as the compiler will take care of that job.
 
-While numeric literals themselves will be reinterpreted as needed, values of a numeric type cannot be implicitly converted (e.g. once score of type `Num` is defined, you cannot assign the value of `score` to a local of type `Int`).
+While numeric literals themselves will be reinterpreted as needed, values of a numeric type cannot always be implicitly converted.
 
-_For a full explanation of number conversion, see [Type casting § Number casting](#casting-numbers)._
+_For a full explanation of number conversion, see [Type casting § Number conversion](#casting-numbers)._
 
 ## <a name="literals-strings"></a> Strings
 String literals can be defined with either double quotes or backticks:
@@ -1091,8 +1091,15 @@ With the unsafe downcasting operator, the cast will throw a `InvalidCastExceptio
 const dog: Dog = animal:!Dog -- will throw, as animal's type is 'Cat'.
 ```
 
-### <a name="casting-numbers">Number casting</a>
-Number casting allows converting between different numeric types (Num, Int, Byte, Ui32, etc.). This type of casting uses the same operators as upcasting and downcasting (`:`, `:?`, `:!`).
+### <a name="casting-numbers">Number conversion</a>
+Some number formats can be implicitly converted into others, while others require explicit casting. The rule of thumb is that a number can only be promoted (that is, casted into a wider format):
+
+* Numbers can be implicitly converted into a bigger size of the same kind of number (e.g. `I16` into `I32`, `Ui8` into `Ui64` or `F32` into `F64`). Signed integers can be converted into `BigInt`.
+* Signed and unsigned integers can be converted into floats (e.g. `I32` into `F32` or `Ui16` into `F64`). This conversion can actually be lossy, but that's considered a loss of precision rather than a meaningless conversion.
+* Alias types (`Byte`, `Int`, `Float` and `Num`) follow the rules of the type they are aliasing.
+* It is not possible to implicitly convert a `Decimal` into any other format, or vice versa.
+
+When a number cannot be implicitly converted into another format, a explicit casting can be used. This type of casting uses the same operators as upcasting and downcasting (`:`, `:?`, `:!`).
 
 Number casting always occurs at runtime, but each casting operator offers the same guarantees as it does with other types.
 
@@ -1118,9 +1125,11 @@ When casting is done in a checked context, then the need to use `:` or `:?` / `:
 | Float to integer                                   | `:?` or `:!` |
 | Float to decimal                                   | `:`          |
 | Decimal to integer                                 | `:?` or `:!` |
-| Decimal to float                                   | `:?` or `:!` |
+| Decimal to float                                   | `:`          |
 
 \* BigInt is considered an integer of infinite size, so it's always bigger than any other integer type.
+
+Keep in mind that most casts done with `:` in a checked context are ones that could be done with an implicit conversion, so these cast will be redundant.
 
 ### Null-forgiving casting
 Nullable types can be casted into their non-nullable counterparts by appending the null-forgiving operator `!` at their end. Casting a `null` value in this way will throw a `NullValueException`.
@@ -2161,8 +2170,20 @@ const emp = new Employee()
 Console::log(emp.str()) -- outputs "A very good employee".
 ```
 
+## Strings
+Strings in Judith are encoded in UTF-8. This means that the code points that compose them don't have a fixed size: instead, each code point may take 1 to 4 bytes. The `String` type is aware of this encoding and the Unicode standard, and offers tools to properly deal with this.
+
+When dealing with Unicode strings, there's three basic concepts that are relevant:
+* The size, in bytes, of the string: this is what most languages call "length". As UTF-8 code points  have variable size, accessing the string at an arbitrary byte offset may result in an invalid string. This value is stored in `String.size`.
+* The amount of code points in the string: each code point is a single Unicode entry, and can take 1 to 4 bytes. Code points are not necessarily characters, as some of them combine with others to form new characters (for example, '◌̃' `U+0303 COMBINING TILDE` and 'a' `U+0061 A` are two codepoints that combine into 'ã' (not to be confused with precomposed code point 'ã')). This value is obtained through `String.code_points()`.
+* The amount of grapheme clusters in the string (this is what we'll call Unicode characters from now on): the number a human will guess when they see the string. This can be obtained through `String.count()`.
+
+`String.length()` is purposefully left undefined so developers will pay attention to this difference. In practice, when dealing with strings that will be read by humans, `String.count()` (the amount of Unicode characters) is the value we'll want. Substrings (obtained either with `String.substr()` or with `String[Range]`) also deal in terms of Unicode characters.
+
+Aside from `String`, Judith also features the types `AsciiString` (encoded in ASCII, prefixed with `ascii""`) and `WString` (encoded in UTF-32, prefixed with `utf32""`). These string types should not be used for general use-cases, but only when the performance or predictable byte size are required. Note that these types are not necessary to interact with files and streams that are encoded in other formats, as `String` is perfectly capable of parsing and outputting text in any format.
+
 ## <a name="appendix-char">`Char` type</a>
-`Char` is a special type that represents a `String` that contains exactly one character.
+`Char` is a special type that represents a `String` that contains exactly one character (unicode grapheme cluster).
 
 ```judith
 const separator: Char = ","
@@ -2187,6 +2208,8 @@ Casting a string literal into `Char` is valid, although it should never be neede
 ```judith
 const separator = ";":Char
 ```
+
+The types `AsciiChar` and `WChar` exist as equivalents for `AsciiString` and `WString`, respectively.
 
 ## nameof() and qnameof()
 Sometimes, the name of a field, definition, etc. in the source code is needed as a `String`. This makes code more brittle, as the string doesn't have any connection to the identifier it's referring to. To avoid this problem, the expression `nameof()` produces a string literal at compile time whose content is the name of the identifier it contains:

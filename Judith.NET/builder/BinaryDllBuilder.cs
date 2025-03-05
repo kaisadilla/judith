@@ -63,10 +63,10 @@ public class BinaryDllBuilder {
     }
 
     private void WriteBlock (BinaryWriter writer, BinaryBlock block) {
-        // constant_count: ui32 -- the amount of constants in the table, not its size in bytes.
-        writer.Write((uint)block.ConstantTable.Count);
-        // constant_table: constant[constant_count]
-        foreach (var ui8 in block.ConstantTable.Bytes) {
+        // string_count: ui32 -- the amount of strings in the table, not its size in bytes.
+        writer.Write((uint)block.StringTable.Count);
+        // string_table: string[string_count]
+        foreach (var ui8 in block.StringTable.Bytes) {
             writer.Write((byte)ui8);
         }
 

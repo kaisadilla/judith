@@ -12,7 +12,7 @@ public class DllDisassembler {
 
     public string ChunkString { get; private set; } = string.Empty;
 
-    private ConstantTable _constantTable = null;
+    private StringTable _stringTable = null;
     private Chunk _chunk = null;
 
     public DllDisassembler (JudithDll dll) {
@@ -42,8 +42,8 @@ public class DllDisassembler {
         Console.WriteLine($"Name: {block.Name}");
         Console.WriteLine("");
 
-        Console.WriteLine("=== Constant table ===");
-        DisassembleConstantTable(block.ConstantTable);
+        Console.WriteLine("=== String table ===");
+        DisassembleStringTable(block.StringTable);
         Console.WriteLine("");
 
         Console.WriteLine("=== Functions ===");
@@ -52,9 +52,18 @@ public class DllDisassembler {
         }
     }
 
-    public void DisassembleConstantTable (ConstantTable table) {
-        _constantTable = table;
-        Console.WriteLine("Not implemented yet.");
+    public void DisassembleStringTable (StringTable strTable) {
+        _stringTable = strTable;
+
+        for (int i = 0; i < strTable.Count; i++) {
+            int offset = strTable.Offsets[i];
+
+            Console.WriteLine(
+                $"{i,4}   0x{offset:X4}    \"{strTable[i]}\""
+            );
+        }
+
+        Console.WriteLine("");
     }
 
     public void DisassembleFunction (BinaryFunction func, int funcIndex) {
@@ -78,7 +87,7 @@ public class DllDisassembler {
             ChunkString += "\n";
         }
 
-        Console.WriteLine(ChunkString); // TODO - don't use this.
+        Console.WriteLine(ChunkString); // TODO - don't do it like this.
         ChunkString = string.Empty;
     }
 
@@ -88,135 +97,141 @@ public class DllDisassembler {
         ChunkString += $"Line {_chunk.Lines[index],-5} | {HexByteStr(index)} ";
 
         switch (opCode) {
-            case OpCode.NoOp:
-                return SimpleInstruction("NOOP", index);
-            case OpCode.Const:
-                return ConstantInstruction("CONST", index);
-            case OpCode.ConstLong:
-                return ConstantLongInstruction("CONST_L", index);
-            case OpCode.Const0:
-                return SimpleInstruction("CONST_0", index);
-            case OpCode.IConst1:
-                return SimpleInstruction("I_CONST_1", index);
-            case OpCode.IConst2:
-                return SimpleInstruction("I_CONST_2", index);
-            case OpCode.ConstStr:
-                return ConstantInstruction("CONST_STR", index);
-            case OpCode.ConstStrLong:
-                return ConstantLongInstruction("CONST_STR_L", index);
+            case OpCode.NOOP:
+                return SimpleInstruction(nameof(OpCode.NOOP), index);
+            case OpCode.NATIVE:
+                return U64Instruction("*NATIVE", index);
+            case OpCode.CONST:
+                return ConstantInstruction(nameof(OpCode.CONST), index);
+            case OpCode.CONST_L:
+                return ConstantLongInstruction(nameof(OpCode.CONST_L), index);
+            case OpCode.CONST_LL:
+                return ConstantLongLongInstruction(nameof(OpCode.CONST_LL), index);
+            case OpCode.CONST_0:
+                return SimpleInstruction(nameof(OpCode.CONST_0), index);
+            case OpCode.I_CONST_1:
+                return SimpleInstruction(nameof(OpCode.I_CONST_1), index);
+            case OpCode.I_CONST_2:
+                return SimpleInstruction(nameof(OpCode.I_CONST_2), index);
+            case OpCode.F_CONST_1:
+                return SimpleInstruction(nameof(OpCode.F_CONST_1), index);
+            case OpCode.F_CONST_2:
+                return SimpleInstruction(nameof(OpCode.F_CONST_2), index);
+            case OpCode.STR_CONST:
+                return StringConstantInstruction(nameof(OpCode.STR_CONST), index);
+            case OpCode.STR_CONST_L:
+                return StringConstantLongInstruction(nameof(OpCode.STR_CONST_L), index);
 
-            case OpCode.Ret:
-                return SimpleInstruction("RET", index);
+            case OpCode.RET:
+                return SimpleInstruction(nameof(OpCode.RET), index);
 
-            case OpCode.FNeg:
-                return SimpleInstruction("F_NEG", index);
-            case OpCode.FAdd:
-                return SimpleInstruction("F_ADD", index);
-            case OpCode.FSub:
-                return SimpleInstruction("F_SUB", index);
-            case OpCode.FMul:
-                return SimpleInstruction("F_MUL", index);
-            case OpCode.FDiv:
-                return SimpleInstruction("F_DIV", index);
-            case OpCode.FGt:
-                return SimpleInstruction("F_GT", index);
-            case OpCode.FGe:
-                return SimpleInstruction("F_GE", index);
-            case OpCode.FLt:
-                return SimpleInstruction("F_LT", index);
-            case OpCode.FLe:
-                return SimpleInstruction("F_LE", index);
+            case OpCode.F_NEG:
+                return SimpleInstruction(nameof(OpCode.F_NEG), index);
+            case OpCode.F_ADD:
+                return SimpleInstruction(nameof(OpCode.F_ADD), index);
+            case OpCode.F_SUB:
+                return SimpleInstruction(nameof(OpCode.F_SUB), index);
+            case OpCode.F_MUL:
+                return SimpleInstruction(nameof(OpCode.F_MUL), index);
+            case OpCode.F_DIV:
+                return SimpleInstruction(nameof(OpCode.F_DIV), index);
+            case OpCode.F_GT:
+                return SimpleInstruction(nameof(OpCode.F_GT), index);
+            case OpCode.F_GE:
+                return SimpleInstruction(nameof(OpCode.F_GE), index);
+            case OpCode.F_LT:
+                return SimpleInstruction(nameof(OpCode.F_LT), index);
+            case OpCode.F_LE:
+                return SimpleInstruction(nameof(OpCode.F_LE), index);
 
-            case OpCode.INeg:
-                return SimpleInstruction("I_NEG", index);
-            case OpCode.IAdd:
-                return SimpleInstruction("I_ADD", index);
-            case OpCode.IAddChecked:
-                return SimpleInstruction("I_ADD_CHECKED", index);
-            case OpCode.ISub:
-                return SimpleInstruction("I_SUB", index);
-            case OpCode.ISubChecked:
-                return SimpleInstruction("I_SUB_CHECKED", index);
-            case OpCode.IMul:
-                return SimpleInstruction("I_MUL", index);
-            case OpCode.IMulChecked:
-                return SimpleInstruction("I_MUL_CHECKED", index);
-            case OpCode.IDiv:
-                return SimpleInstruction("I_DIV", index);
-            case OpCode.IDivChecked:
-                return SimpleInstruction("I_DIV_CHECKED", index);
-            case OpCode.IGt:
-                return SimpleInstruction("I_GT", index);
-            case OpCode.IGe:
-                return SimpleInstruction("I_GE", index);
-            case OpCode.ILt:
-                return SimpleInstruction("I_LT", index);
-            case OpCode.ILe:
-                return SimpleInstruction("I_LE", index);
+            case OpCode.I_NEG:
+                return SimpleInstruction(nameof(OpCode.I_NEG), index);
+            case OpCode.I_ADD:
+                return SimpleInstruction(nameof(OpCode.I_ADD), index);
+            case OpCode.I_ADD_CHECKED:
+                return SimpleInstruction(nameof(OpCode.I_ADD_CHECKED), index);
+            case OpCode.I_SUB:
+                return SimpleInstruction(nameof(OpCode.I_SUB), index);
+            case OpCode.I_SUB_CHECKED:
+                return SimpleInstruction(nameof(OpCode.I_SUB_CHECKED), index);
+            case OpCode.I_MUL:
+                return SimpleInstruction(nameof(OpCode.I_MUL), index);
+            case OpCode.I_MUL_CHECKED:
+                return SimpleInstruction(nameof(OpCode.I_MUL_CHECKED), index);
+            case OpCode.I_DIV:
+                return SimpleInstruction(nameof(OpCode.I_DIV), index);
+            case OpCode.I_DIV_CHECKED:
+                return SimpleInstruction(nameof(OpCode.I_DIV_CHECKED), index);
+            case OpCode.I_GT:
+                return SimpleInstruction(nameof(OpCode.I_GT), index);
+            case OpCode.I_GE:
+                return SimpleInstruction(nameof(OpCode.I_GE), index);
+            case OpCode.I_LT:
+                return SimpleInstruction(nameof(OpCode.I_LT), index);
+            case OpCode.I_LE:
+                return SimpleInstruction(nameof(OpCode.I_LE), index);
 
-            case OpCode.Eq:
-                return SimpleInstruction("EQ", index);
-            case OpCode.Neq:
-                return SimpleInstruction("NEQ", index);
+            case OpCode.EQ:
+                return SimpleInstruction(nameof(OpCode.EQ), index);
+            case OpCode.NEQ:
+                return SimpleInstruction(nameof(OpCode.NEQ), index);
 
-            case OpCode.Store0:
-                return SimpleInstruction("STORE_0", index);
-            case OpCode.Store1:
-                return SimpleInstruction("STORE_1", index);
-            case OpCode.Store2:
-                return SimpleInstruction("STORE_2", index);
-            case OpCode.Store3:
-                return SimpleInstruction("STORE_3", index);
-            case OpCode.Store4:
-                return SimpleInstruction("STORE_4", index);
-            case OpCode.Store:
-                return ByteInstruction("STORE", index);
-            case OpCode.StoreLong:
-                return U16Instruction("STORE_L", index);
+            case OpCode.STORE_0:
+                return SimpleInstruction(nameof(OpCode.STORE_0), index);
+            case OpCode.STORE_1:
+                return SimpleInstruction(nameof(OpCode.STORE_1), index);
+            case OpCode.STORE_2:
+                return SimpleInstruction(nameof(OpCode.STORE_2), index);
+            case OpCode.STORE_3:
+                return SimpleInstruction(nameof(OpCode.STORE_3), index);
+            case OpCode.STORE_4:
+                return SimpleInstruction(nameof(OpCode.STORE_4), index);
+            case OpCode.STORE:
+                return ByteInstruction(nameof(OpCode.STORE), index);
+            case OpCode.STORE_L:
+                return U16Instruction(nameof(OpCode.STORE_L), index);
 
-            case OpCode.Load0:
-                return SimpleInstruction("LOAD_0", index);
-            case OpCode.Load1:
-                return SimpleInstruction("LOAD_1", index);
-            case OpCode.Load2:
-                return SimpleInstruction("LOAD_2", index);
-            case OpCode.Load3:
-                return SimpleInstruction("LOAD_3", index);
-            case OpCode.Load4:
-                return SimpleInstruction("LOAD_4", index);
-            case OpCode.Load:
-                return ByteInstruction("LOAD", index);
-            case OpCode.LoadLong:
-                return U16Instruction("LOAD_L", index);
+            case OpCode.LOAD_0:
+                return SimpleInstruction(nameof(OpCode.LOAD_0), index);
+            case OpCode.LOAD_1:
+                return SimpleInstruction(nameof(OpCode.LOAD_1), index);
+            case OpCode.LOAD_2:
+                return SimpleInstruction(nameof(OpCode.LOAD_2), index);
+            case OpCode.LOAD_3:
+                return SimpleInstruction(nameof(OpCode.LOAD_3), index);
+            case OpCode.LOAD_4:
+                return SimpleInstruction(nameof(OpCode.LOAD_4), index);
+            case OpCode.LOAD:
+                return ByteInstruction(nameof(OpCode.LOAD), index);
+            case OpCode.LOAD_L:
+                return U16Instruction(nameof(OpCode.LOAD_L), index);
 
-            case OpCode.Jmp:
-                return JumpInstruction("JMP", index);
-            case OpCode.JmpLong:
-                return JumpLongInstruction("JMP_L", index);
-            case OpCode.JTrue:
-                return JumpInstruction("JTRUE", index);
-            case OpCode.JTrueLong:
-                return JumpLongInstruction("JTRUE_L", index);
-            case OpCode.JTrueK:
-                return JumpInstruction("JTRUE_C", index);
-            case OpCode.JTrueKLong:
-                return JumpLongInstruction("JTRUE_C_L", index);
-            case OpCode.JFalse:
-                return JumpInstruction("JFALSE", index);
-            case OpCode.JFalseLong:
-                return JumpLongInstruction("JFALSE_L", index);
-            case OpCode.JFalseK:
-                return JumpInstruction("JFALSE_C", index);
-            case OpCode.JFalseKLong:
-                return JumpLongInstruction("JFALSE_C_L", index);
+            case OpCode.JMP:
+                return JumpInstruction(nameof(OpCode.JMP), index);
+            case OpCode.JMP_L:
+                return JumpLongInstruction(nameof(OpCode.JMP_L), index);
+            case OpCode.JTRUE:
+                return JumpInstruction(nameof(OpCode.JTRUE), index);
+            case OpCode.JTRUE_L:
+                return JumpLongInstruction(nameof(OpCode.JTRUE_L), index);
+            case OpCode.JTRUE_K:
+                return JumpInstruction(nameof(OpCode.JTRUE_K), index);
+            case OpCode.JTRUE_K_L:
+                return JumpLongInstruction(nameof(OpCode.JTRUE_K_L), index);
+            case OpCode.JFALSE:
+                return JumpInstruction(nameof(OpCode.JFALSE), index);
+            case OpCode.JFALSE_L:
+                return JumpLongInstruction(nameof(OpCode.JFALSE_L), index);
+            case OpCode.JFALSE_K:
+                return JumpInstruction(nameof(OpCode.JFALSE_K), index);
+            case OpCode.JFALSE_K_L:
+                return JumpLongInstruction(nameof(OpCode.JFALSE_K_L), index);
 
-            case OpCode.Call:
-                return I32Instruction("CALL", index);
+            case OpCode.CALL:
+                return I32Instruction(nameof(OpCode.CALL), index);
 
-            case OpCode.Print:
-                return PrintInstruction("PRINT", index);
-            default:
-                break;
+            case OpCode.PRINT:
+                return PrintInstruction(nameof(OpCode.PRINT), index);
         }
 
         return UnknownInstruction(index);
@@ -267,23 +282,76 @@ public class DllDisassembler {
         return index + 5;
     }
 
-    private int ConstantInstruction (string name, int index) {
-        var constIndex = _chunk.Code[index + 1];
+    private int U64Instruction (string name, int index) {
+        var val = _chunk.Code[index + 1]
+            | (_chunk.Code[index + 2] << 8)
+            | (_chunk.Code[index + 3] << 16)
+            | (_chunk.Code[index + 4] << 24)
+            | (_chunk.Code[index + 5] << 32)
+            | (_chunk.Code[index + 6] << 40)
+            | (_chunk.Code[index + 7] << 48)
+            | (_chunk.Code[index + 8] << 56);
 
         ChunkString += IdStr(name) + " ";
-        ChunkString += HexByteStr(constIndex) + " ; " + Constant(constIndex);
+        ChunkString += HexIntegerStr(val) + " ";
+
+        return index + 9;
+    }
+
+    private int ConstantInstruction (string name, int index) {
+        var constant = _chunk.Code[index + 1];
+
+        ChunkString += IdStr(name) + " ";
+        ChunkString += HexByteStr(constant) + " ; " + constant;
 
         return index + 2;
     }
 
     private int ConstantLongInstruction (string name, int index) {
-        var constIndex = _chunk.Code[index + 1]
+        var constant = _chunk.Code[index + 1]
             | (_chunk.Code[index + 2] << 8)
             | (_chunk.Code[index + 3] << 16)
             | (_chunk.Code[index + 4] << 24);
 
         ChunkString += IdStr(name) + " ";
-        ChunkString += HexIntegerStr(constIndex) + " ; " + Constant(constIndex);
+        ChunkString += HexIntegerStr(constant) + " ; " + constant;
+
+        return index + 5;
+    }
+
+    private int ConstantLongLongInstruction (string name, int index) {
+        var constant = _chunk.Code[index + 1]
+            | (_chunk.Code[index + 2] << 8)
+            | (_chunk.Code[index + 3] << 16)
+            | (_chunk.Code[index + 4] << 24)
+            | (_chunk.Code[index + 5] << 32)
+            | (_chunk.Code[index + 6] << 40)
+            | (_chunk.Code[index + 7] << 48)
+            | (_chunk.Code[index + 8] << 56);
+
+        ChunkString += IdStr(name) + " ";
+        ChunkString += HexIntegerStr(constant) + " ; " + constant;
+
+        return index + 9;
+    }
+
+    private int StringConstantInstruction (string name, int index) {
+        var strIndex = _chunk.Code[index + 1];
+
+        ChunkString += IdStr(name) + " ";
+        ChunkString += HexByteStr(strIndex) + " ; " + _stringTable[strIndex];
+
+        return index + 2;
+    }
+
+    private int StringConstantLongInstruction (string name, int index) {
+        var strIndex = _chunk.Code[index + 1]
+            | (_chunk.Code[index + 2] << 8)
+            | (_chunk.Code[index + 3] << 16)
+            | (_chunk.Code[index + 4] << 24);
+
+        ChunkString += IdStr(name) + " ";
+        ChunkString += HexIntegerStr(strIndex) + " ; " + _stringTable[strIndex];
 
         return index + 5;
     }
@@ -321,26 +389,6 @@ public class DllDisassembler {
     private int UnknownInstruction (int index) {
         ChunkString += $"0x{index:X4} <Unknown>";
         return index + 1;
-    }
-
-    private string Constant (int constIndex) {
-        int offset = _constantTable.Offsets[constIndex];
-        ConstantType ctype = (ConstantType)_constantTable.Bytes[offset++];
-
-        switch (ctype) {
-            case ConstantType.Error:
-                return "<error-type>";
-            case ConstantType.Int64:
-                return _constantTable.ReadInt64(offset).ToString();
-            case ConstantType.Float64:
-                return _constantTable.ReadFloat64(offset).ToString();
-            case ConstantType.UnsignedInt64:
-                return _constantTable.ReadUnsignedInt64(offset).ToString();
-            case ConstantType.StringASCII:
-                return '"' + _constantTable.ReadStringASCII(offset) + '"';
-            default:
-                return "<unknown-type>";
-        }
     }
 
     private static string HexByteStr (int index) => $"0x{index:X4}";

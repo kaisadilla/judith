@@ -6,13 +6,18 @@ namespace OpCode {
     enum {
         NOOP = 0,
 
+        NATIVE,
+
         CONST,
-        CONST_LONG,
+        CONST_L,
+        CONST_L_L,
         CONST_0,
+        F_CONST_1,
+        F_CONST_2,
         I_CONST_1,
         I_CONST_2,
-        CONST_STR,
-        CONST_STR_LONG,
+        STR_CONST,
+        STR_CONST_L,
 
         RET,
 
