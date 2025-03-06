@@ -1,4 +1,5 @@
 ﻿using Judith.NET;
+using Judith.NET.analysis;
 using Judith.NET.analysis.syntax;
 using Judith.NET.builder;
 using Judith.NET.compiler;
@@ -19,23 +20,26 @@ Stopwatch s = Stopwatch.StartNew();
 
 MessageContainer messages = new();
 
+// Generate token array:
 Lexer lexer = new(src);
 lexer.Tokenize();
 messages.Add(lexer.Messages);
-// PrintTokens();
 if (ShouldAbort()) return;
 
+// Generate AST:
 Parser parser = new(lexer.Tokens);
 parser.Parse();
 messages.Add(parser.Messages);
-// PrintAST();
 if (ShouldAbort()) return;
+
 
 CompilerUnitBuilder cub = new("test", parser.Nodes);
 cub.BuildUnit();
 CompilerUnit cu = cub.CompilerUnit;
 
-Compilation cmp = new([cu]);
+NativeCompilation nc = NativeCompilation.Ver1();
+
+Compilation cmp = new([nc], [cu]);
 cmp.Analyze();
 messages.Add(cmp.Messages);
 

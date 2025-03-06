@@ -15,6 +15,8 @@ public class DllDisassembler {
     private StringTable _stringTable = null;
     private Chunk _chunk = null;
 
+    private static string[] _sizeUnits = ["KiB", "MiB", "GiB", "TiB"];
+
     public DllDisassembler (JudithDll dll) {
         _dll = dll;
     }
@@ -42,7 +44,7 @@ public class DllDisassembler {
         Console.WriteLine($"Name: {block.Name}");
         Console.WriteLine("");
 
-        Console.WriteLine("=== String table ===");
+        Console.WriteLine($"=== String table ({Size(block.StringTable.Size)}) ===");
         DisassembleStringTable(block.StringTable);
         Console.WriteLine("");
 
@@ -396,4 +398,21 @@ public class DllDisassembler {
     private static string HexIntegerStr (long index) => $"0x{index:X8}";
     private static string JFloatStr (double val) => $"{val}";
     private static string IdStr (string id) => id.PadRight(16, ' ');
+
+    private static string Size (int size) {
+        if (size < 1_024) {
+            return $"{size} bytes";
+        }
+
+        float fsize = size / 1_024f;
+
+        for (int i = 0; i < _sizeUnits.Length - 1; i++) {
+            if (fsize < 1_024) {
+                return $"{fsize:F3} {_sizeUnits[i]}";
+            }
+            fsize /= 1_024f;
+        }
+
+        return $"{fsize:F3} {_sizeUnits[^1]}";
+    }
 }

@@ -7,46 +7,53 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.analysis;
 
-public class NativeFeatures {
-    public TypeCollection Types { get; private set; }
+public class NativeCompilation : ICompilation {
+    public SymbolTable SymbolTable { get; } = new(ScopeKind.Global, null, null);
+    public TypeTable TypeTable { get; } = new();
 
-    /// <summary>
-    /// Adds all native types to the type and symbol tables given.
-    /// </summary>
-    public NativeFeatures (SymbolTable tbl) {
-        Types = new() {
-            Unresolved = AddType(tbl, SymbolKind.UnresolvedType, "!Unresolved"),
-            UnresolvedFunction = AddType(tbl, SymbolKind.UnresolvedType, "!Function"),
+    public TypeCollection Types { get; private set; } = new();
 
-            Error = AddType(tbl, SymbolKind.ErrorType, "<error-type>"),
+    private SymbolTable _pseudoSymbols = new(ScopeKind.Global, null, null);
 
-            NoType = AddType(tbl, SymbolKind.PseudoType, "<no-type>"),
-            Anonymous = AddType(tbl, SymbolKind.PseudoType, "<anonymous-object>"),
-            Void = AddType(tbl, SymbolKind.PseudoType, "Void"),
+    private NativeCompilation () { }
 
-            F32 = AddType(tbl, SymbolKind.PrimitiveType, "F32"),
-            F64 = AddType(tbl, SymbolKind.PrimitiveType, "F64"),
+    public static NativeCompilation Ver1 () {
+        var nc = new NativeCompilation();
+        nc.Types = new() {
+            Unresolved = nc.AddPseudoType(SymbolKind.UnresolvedType, "!Unresolved", "#"),
+            UnresolvedFunction = nc.AddPseudoType(SymbolKind.UnresolvedType, "!Function", "#"),
 
-            I8 = AddType(tbl, SymbolKind.PrimitiveType, "I8"),
-            I16 = AddType(tbl, SymbolKind.PrimitiveType, "I16"),
-            I32 = AddType(tbl, SymbolKind.PrimitiveType, "I32"),
-            I64 = AddType(tbl, SymbolKind.PrimitiveType, "I64"),
+            Error = nc.AddPseudoType(SymbolKind.ErrorType, "<error-type", "#"),
 
-            Ui8 = AddType(tbl, SymbolKind.PrimitiveType, "Ui8"),
-            Ui16 = AddType(tbl, SymbolKind.PrimitiveType, "Ui16"),
-            Ui32 = AddType(tbl, SymbolKind.PrimitiveType, "Ui32"),
-            Ui64 = AddType(tbl, SymbolKind.PrimitiveType, "Ui64"),
+            NoType = nc.AddPseudoType(SymbolKind.PseudoType, "<no-type>", "#"),
+            Anonymous = nc.AddPseudoType(SymbolKind.PseudoType, "<anonymous-object>", "#"),
+            Void = nc.AddType(SymbolKind.PseudoType, "Void", "V"),
 
-            Bool = AddType(tbl, SymbolKind.PrimitiveType, "Bool"),
-            String = AddType(tbl, SymbolKind.StringType, "String"),
+            F32 = nc.AddType(SymbolKind.PrimitiveType, "F32", "F32"),
+            F64 = nc.AddType(SymbolKind.PrimitiveType, "F64", "F64"),
 
-            Byte = AddType(tbl, SymbolKind.AliasType, "Byte"),
-            Int = AddType(tbl, SymbolKind.AliasType, "Int"),
-            Float = AddType(tbl, SymbolKind.AliasType, "Float"),
-            Num = AddType(tbl, SymbolKind.AliasType, "Num"),
+            I8 = nc.AddType(SymbolKind.PrimitiveType, "I8", "I8"),
+            I16 = nc.AddType(SymbolKind.PrimitiveType, "I16", "I16"),
+            I32 = nc.AddType(SymbolKind.PrimitiveType, "I32", "I32"),
+            I64 = nc.AddType(SymbolKind.PrimitiveType, "I64", "I64"),
+
+            Ui8 = nc.AddType(SymbolKind.PrimitiveType, "Ui8", "U8"),
+            Ui16 = nc.AddType(SymbolKind.PrimitiveType, "Ui16", "U16"),
+            Ui32 = nc.AddType(SymbolKind.PrimitiveType, "Ui32", "U32"),
+            Ui64 = nc.AddType(SymbolKind.PrimitiveType, "Ui64", "U64"),
+
+            Bool = nc.AddType(SymbolKind.PrimitiveType, "Bool", "B"),
+            String = nc.AddType(SymbolKind.StringType, "String", "S"),
+            Char = nc.AddType(SymbolKind.CharType, "Char", "C"),
+
+            Byte = nc.AddType(SymbolKind.AliasType, "Byte", "U8"),
+            Int = nc.AddType(SymbolKind.AliasType, "Int", "I64"),
+            Float = nc.AddType(SymbolKind.AliasType, "Float", "F64"),
+            Num = nc.AddType(SymbolKind.AliasType, "Num", "F64"),
         };
+        nc.Types.Init();
 
-        Types.Init();
+        return nc;
     }
 
     public bool IsNumericType (TypeSymbol type) {
@@ -119,8 +126,12 @@ public class NativeFeatures {
         }
     }
 
-    private TypeSymbol AddType (SymbolTable tbl, SymbolKind kind, string name) {
-        return tbl.AddSymbol(TypeSymbol.Define(kind, name));
+    private TypeSymbol AddPseudoType (SymbolKind kind, string name, string signatureName) {
+        return _pseudoSymbols.AddSymbol(TypeSymbol.Define(kind, name, signatureName));
+    }
+
+    private TypeSymbol AddType (SymbolKind kind, string name, string signatureName) {
+        return SymbolTable.AddSymbol(TypeSymbol.Define(kind, name, signatureName));
     }
 
     public class TypeCollection {
@@ -157,6 +168,7 @@ public class NativeFeatures {
         // Other native types:
         public TypeSymbol Bool { get; init; }
         public TypeSymbol String { get; init; }
+        public TypeSymbol Char { get; init; }
 
         // Default aliased types:
         public TypeSymbol Byte { get; init; } // Default: Ui8
@@ -190,6 +202,7 @@ public class NativeFeatures {
 
             Bool.Type = NoType;
             String.Type = NoType;
+            Char.Type = NoType;
 
             Byte.Type = NoType;
             Int.Type = NoType;

@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System.Diagnostics.CodeAnalysis;
+using System.Text;
 
 namespace Judith.NET.analysis.semantics;
 
@@ -129,7 +130,19 @@ public class FunctionOverload {
     }
 
     public string GetSignatureString () {
-        //return Symbol.FullyQualifiedName + "("; 
-        return "--placeholder"; // TODO: Replace with something like "(std/Vec3;II)V".
+        if (IsResolved() == false || TypeSymbol.IsResolved(ReturnType) == false) {
+            return "{{unresolved}}";
+        }
+
+        var sb = new StringBuilder('(');
+
+        foreach (var type in ParamTypes) {
+            sb.Append(type.SignatureName);
+        }
+        sb.Append(')');
+
+        sb.Append(ReturnType.SignatureName);
+
+        return sb.ToString();
     }
 }

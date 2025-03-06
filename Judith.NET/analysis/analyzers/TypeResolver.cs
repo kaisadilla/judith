@@ -36,7 +36,7 @@ public class TypeResolver : SyntaxVisitor {
     );
 
     private Binder Binder => _cmp.Binder;
-    private NativeFeatures.TypeCollection NativeTypes => _cmp.Native.Types;
+    private TODO_REMOVE_NativeFeatures.TypeCollection NativeTypes => _cmp.Native.Types;
 
     public TypeResolver (Compilation cmp) {
         _cmp = cmp;

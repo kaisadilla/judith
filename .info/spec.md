@@ -997,6 +997,7 @@ scores[^1] -- Returns the first value from the end, that is the value at
            -- index 3: 15.
 scores[1..3] -- Returns the values in the range given, that is values at 1 and
              -- 2: [5, 9].
+scores[1..^1] -- Same as 1..3
 ```
 
 ## Array

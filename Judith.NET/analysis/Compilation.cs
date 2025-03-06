@@ -1,9 +1,8 @@
-﻿using Judith.NET.analysis;
-using Judith.NET.analysis.analyzers;
+﻿using Judith.NET.analysis.analyzers;
 using Judith.NET.analysis.syntax;
 using Judith.NET.message;
 
-namespace Judith.NET;
+namespace Judith.NET.analysis;
 
 public class Compilation {
     public MessageContainer Messages { get; private set; } = new();
@@ -13,16 +12,24 @@ public class Compilation {
     /// </summary>
     public List<CompilerUnit> Units { get; private set; } = new();
 
+    public List<ICompilation> Dependencies { get; private set; } = new();
     public TypeTable TypeTable { get; private set; }
-    public NativeFeatures Native { get; private set; }
+    public NativeCompilation Native { get; private set; }
     public SymbolTable SymbolTable { get; private set; }
     public Binder Binder { get; private set; }
 
-    public Compilation (List<CompilerUnit> units) {
+    public Compilation (List<ICompilation> dependencies, List<CompilerUnit> units) {
+        if (dependencies.Count == 0) {
+            throw new("At least the native dependency must exist.");
+        }
+        if (dependencies[0] is not NativeCompilation native) {
+            throw new("The first dependency must be the native dependency.");
+        }
+
         Units = units;
         SymbolTable = SymbolTable.CreateGlobalTable();
         Binder = new(this);
-        Native = new(SymbolTable);
+        Native = native;
         TypeTable = new();
     }
 

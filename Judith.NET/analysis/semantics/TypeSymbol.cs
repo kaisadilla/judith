@@ -10,12 +10,27 @@ namespace Judith.NET.analysis.semantics;
 
 public class TypeSymbol : Symbol {
     public List<MemberSymbol> MemberFields { get; private set; } = [];
+    public string SignatureName { get; private init; }
 
     public TypeSymbol (
         SymbolTable table, SymbolKind kind, string name, string fullyQualifiedName
     )
         : base(table, kind, name, fullyQualifiedName)
-    { }
+    {
+        SignatureName = $"L{fullyQualifiedName.Replace("::", "/").Replace(".", "/")};";
+    }
+
+    public TypeSymbol (
+        SymbolTable table,
+        SymbolKind kind,
+        string name,
+        string fullyQualifiedName,
+        string signatureName
+    )
+        : base(table, kind, name, fullyQualifiedName)
+    {
+        SignatureName = signatureName;
+    }
 
     public bool TryGetMember (
         string memberName, [NotNullWhen(true)] out MemberSymbol? member
@@ -32,6 +47,14 @@ public class TypeSymbol : Symbol {
     /// <returns></returns>
     public static new DefinerFunc<TypeSymbol> Define (SymbolKind kind, string name) {
         return table => new TypeSymbol(table, kind, name, table.Qualify(name));
+    }
+
+    public static DefinerFunc<TypeSymbol> Define (
+        SymbolKind kind, string name, string signatureName
+    ) {
+        return table => new TypeSymbol(
+            table, kind, name, table.Qualify(name), signatureName
+        );
     }
 
     public static bool IsResolved ([NotNullWhen(true)] TypeSymbol? symbol) {

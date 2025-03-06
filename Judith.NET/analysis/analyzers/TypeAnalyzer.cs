@@ -17,7 +17,7 @@ public class TypeAnalyzer : SyntaxVisitor {
     private readonly ScopeResolver _scope;
 
     private Binder Binder => _cmp.Binder;
-    private NativeFeatures.TypeCollection NativeTypes => _cmp.Native.Types;
+    private NativeCompilation.TypeCollection NativeTypes => _cmp.Native.Types;
 
     public TypeAnalyzer (Compilation cmp) {
         _cmp = cmp;
