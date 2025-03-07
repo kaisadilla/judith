@@ -1,10 +1,11 @@
 ﻿using Judith.NET.analysis.analyzers;
+using Judith.NET.analysis.semantics;
 using Judith.NET.analysis.syntax;
 using Judith.NET.message;
 
 namespace Judith.NET.analysis;
 
-public class Compilation {
+public class ProjectCompilation {
     public MessageContainer Messages { get; private set; } = new();
 
     /// <summary>
@@ -18,7 +19,7 @@ public class Compilation {
     public SymbolTable SymbolTable { get; private set; }
     public Binder Binder { get; private set; }
 
-    public Compilation (List<ICompilation> dependencies, List<CompilerUnit> units) {
+    public ProjectCompilation (List<ICompilation> dependencies, List<CompilerUnit> units) {
         if (dependencies.Count == 0) {
             throw new("At least the native dependency must exist.");
         }
@@ -26,6 +27,7 @@ public class Compilation {
             throw new("The first dependency must be the native dependency.");
         }
 
+        Dependencies = dependencies;
         Units = units;
         SymbolTable = SymbolTable.CreateGlobalTable();
         Binder = new(this);

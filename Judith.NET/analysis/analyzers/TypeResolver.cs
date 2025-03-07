@@ -18,7 +18,7 @@ namespace Judith.NET.analysis.analyzers;
 public class TypeResolver : SyntaxVisitor {
     public MessageContainer Messages { get; private set; } = new();
 
-    private readonly Compilation _cmp;
+    private readonly ProjectCompilation _cmp;
     private readonly ScopeResolver _scope;
 
     private Dictionary<SyntaxNode, NodeState> _nodeStates = [];
@@ -36,11 +36,11 @@ public class TypeResolver : SyntaxVisitor {
     );
 
     private Binder Binder => _cmp.Binder;
-    private TODO_REMOVE_NativeFeatures.TypeCollection NativeTypes => _cmp.Native.Types;
+    private NativeCompilation.TypeCollection NativeTypes => _cmp.Native.Types;
 
-    public TypeResolver (Compilation cmp) {
+    public TypeResolver (ProjectCompilation cmp) {
         _cmp = cmp;
-        _scope = new(_cmp.Binder, _cmp.SymbolTable);
+        _scope = new(_cmp);
     }
 
     public void Analyze (CompilerUnit unit) {

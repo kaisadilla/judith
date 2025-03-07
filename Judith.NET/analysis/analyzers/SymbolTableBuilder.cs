@@ -1,6 +1,7 @@
 ﻿using Judith.NET.analysis.binder;
 using Judith.NET.analysis.semantics;
 using Judith.NET.analysis.syntax;
+using Judith.NET.message;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,17 +15,20 @@ namespace Judith.NET.analysis.analyzers;
 /// defined in it.
 /// </summary>
 public class SymbolTableBuilder : SyntaxVisitor {
+    public MessageContainer Messages { get; private set; } = new();
 
-    private Compilation _cmp;
+    private ProjectCompilation _cmp;
 
     private ScopeResolver _scope;
+    private SymbolFinder _finder;
 
     private Dictionary<SyntaxNode, NodeState> _nodeStates = [];
     private int _resolutions = 0;
 
-    public SymbolTableBuilder (Compilation cmp) {
+    public SymbolTableBuilder (ProjectCompilation cmp) {
         _cmp = cmp;
-        _scope = new(_cmp.Binder, _cmp.SymbolTable);
+        _scope = new(_cmp);
+        _finder = new(_cmp);
     }
 
     public void Analyze (CompilerUnit unit) {
@@ -40,19 +44,33 @@ public class SymbolTableBuilder : SyntaxVisitor {
 
         var paramTypes = _cmp.Binder.GetParamTypes(node.Parameters);
 
-        var (symbol, overload) = _scope.Current.AddFunctionSymbol(
-            name, _cmp.Native.Types.UnresolvedFunction, paramTypes
-        );
-        var scope = _scope.Current.CreateInnerTable(
-            ScopeKind.FunctionBlock, symbol, overload
+        FunctionSymbol funcSymbol;
+        if (_scope.Current.TryGetSymbol(name, out Symbol? symbol)) {
+            if (symbol is FunctionSymbol fs) {
+                funcSymbol = fs;
+            }
+            else {
+                Messages.Add(CompilerMessage.Analyzers.DefinitionAlreadyExist(
+                    name, node.Line
+                ));
+                return;
+            }
+        }
+        else {
+            funcSymbol = _scope.Current.AddSymbol(FunctionSymbol.Define(name));
+        }
+
+        var (overloadSymbol, scope) = _scope.Current.AddOverloadSymbol(
+            name,
+            (tbl, name) => new FunctionOverloadSymbol(tbl, funcSymbol, paramTypes, name)
         );
 
         _scope.BeginScope(scope);
         Visit(node.Parameters);
         Visit(node.Body);
-        _scope.EndScope(); // If this fails, something is wrong in CreateAnonymousInnerTable().
+        _scope.EndScope(); // If this fails, something is wrong in CreateChildTable().
 
-        _cmp.Binder.BindFunctionDefinition(node, symbol, overload, scope);
+        _cmp.Binder.BindFunctionDefinition(node, funcSymbol, overloadSymbol, scope);
 
         _nodeStates[node] = NodeState.Completed;
     }
@@ -60,12 +78,19 @@ public class SymbolTableBuilder : SyntaxVisitor {
     public override void Visit (StructTypeDefinition node) {
         string name = node.Identifier.Name;
 
+        if (_finder.ContainsSymbol(name, _scope.Current)) {
+            Messages.Add(CompilerMessage.Analyzers.DefinitionAlreadyExist(
+                name, node.Line
+            ));
+            return;
+        }
+
         TypeSymbol symbol = _scope.Current.AddSymbol(
             TypeSymbol.Define(SymbolKind.StructType, name)
         );
         symbol.Type = _cmp.Native.Types.NoType;
 
-        var scope = _scope.Current.CreateInnerTable(ScopeKind.StructSpace, symbol);
+        var scope = _scope.Current.CreateChildTable(ScopeKind.StructSpace, symbol);
         var boundNode = _cmp.Binder.BindStructTypeDefinition(node, symbol, scope);
 
         _scope.BeginScope(scope);
@@ -88,11 +113,11 @@ public class SymbolTableBuilder : SyntaxVisitor {
     public override void Visit (IfExpression node) {
         Visit(node.Test);
 
-        var consequentScope = _scope.Current.CreateAnonymousInnerTable(ScopeKind.IfBlock);
+        var consequentScope = _scope.Current.CreateChildTable(ScopeKind.IfBlock, null);
         SymbolTable? alternateScope = null;
 
         if (node.Alternate != null) {
-            alternateScope = _scope.Current.CreateAnonymousInnerTable(ScopeKind.ElseBlock);
+            alternateScope = _scope.Current.CreateChildTable(ScopeKind.ElseBlock, null);
         }
 
         _cmp.Binder.BindIfExpression(node, consequentScope, alternateScope);
@@ -113,7 +138,7 @@ public class SymbolTableBuilder : SyntaxVisitor {
     public override void Visit (WhileExpression node) {
         Visit(node.Test);
 
-        var bodyScope = _scope.Current.CreateAnonymousInnerTable(ScopeKind.WhileBlock);
+        var bodyScope = _scope.Current.CreateChildTable(ScopeKind.WhileBlock, null);
         
         _cmp.Binder.BindWhileExpression(node, bodyScope);
 
@@ -145,8 +170,8 @@ public class SymbolTableBuilder : SyntaxVisitor {
     }
 
     public override void Visit (ObjectInitializer node) {
-        var bodyScope = _scope.Current.CreateAnonymousInnerTable(
-            ScopeKind.ObjectInitializer
+        var bodyScope = _scope.Current.CreateChildTable(
+            ScopeKind.ObjectInitializer, null
         ); // TODO: Maybe we don't need it.
 
         _cmp.Binder.BindObjectInitializer(node, bodyScope);

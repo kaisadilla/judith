@@ -44,8 +44,12 @@ public enum MessageCode {
     FieldMustBeInitialized,
 
     // 3xxx - Analyzer errors
+    // SymbolTableBuilder
+    DefinitionAlreadyExist = 3_000,
+
     // SymbolResolver
-    NameDoesNotExist = 3_000,
+    NameDoesNotExist,
+    NameIsAmbiguous,
 
     // Binder
     NumberSuffixCannotBeUsedForDecimal,

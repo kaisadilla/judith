@@ -20,6 +20,7 @@ public enum SymbolKind {
     ClassType,
     Namespace,
     Function, // Symbols that define functions, not any kind of variables of type function.
+    FunctionOverload,
     MemberField,
     MemberFunction,
     Parameter,

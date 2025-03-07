@@ -32,14 +32,10 @@ parser.Parse();
 messages.Add(parser.Messages);
 if (ShouldAbort()) return;
 
+CompilerUnit cu = CompilerUnitFactory.FromNodeCollection("test", parser.Nodes);
+NativeCompilation nativeComp = NativeCompilation.Ver1();
 
-CompilerUnitBuilder cub = new("test", parser.Nodes);
-cub.BuildUnit();
-CompilerUnit cu = cub.CompilerUnit;
-
-NativeCompilation nc = NativeCompilation.Ver1();
-
-Compilation cmp = new([nc], [cu]);
+ProjectCompilation cmp = new([nativeComp], [cu]);
 cmp.Analyze();
 messages.Add(cmp.Messages);
 

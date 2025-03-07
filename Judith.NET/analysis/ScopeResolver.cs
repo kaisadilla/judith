@@ -1,4 +1,5 @@
 ﻿using Judith.NET.analysis.binder;
+using Judith.NET.analysis.semantics;
 using Judith.NET.analysis.syntax;
 using System;
 using System.Collections.Generic;
@@ -9,12 +10,13 @@ using System.Xml.Linq;
 
 namespace Judith.NET.analysis;
 public class ScopeResolver {
-    private Binder _binder { get; set; }
-    public SymbolTable Current { get; set; }
+    public SymbolTable Current { get; private set; }
 
-    public ScopeResolver (Binder binder, SymbolTable root) {
-        _binder = binder;
-        Current = root;
+    private ProjectCompilation _cmp;
+
+    public ScopeResolver (ProjectCompilation cmp) {
+        _cmp = cmp;
+        Current = _cmp.SymbolTable;
     }
 
     /// <summary>
@@ -29,11 +31,11 @@ public class ScopeResolver {
     /// current scope doesn't have an outer scope.
     /// </summary>
     public void EndScope () {
-        if (Current.OuterTable == null) {
+        if (Current.Parent == null) {
             throw new($"SymbolTable '{Current.Qualifier}' should have a parent.");
         }
 
-        Current = Current.OuterTable;
+        Current = Current.Parent;
     }
 
     public void BeginScope (FunctionDefinition funcDef) {
@@ -75,7 +77,7 @@ public class ScopeResolver {
     }
 
     private T GetBoundNodeOrThrow<T> (SyntaxNode node) where T : BoundNode {
-        if (_binder.TryGetBoundNode(node, out T? boundNode) == false) {
+        if (_cmp.Binder.TryGetBoundNode(node, out T? boundNode) == false) {
             throw new($"Node '{node}' should be bound!");
         }
 

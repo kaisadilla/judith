@@ -9,18 +9,13 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.diagnostics;
 
-public class TypeTableGenerator
-{
+public class TypeTableGenerator {
     public List<object> TypeTable { get; private set; } = [];
 
-    public void Analyze(SymbolTable table)
-    {
-        foreach (Symbol s in table.Symbols.Values)
-        {
-            if (s is TypeSymbol ts)
-            {
-                TypeTable.Add(new
-                {
+    public void Analyze (SymbolTable table) {
+        foreach (Symbol s in table.Symbols.Values) {
+            if (s is TypeSymbol ts) {
+                TypeTable.Add(new {
                     ts.Name,
                     ts.FullyQualifiedName,
                     ts.Kind,
@@ -28,8 +23,7 @@ public class TypeTableGenerator
             }
         }
 
-        foreach (SymbolTable inner in table.InnerTables.Values)
-        {
+        foreach (var inner in table.ChildTables.Values) {
             Analyze(inner);
         }
     }

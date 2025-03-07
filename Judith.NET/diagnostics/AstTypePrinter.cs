@@ -13,9 +13,9 @@ namespace Judith.NET.diagnostics;
 public class AstTypePrinter : SyntaxVisitor {
     public List<string> TypedNodes { get; private set; } = new();
 
-    private Compilation _cmp;
+    private ProjectCompilation _cmp;
 
-    public AstTypePrinter (Compilation cmp) {
+    public AstTypePrinter (ProjectCompilation cmp) {
         _cmp = cmp;
     }
 

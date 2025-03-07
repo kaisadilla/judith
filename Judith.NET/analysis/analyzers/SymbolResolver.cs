@@ -8,6 +8,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace Judith.NET.analysis.analyzers;
 
@@ -18,15 +19,17 @@ namespace Judith.NET.analysis.analyzers;
 public class SymbolResolver : SyntaxVisitor {
     public MessageContainer Messages { get; private set; } = new();
 
-    private readonly Compilation _cmp;
+    private readonly ProjectCompilation _cmp;
     private readonly ScopeResolver _scope;
+    private readonly SymbolFinder _finder;
 
     private NodeStateManager _nodeStates = new();
     public int Resolutions { get; private set; } = 0;
 
-    public SymbolResolver (Compilation cmp) {
+    public SymbolResolver (ProjectCompilation cmp) {
         _cmp = cmp;
-        _scope = new(_cmp.Binder, _cmp.SymbolTable);
+        _scope = new(_cmp);
+        _finder = new(_cmp);
     }
 
     public void Analyze (CompilerUnit unit) {
@@ -111,12 +114,10 @@ public class SymbolResolver : SyntaxVisitor {
 
         string name = node.Identifier.Name;
 
-        if (_scope.Current.TryFindSymbolRecursively(name, out Symbol? symbol) == false) {
-            Messages.Add(CompilerMessage.Analyzers.NameDoesNotExist(
-                name, node.Identifier.Line
-            ));
-            return;
-        }
+        var candidates = _finder.FindRecursively(name, _scope.Current, []);
+
+        var symbol = FindSymbolOrErrorMsg(name, node.Identifier.Line);
+        if (symbol == null) return;
 
         var boundNode = _cmp.Binder.BindIdentifierExpression(node, symbol);
 
@@ -134,12 +135,8 @@ public class SymbolResolver : SyntaxVisitor {
 
         string name = node.Identifier.Name;
 
-        if (_scope.Current.TryFindSymbolRecursively(name, out Symbol? symbol) == false) {
-            Messages.Add(CompilerMessage.Analyzers.NameDoesNotExist(
-                name, node.Identifier.Line
-            ));
-            return;
-        }
+        var symbol = FindSymbolOrErrorMsg(name, node.Identifier.Line);
+        if (symbol == null) return;
 
         if (symbol is TypeSymbol typeSymbol) {
             _cmp.Binder.BindTypeAnnotation(node, typeSymbol);
@@ -160,5 +157,21 @@ public class SymbolResolver : SyntaxVisitor {
         }
 
         return boundNode;
+    }
+
+    private Symbol? FindSymbolOrErrorMsg (string name, int line) {
+        var candidates = _finder.FindRecursively(name, _scope.Current, []);
+
+        if (candidates.Count == 0) {
+            Messages.Add(CompilerMessage.Analyzers.NameDoesNotExist(name, line));
+            return null;
+        }
+        else if (candidates.Count > 1) {
+            Messages.Add(CompilerMessage.Analyzers.NameIsAmbiguous(name, line));
+            return null;
+        }
+        else {
+            return candidates[0];
+        }
     }
 }

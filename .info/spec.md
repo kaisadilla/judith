@@ -304,7 +304,9 @@ An arbitrarily large integer. Judith considers it as a signed integer of infinit
 * `Byte`: An alias for the size of a byte, by default `Ui8`.
 * `Int`: An alias for an int of the native size in the platform, usually `I64`. Suffix: `i` (can be omitted).
 * `Float`: An alias for a float of the native size in the platform, usually `F64`. Suffix: `f` (can be omitted).
-* `Num`: The "basic primitive" for a number is actually just an alias for `F64`. Suffix: none.
+
+### Num
+`Num` is a special type. It represents an `F64` and gets compiled to just that, but it isn't an alias. Instead, `Num` has its own set of rules around number conversion that allows it to be used in certain places where a more refined number type is expected.
 
 ## Pseudotypes
 Judith features some pseudo-types. These types represent concepts relating to types that aren't directly types and, as such, their usage varies:
@@ -1097,7 +1099,7 @@ Some number formats can be implicitly converted into others, while others requir
 
 * Numbers can be implicitly converted into a bigger size of the same kind of number (e.g. `I16` into `I32`, `Ui8` into `Ui64` or `F32` into `F64`). Signed integers can be converted into `BigInt`.
 * Signed and unsigned integers can be converted into floats (e.g. `I32` into `F32` or `Ui16` into `F64`). This conversion can actually be lossy, but that's considered a loss of precision rather than a meaningless conversion.
-* Alias types (`Byte`, `Int`, `Float` and `Num`) follow the rules of the type they are aliasing.
+* Alias types (`Byte`, `Int` and `Float`) follow the rules of the type they are aliasing.
 * It is not possible to implicitly convert a `Decimal` into any other format, or vice versa.
 
 When a number cannot be implicitly converted into another format, a explicit casting can be used. This type of casting uses the same operators as upcasting and downcasting (`:`, `:?`, `:!`).
@@ -1105,9 +1107,9 @@ When a number cannot be implicitly converted into another format, a explicit cas
 Number casting always occurs at runtime, but each casting operator offers the same guarantees as it does with other types.
 
 ```judith
-const num: Num = 13
-const integer: Int? = num:?Int -- cast fails if num is too big for Int.
-const num2: Num = integer:Num -- Errors cannot occur, every Int can be a Num.
+const float: Float = 13
+const integer: Int? = num:?Int -- cast fails if float is too big for Int.
+const float2: Float = integer:Float -- Errors cannot occur, every Int can be a Float.
 ```
 
 Keep in mind that, in the example above, it is possible for an integer type casted to a floating-point type to lose precision, which is considered acceptable and not an error when transforming an integer into a float.
@@ -1132,6 +1134,11 @@ When casting is done in a checked context, then the need to use `:` or `:?` / `:
 
 Keep in mind that most casts done with `:` in a checked context are ones that could be done with an implicit conversion, so these cast will be redundant.
 
+#### Num
+
+`Num` follows a special set of rules:
+* `Num` can always be implicitly transformed into any other type, and any type can be transformed into `Num`.
+
 ### Null-forgiving casting
 Nullable types can be casted into their non-nullable counterparts by appending the null-forgiving operator `!` at their end. Casting a `null` value in this way will throw a `NullValueException`.
 
@@ -1147,11 +1154,15 @@ Unsafe casting operations are extremely discouraged, as when, left unhandled, ca
 ## <a name="types-narrowing">Type narrowing</a>
 Narrowing is the process of refining a broader type into a more specific one based on control flow. While traveling through a possible execution branch of a block of code, when a certain property of a value's type is asserted, that property remains true for the remainder of that branch.
 
+Type narrowing only occurs when the integrity of the value can be asserted at compile time. This happens when the value is a constant rather than a variable.
+
+
 ### Type checking (`is`)
 With the `is` keyword, a value can be asserted to be (or not to be) of a given type:
 
 ```judith
 type Animal = Dog | Cat | Rabbit | Mouse
+const animal = get_animal()
 
 if animal is Dog
     animal.bark() -- 'animal' is of type 'Dog' here.
@@ -1746,7 +1757,7 @@ end
 ```
 
 # Operator overloading
-Some operators in Judith can be overloaded. This is done with the `oper` keyword, which defines a function that acts as the overloaded operation. Most operators are defined as functions, but a few of them are defined as member methods. Binary operations can be made symmetric with the `symm` keyword. When an overloaded operator is marked as symmetric, it means that the order of the factors can be inversed to fit the function, if a better fit is not found. For example, a symmetric operation of `Vec2 + Quaternion` will allow `quaternion + vec2` by transforming it into `vec2 + quaternion`.
+Some operators in Judith can be overloaded. This is done with the `oper` keyword, which defines a function that acts as the overloaded operation. Most operators are defined as functions, but a few of them are defined as member methods. Binary operations can be made symmetric with the `#symmetric` directive. When an overloaded operator is marked as symmetric, it will automatically generate an identical overload where the operands are inversed. For example, an overload of `Vec2 + Quaternion` marked as symmetric will create a new function `Quaternion + Vec2` with the exact same body.
 
 ## Arithmetic operators
 `+`, `-`, `*`, `/`, `%i`, `%m` and `%r`
@@ -1754,7 +1765,8 @@ Some operators in Judith can be overloaded. This is done with the `oper` keyword
 These operators take two values of any type and return a new value of any type.
 
 ```judith
-symm oper + (a: Fraction, b: Num) : Fraction
+#symmetric
+oper + (a: Fraction, b: Num) : Fraction
     return {
         num: a + (b * den),
         den: den,
@@ -1779,7 +1791,8 @@ These operators take two values of any type and return a `Bool`.
 Overloading `==` will implicitly overload `!=` as `not (a == b)`. The same will occur with `~~` and `!~` as `not (a ~~ b)`. Overloading `!=` and `!~` is still allowed, so a more efficient operation can be implemented (or a different behavior, if it makes sense).
 
 ```judith
-symm oper == (a, b: Vec3)
+#symmetric
+oper == (a, b: Vec3)
     return a.x == b.x and a.y == b.y and a.z == b.z
 end
 ```
@@ -1792,7 +1805,8 @@ These operators take two values of any type and return a `Bool`.
 Overloading just some of these operators is enough to get the full set. Overloading just `<` will define `<=` as `a < b or a == b`, `>` as `not (a < b or a == b)` and `>=` as `not (a < b)`. Same goes for `>`. In every case, though, more of these operators can be overloaded to refine their behavior.
 
 ```judith
-symm oper < (a, b: Vec3)
+#symmetric
+oper < (a, b: Vec3)
     return a.mod < b.mod
 end
 ```
@@ -2243,12 +2257,4 @@ TODO: <a name="appendix-regex">Appendix § Regex</a>
 ---
 ```judith
 
-```
-```judith
-```
-```judith
-```
-```judith
-```
-```judith
 ```

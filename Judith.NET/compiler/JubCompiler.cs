@@ -16,7 +16,7 @@ namespace Judith.NET.compiler;
 public class JubCompiler : SyntaxVisitor {
     const int MAX_LOCALS = ushort.MaxValue + 1;
 
-    private Compilation _cmp;
+    private ProjectCompilation _cmp;
     private ScopeResolver _scope;
     private LocalBlock? _localBlock = null;
 
@@ -44,9 +44,9 @@ public class JubCompiler : SyntaxVisitor {
     private BinaryBlock CurrentBlock => Blocks[^1];
     private int CurrentBlockIndex => Blocks.Count - 1;
 
-    public JubCompiler (Compilation cmp) {
+    public JubCompiler (ProjectCompilation cmp) {
         _cmp = cmp;
-        _scope = new(_cmp.Binder, _cmp.SymbolTable);
+        _scope = new(_cmp);
     }
 
     public JudithDll Compile () {

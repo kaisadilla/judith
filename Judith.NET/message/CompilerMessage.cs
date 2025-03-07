@@ -21,6 +21,7 @@ public enum MessageKind {
 public enum MessageOrigin {
     Lexer,
     Parser,
+    SymbolTableBuilder,
     SymbolResolver,
     Binder,
     TypeResolver,
@@ -356,12 +357,32 @@ public class CompilerMessage {
     }
 
     public static class Analyzers {
+        public static CompilerMessage DefinitionAlreadyExist (string name, int line) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.SymbolTableBuilder,
+                (int)MessageCode.DefinitionAlreadyExist,
+                $"The name '{name}' already exists in the current context.",
+                line
+            );
+        }
+
         public static CompilerMessage NameDoesNotExist (string name, int line) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.SymbolResolver,
                 (int)MessageCode.NameDoesNotExist,
                 $"The name '{name}' does not exist in the current context.",
+                line
+            );
+        }
+
+        public static CompilerMessage NameIsAmbiguous (string name, int line) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.SymbolResolver,
+                (int)MessageCode.NameDoesNotExist,
+                $"The name '{name}' is ambiguous.",
                 line
             );
         }

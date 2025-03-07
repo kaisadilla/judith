@@ -1,4 +1,5 @@
-﻿using Judith.NET.analysis.syntax;
+﻿using Judith.NET.analysis.semantics;
+using Judith.NET.analysis.syntax;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;

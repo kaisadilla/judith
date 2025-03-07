@@ -15,12 +15,12 @@ using RetInfo = (SyntaxKind retKind, TypeSymbol type);
 public class BlockTypeResolver : SyntaxVisitor<RetInfo?> {
     public MessageContainer Messages { get; private set; } = new();
 
-    private Compilation _cmp;
+    private ProjectCompilation _cmp;
     private ScopeResolver _scope;
 
-    public BlockTypeResolver (Compilation cmp) {
+    public BlockTypeResolver (ProjectCompilation cmp) {
         _cmp = cmp;
-        _scope = new(_cmp.Binder, _cmp.SymbolTable);
+        _scope = new(_cmp);
     }
 
     public void Analyze (CompilerUnit unit) {

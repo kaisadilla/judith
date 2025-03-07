@@ -20,11 +20,11 @@ public class Binder {
     public MessageContainer Messages { get; private set; } = new();
 
     [JsonIgnore]
-    private Compilation _cmp;
+    private ProjectCompilation _cmp;
 
     public Dictionary<SyntaxNode, BoundNode> BoundNodes { get; private set; } = new();
 
-    public Binder (Compilation compilation) {
+    public Binder (ProjectCompilation compilation) {
         _cmp = compilation;
     }
 
@@ -69,7 +69,7 @@ public class Binder {
     public BoundFunctionDefinition BindFunctionDefinition (
         FunctionDefinition funcDef,
         FunctionSymbol symbol,
-        FunctionOverload overload,
+        FunctionOverloadSymbol overload,
         SymbolTable scope
     ) {
         if (TryGetBoundNode(
