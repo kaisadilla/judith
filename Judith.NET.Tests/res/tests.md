@@ -1,0 +1,4 @@
+The `res/` folder contains files used to run many of the tests.
+
+# E2E tests
+These tests take source code, compile it, run it and test the output of the program against its expected output. These scripts are expected to be successfully compiled and executed, and not contain errors. The files to run these tests are located in the folder `scripts/`. Inside this folder, the folder `programs/` contains each individual file (subfolders are allowed), with the extension `.jud`. The expected result of each script is placed inside the folder `expected/`, at the exact same relative location as the script file, with the exact same name, but with the extension `.txt`. When executing the test, the compiled assembly will be placed in the `bin/` folder, from which the JuVM will read it. The output of the JuVM will be placed in the `out/` folder.

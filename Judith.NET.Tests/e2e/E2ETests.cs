@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -28,28 +29,32 @@ public class E2ETests {
 
     [Fact]
     public void HelloWorld () {
-        var output = Juvm("basic", "hello_world");
+        var output = ScriptRun("basic", "hello_world");
         Stdout.WriteLine("Output: " + output);
         Assert.True(output == "Hello world!\n");
     }
 
+    [Theory]
+    [InlineData("basic", "fibonacci1")]
+    [InlineData("basic", "comparisons1")]
+    public void Scripts (string folderPath, string fileName) {
+        var output = ScriptRun(folderPath, fileName);
+        var expected = ScriptExpected(folderPath, fileName);
+        Stdout.WriteLine("Output: " + output);
+        Assert.True(output == expected);
+    }
+
     #region Helper functions
-    private string Jud (string path) {
-        return Path.Join(_res, "/test_programs/", path + ".jud");
-    }
+    private string ScriptRun (string folderPath, string fileName) {
+        string srcPath = Path.Join(_res, "scripts", "programs", folderPath, fileName + ".jud");
+        string outPath = Path.Join(_res, "scripts", "out", folderPath, fileName + ".txt");
 
-    private string JuvmOut (string path) {
-        return Path.Join(_res, "out", path + ".txt");
-    }
-
-    private string Juvm (string folderPath, string fileName) {
-        string binPath = Compiler.Compile(folderPath, fileName);
-        string outPath = JuvmOut(Path.Join(folderPath, fileName));
+        string binPath = Compiler.Compile(srcPath, folderPath, fileName);
 
         var proc = new Process {
             StartInfo = new ProcessStartInfo {
                 FileName = _juvmPath,
-                Arguments = Jud(binPath) + " " + outPath,
+                Arguments = binPath + " " + outPath,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 RedirectStandardInput = false,
@@ -63,6 +68,14 @@ public class E2ETests {
         proc.WaitForExit();
 
         return File.ReadAllText(outPath).Replace("\r\n", "\n");
+    }
+
+    private string ScriptExpected (string folderPath, string fileName) {
+        string path = Path.Join(
+            _res, "scripts", "expected", folderPath, fileName + ".txt"
+        );
+
+        return File.ReadAllText(path).Replace("\r\n", "\n");
     }
     #endregion
 }

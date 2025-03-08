@@ -5,7 +5,7 @@ const first = 1
 const second = 1
 const cycles = 20
 
-fib_recur(i1, i2, cycles)
+fib(first, second, cycles)
 print_str("")
 print_str("Fiboňácĉi for you! [test]")
 

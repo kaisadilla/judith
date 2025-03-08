@@ -17,10 +17,8 @@ public static class Compiler {
         AppContext.BaseDirectory, "res"
     );
 
-    public static string Compile (string folderPath, string fileName) {
-        string src = File.ReadAllText(
-            Path.Join(RES_PATH, "jud", folderPath, fileName + ".jud")
-        );
+    public static string Compile (string srcPath, string folderPath, string fileName) {
+        string src = File.ReadAllText(srcPath);
 
         MessageContainer messages = new();
 
