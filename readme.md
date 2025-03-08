@@ -4,7 +4,7 @@ Judith is a WIP statically-typed high-level programming language that compiles t
 
 Judith is a personal project started in February 2024, and is a work in progress.
 
-A (very) informal specification of the language can be found in [.info/spec.jud](.info/spec.jud).
+A (very) informal specification of the language can be found in [.info/spec.md](.info/spec.md).
 
 # What is Judith?
 Nothing, as I've literally just started it.
