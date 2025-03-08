@@ -47,12 +47,12 @@ bool isMagicNumberCorrect (byte* magicNumbers) {
         && magicNumbers[11] == 'H';
 }
 
-Assembly readAssembly () {
+Assembly readAssembly (const char* path) {
     constexpr size_t MAGIC_NUMBER_COUNT = 12;
 
     std::cout << "JuVM C++" << std::endl;
 
-    auto buffer = readBinaryFile("res/test.jdll");
+    auto buffer = readBinaryFile(path);
     size_t bufferSize = buffer.size();
     Buffer reader((buffer));
 

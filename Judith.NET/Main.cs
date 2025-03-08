@@ -15,6 +15,7 @@ Console.WriteLine("> juc test.judith");
 Console.WriteLine();
 
 string src = File.ReadAllText(AppContext.BaseDirectory + "/res/test.judith");
+//string src = "__p_print \"Hello world 2\"";
 
 Stopwatch s = Stopwatch.StartNew();
 

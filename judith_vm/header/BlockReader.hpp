@@ -5,4 +5,4 @@
 class Assembly;
 struct Block;
 
-Assembly readAssembly();
+Assembly readAssembly(const char* path);

@@ -496,16 +496,16 @@ public class Lexer {
         // the string will only end when it encounters as many quoting chars in
         // a row as those used to start the string.
         int closingQuotes = 0;
-        while (closingQuotes < openingQuotes && IsAtEnd() == false) {
+        while (closingQuotes < openingQuotes) {
+            if (IsAtEnd()) {
+                Error(CompilerMessage.Lexer.UnterminatedString(_line));
+                return null;
+            }
+
             char c = Advance();
 
             if (c == quotingChar) closingQuotes++;
             else closingQuotes = 0; // If a non-quote char is found, the counter is reset.
-        }
-
-        if (IsAtEnd()) {
-            Error(CompilerMessage.Lexer.UnterminatedString(_line));
-            return null;
         }
 
         return MakeStringToken(quotingChar, openingQuotes, startColumn);

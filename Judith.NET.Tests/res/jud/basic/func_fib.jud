@@ -1,0 +1,39 @@
+﻿-- This test includes some functions and call to them, as well as an unused
+-- function. The fib() function calls itself recursively.
+
+const first = 1
+const second = 1
+const cycles = 20
+
+fib_recur(i1, i2, cycles)
+print_str("")
+print_str("Fiboňácĉi for you! [test]")
+
+func fib (a, b, cycles: Num)
+    if cycles <= 0 then return end
+    
+    print(a)
+    fib(b, a + b, cycles - 1)
+end
+
+func _unused_func (var a, b, const cycles: Num)
+    var i = 0
+
+    while i < cycles do
+        const next = a + b
+        a = b
+        b = next
+        
+        print(next)
+
+        i = i + 1
+    end
+end
+
+func print (n: Num)
+    __p_print n
+end
+
+func print_str (str: String)
+    __p_print str
+end

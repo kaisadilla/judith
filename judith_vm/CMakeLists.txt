@@ -3,7 +3,7 @@
 #
 cmake_minimum_required (VERSION 3.8)
 
-set(APP_NAME "judith_vm")
+set(APP_NAME "juvm")
 
 # Enable Hot Reload for MSVC compilers if supported.
 if (POLICY CMP0141)
@@ -11,7 +11,7 @@ if (POLICY CMP0141)
   set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>")
 endif()
 
-project ("judith_vm")
+project(${APP_NAME})
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 20)
@@ -30,7 +30,7 @@ add_subdirectory("lib/unordered_dense")
 
 # Define the executable
 add_executable(
-	judith_vm
+	${APP_NAME}
 	${SRC_FILES}
 	${HEADER_FILES}
 	"header/root.hpp" "header/types.hpp"
@@ -41,7 +41,7 @@ add_executable(
 target_link_libraries(${APP_NAME} PRIVATE unordered_dense)
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
-  set_property(TARGET judith_vm PROPERTY CXX_STANDARD 20)
+  set_property(TARGET ${APP_NAME} PROPERTY CXX_STANDARD 20)
 endif()
 
 # copy the contents of the "res" file directly into the binary folder.

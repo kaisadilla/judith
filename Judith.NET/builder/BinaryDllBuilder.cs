@@ -35,6 +35,7 @@ public class BinaryDllBuilder {
             WriteBlock(writer, block);
         }
 
+        Directory.CreateDirectory(_outFolder);
         File.WriteAllBytes(path, ms.ToArray());
     }
 
