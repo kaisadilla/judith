@@ -4,13 +4,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Judith.NET.compiler.jub;
+namespace Judith.NET.codegen.jasm;
 
-public class JudithDll {
+public class JasmAssembly {
     public FunctionRefTable FunctionRefTable { get; private init; }
     public List<BinaryBlock> Blocks { get; private init; }
 
-    public JudithDll (FunctionRefTable functionRefArray, List<BinaryBlock> blocks) {
+    public JasmAssembly (FunctionRefTable functionRefArray, List<BinaryBlock> blocks) {
         FunctionRefTable = functionRefArray;
         Blocks = blocks;
     }

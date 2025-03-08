@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Judith.NET.compiler.jub;
+namespace Judith.NET.codegen.jasm;
 
 /// <summary>
 /// Contains a reference to a function. This reference indicates the index of

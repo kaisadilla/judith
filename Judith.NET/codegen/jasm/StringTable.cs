@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Judith.NET.compiler.jub;
+namespace Judith.NET.codegen.jasm;
 
 public class StringTable {
     public List<byte> Bytes { get; private init; } = [];

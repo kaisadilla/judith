@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Judith.NET.compiler.jub;
+namespace Judith.NET.codegen.jasm;
 
 public class Chunk {
     public List<byte> Code { get; private set; } = new();

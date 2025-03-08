@@ -1,4 +1,4 @@
-﻿using Judith.NET.compiler.jub;
+﻿using Judith.NET.codegen.jasm;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,15 +7,17 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.builder;
 
-public class BinaryDllBuilder {
-    private string _outFolder;
+public class JdllBuilder {
+    private JasmAssembly _assembly;
 
-    public BinaryDllBuilder (string outFolder) {
-        _outFolder = outFolder;
+    public JdllBuilder (JasmAssembly assembly) {
+        _assembly = assembly;
     }
 
-    public void BuildLibrary (string fileName, JudithDll dll) {
-        string path = Path.Join(_outFolder, fileName);
+    public void BuildLibrary (string outPath) {
+        string dir = Path.GetDirectoryName(outPath) ?? throw new(
+            $"Couldn't determine out path's directory. Out path: '{outPath}'"
+        );
 
         List<byte> fileBytes = new();
 
@@ -27,16 +29,16 @@ public class BinaryDllBuilder {
         writer.Write((byte)0); // major_version: byte = 0
         writer.Write((byte)0); // minor_version: byte = 0
 
-        WriteFuncRefTable(writer, dll.FunctionRefTable); // func_ref_arr
+        WriteFuncRefTable(writer, _assembly.FunctionRefTable); // func_ref_arr
 
-        writer.Write((uint)dll.Blocks.Count); // block_count
+        writer.Write((uint)_assembly.Blocks.Count); // block_count
 
-        foreach (var block in dll.Blocks) {
+        foreach (var block in _assembly.Blocks) {
             WriteBlock(writer, block);
         }
 
-        Directory.CreateDirectory(_outFolder);
-        File.WriteAllBytes(path, ms.ToArray());
+        Directory.CreateDirectory(dir);
+        File.WriteAllBytes(outPath, ms.ToArray());
     }
 
     private void WriteMagicNumber (BinaryWriter writer) {

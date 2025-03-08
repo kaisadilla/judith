@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Judith.NET.compiler.jub;
+namespace Judith.NET.codegen.jasm;
 
 public class BinaryBlock {
     public string Name { get; private init; }

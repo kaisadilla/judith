@@ -19,6 +19,8 @@ public class ProjectCompilation {
     public SymbolTable SymbolTable { get; private set; }
     public Binder Binder { get; private set; }
 
+    public bool IsValidProgram { get; private set; } = false;
+
     public ProjectCompilation (List<ICompilation> dependencies, List<CompilerUnit> units) {
         if (dependencies.Count == 0) {
             throw new("At least the native dependency must exist.");
@@ -79,6 +81,8 @@ public class ProjectCompilation {
         //Binder.ResolveIncomplete();
 
         Messages.Add(Binder.Messages);
+
+        IsValidProgram = Messages.HasErrors == false;
     }
 
     private void ResolveTypes () {

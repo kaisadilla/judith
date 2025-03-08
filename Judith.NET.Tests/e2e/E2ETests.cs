@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Judith.NET.compilation;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -47,9 +48,13 @@ public class E2ETests {
     #region Helper functions
     private string ScriptRun (string folderPath, string fileName) {
         string srcPath = Path.Join(_res, "scripts", "programs", folderPath, fileName + ".jud");
+        string binPath = Path.Join(_res, "scripts", "out", folderPath, fileName + ".jdll");
         string outPath = Path.Join(_res, "scripts", "out", folderPath, fileName + ".txt");
 
-        string binPath = Compiler.Compile(srcPath, folderPath, fileName);
+        string src = File.ReadAllText(srcPath);
+
+        var compiler = new JasmScriptCompiler("test", src);
+        compiler.Compile(binPath);
 
         var proc = new Process {
             StartInfo = new ProcessStartInfo {

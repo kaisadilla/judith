@@ -1,4 +1,4 @@
-﻿using Judith.NET.compiler.jub;
+﻿using Judith.NET.codegen.jasm;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace Judith.NET.diagnostics;
 
 public class DllDisassembler {
-    private JudithDll _dll;
+    private JasmAssembly _dll;
 
     public string ChunkString { get; private set; } = string.Empty;
 
@@ -17,7 +17,7 @@ public class DllDisassembler {
 
     private static string[] _sizeUnits = ["KiB", "MiB", "GiB", "TiB"];
 
-    public DllDisassembler (JudithDll dll) {
+    public DllDisassembler (JasmAssembly dll) {
         _dll = dll;
     }
 

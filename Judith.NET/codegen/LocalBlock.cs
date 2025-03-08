@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Judith.NET.compiler;
+namespace Judith.NET.codegen;
 
 /// <summary>
 /// Offers a dynamic representation of how locals evolve within a block. This

@@ -2,7 +2,7 @@
 using Judith.NET.analysis.binder;
 using Judith.NET.analysis.semantics;
 using Judith.NET.analysis.syntax;
-using Judith.NET.compiler.jub;
+using Judith.NET.codegen.jasm;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -11,9 +11,9 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 
-namespace Judith.NET.compiler;
+namespace Judith.NET.codegen;
 
-public class JubCompiler : SyntaxVisitor {
+public class JasmGenerator : SyntaxVisitor {
     const int MAX_LOCALS = ushort.MaxValue + 1;
 
     private ProjectCompilation _cmp;
@@ -44,12 +44,12 @@ public class JubCompiler : SyntaxVisitor {
     private BinaryBlock CurrentBlock => Blocks[^1];
     private int CurrentBlockIndex => Blocks.Count - 1;
 
-    public JubCompiler (ProjectCompilation cmp) {
+    public JasmGenerator (ProjectCompilation cmp) {
         _cmp = cmp;
         _scope = new(_cmp);
     }
 
-    public JudithDll Compile () {
+    public JasmAssembly Generate () {
         CollectReferences();
 
         foreach (var unit in _cmp.Units) {
