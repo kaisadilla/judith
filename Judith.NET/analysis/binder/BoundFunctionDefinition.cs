@@ -13,20 +13,17 @@ public class BoundFunctionDefinition : BoundNode {
     public new FunctionDefinition Node => (FunctionDefinition)base.Node;
 
     public FunctionSymbol Symbol { get; private init; }
-    public FunctionOverloadSymbol Overload { get; private init; }
     [JsonIgnore]
     public SymbolTable Scope { get; private init; }
 
     public BoundFunctionDefinition (
         FunctionDefinition node,
         FunctionSymbol symbol,
-        FunctionOverloadSymbol overload,
         SymbolTable scope
     )
         : base(node)
     {
         Symbol = symbol;
-        Overload = overload;
         Scope = scope;
     }
 }

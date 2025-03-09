@@ -63,19 +63,19 @@ public class TypeResolver : SyntaxVisitor {
         Visit(node.Parameters);
         _scope.EndScope();
 
-        if (TypeSymbol.IsResolved(boundNode.Overload.ReturnType) == false) {
+        if (TypeSymbol.IsResolved(boundNode.Symbol.ReturnType) == false) {
             // If the return type is explicitly declared.
             if (node.ReturnTypeAnnotation != null) {
                 var type = GetType(node.ReturnTypeAnnotation);
 
-                boundNode.Overload.ReturnType = type;
+                boundNode.Symbol.ReturnType = type;
             }
             // Else, it's implicitly "Void".
             else {
-                boundNode.Overload.ReturnType = NativeTypes.Void;
+                boundNode.Symbol.ReturnType = NativeTypes.Void;
             }
 
-            if (TypeSymbol.IsResolved(boundNode.Overload.ReturnType)) {
+            if (TypeSymbol.IsResolved(boundNode.Symbol.ReturnType)) {
                 Resolutions++;
             }
             else {
@@ -83,12 +83,12 @@ public class TypeResolver : SyntaxVisitor {
             }
         }
 
-        if (boundNode.Overload.IsResolved() == false) {
+        if (boundNode.Symbol.IsResolved() == false) {
             // ParamTypes will always be the same size as overload's param types.
             var paramTypes = Binder.GetParamTypes(node.Parameters);
 
             for (int i = 0; i < paramTypes.Count; i++) {
-                boundNode.Overload.ParamTypes[i] = paramTypes[i];
+                boundNode.Symbol.ParamTypes[i] = paramTypes[i];
             }
         }
     }
@@ -356,10 +356,7 @@ public class TypeResolver : SyntaxVisitor {
 
             if (boundCallee.Symbol.Kind == SymbolKind.Function) {
                 var funcSymbol = (FunctionSymbol)boundCallee.Symbol;
-
-                if (funcSymbol.TryGetOverload(paramTypes, out var funcOverload)) {
-                    boundNode.Type = funcOverload.ReturnType ?? NativeTypes.Unresolved;
-                }
+                boundNode.Type = funcSymbol.ReturnType ?? NativeTypes.Unresolved;
             }
             else {
                 throw new NotImplementedException("Cannot call dynamically yet!");

@@ -823,6 +823,9 @@ func add (a, b: Num) : Auto -- infered to be 'Num'
 end
 ```
 
+## Function overloading
+Judith does not allow function overloading.
+
 ## Variadic functions
 Variadic functions can take any number of arguments. To define a variadic function, its last parameter has to use the spread operator, and the type of said parameter has to be a type that can be initialized as a list (i.e. any type that can be initialized with [a, b, c] syntax).
 
@@ -995,15 +998,6 @@ func add (x: Num, y: Num) : Num return x + y end
 const add_2 = add(?, 2) -- add_2's type is '(Num) => Num'.
 
 Console::log(add_2(5)) -- prints 7.
-```
-
-Casting `?` to a type may be needed to disambiguate between function overloads.
-
-```judith
-func do_something(x: Num, y: Num) : Num end
-func do_something(x: String, y: Num) : Num end
-
-const partial = do_something(?:String, 5)
 ```
 
 This can be combined with function chaining:
@@ -2233,7 +2227,7 @@ By default, `str()` is defined internally in the JuVM, and its behavior depends 
 * Primitive types: will return a string containing the value itself. E.g. `5` will return `"5"`, `false` will return `"false"` and `undefined` will return `"undefined"`.
 * Array types: will return a string that starts with `[`, then enumerates every element of the array (as a string), separated by commas and spaces, and ends with `]`. E.g. `[3,5,2]` will produce `"[3, 5, 2]"`.
 * Dictionary types: same as array types, but will return key value pairs in a `key => value` format. E.g. `["Kevin"=>500,"John"=>200]` will return `"[\"Kevin\" => 500, \"John\" => 200]"`.
-* Object types, regardless of their kind (struct, class, etc.): will produce a string wrapped with `{` and `}`, that maps member names to the string representation of their values. If the member is a function, it will be mapped to a signature (or array of signatures, if overloaded) and, if the member is a field of a reference type, it will be mapped to the name of the type inside angle brackets (`<>`). The string will be formatted. For example, a local of type `Employee` may produce:
+* Object types, regardless of their kind (struct, class, etc.): will produce a string wrapped with `{` and `}`, that maps member names to the string representation of their values. If the member is a function, it will be mapped to a signature and, if the member is a field of a reference type, it will be mapped to the name of the type inside angle brackets (`<>`). The string will be formatted. For example, a local of type `Employee` may produce:
 ```judith
 "Employee {
     name = \"Kevin\",

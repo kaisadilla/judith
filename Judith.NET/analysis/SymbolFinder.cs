@@ -17,6 +17,13 @@ public class SymbolFinder {
         _cmp = cmp;
     }
 
+    /// <summary>
+    /// Returns true if the symbol given already exists in the current scope.
+    /// This does not check parent scopes.
+    /// </summary>
+    /// <param name="name">The name to search.</param>
+    /// <param name="originScope">The scope from which it's searched.</param>
+    /// <returns></returns>
     public bool ContainsSymbol (string name, SymbolTable originScope) {
         if (originScope.ContainsSymbol(name)) return true;
 

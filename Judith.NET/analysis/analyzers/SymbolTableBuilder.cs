@@ -42,29 +42,18 @@ public class SymbolTableBuilder : SyntaxVisitor {
     public override void Visit (FunctionDefinition node) {
         string name = node.Identifier.Name;
 
+        if (_finder.ContainsSymbol(name, _scope.Current)) {
+            Messages.Add(CompilerMessage.Analyzers.DefinitionAlreadyExist(
+                name, node.Line
+            ));
+            return;
+        }
+
         var paramTypes = _cmp.Binder.GetParamTypes(node.Parameters);
 
-        FunctionSymbol funcSymbol;
-        if (_scope.Current.TryGetSymbol(name, out Symbol? symbol)) {
-            if (symbol is FunctionSymbol fs) {
-                funcSymbol = fs;
-            }
-            else {
-                Messages.Add(CompilerMessage.Analyzers.DefinitionAlreadyExist(
-                    name, node.Line
-                ));
-                return;
-            }
-        }
-        else {
-            funcSymbol = _scope.Current.AddSymbol(FunctionSymbol.Define(name));
-        }
-
-        var overloadName = funcSymbol.GetNextOverloadName();
-        var overloadSymbol = new FunctionOverloadSymbol(
-            _scope.Current, funcSymbol, paramTypes, overloadName
+        var symbol = _scope.Current.AddSymbol(
+            tbl => new FunctionSymbol(tbl, paramTypes, name, tbl.Qualify(name))
         );
-        funcSymbol.Overloads.Add(overloadSymbol);
         var scope = _scope.Current.CreateChildTable(ScopeKind.FunctionBlock, symbol);
 
         _scope.BeginScope(scope);
@@ -72,7 +61,7 @@ public class SymbolTableBuilder : SyntaxVisitor {
         Visit(node.Body);
         _scope.EndScope(); // If this fails, something is wrong in CreateChildTable().
 
-        _cmp.Binder.BindFunctionDefinition(node, funcSymbol, overloadSymbol, scope);
+        _cmp.Binder.BindFunctionDefinition(node, symbol, scope);
 
         _nodeStates[node] = NodeState.Completed;
     }

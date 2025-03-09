@@ -45,14 +45,9 @@ public class SymbolJsonConverter : JsonConverter<Symbol> {
         obj["Type"] = value.Type == null ? null : $"=> {value.Type?.FullyQualifiedName}";
 
         if (value is FunctionSymbol f) {
-            obj["Overloads"] = JToken.FromObject(f.Overloads, serializer);
-        }
-        else if (value is FunctionOverloadSymbol fol) {
-            obj["ParamTypes"] = JToken.FromObject(fol.ParamTypes, serializer);
-            obj["ReturnType"] = fol.ReturnType == null ? null : JToken.FromObject(fol.ReturnType, serializer);
-            obj["IsDuplicate"] = fol.IsDuplicate;
-            obj["IsResolved"] = fol.IsResolved();
-            obj["Signature"] = fol.GetSignatureString();
+            obj["ParamTypes"] = JToken.FromObject(f.ParamTypes, serializer);
+            obj["ReturnType"] = f.ReturnType == null ? null : JToken.FromObject(f.ReturnType, serializer);
+            obj["IsResolved"] = f.IsResolved();
         }
         else if (value is TypeSymbol t) {
         }

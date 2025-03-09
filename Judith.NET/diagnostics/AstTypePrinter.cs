@@ -30,7 +30,7 @@ public class AstTypePrinter : SyntaxVisitor {
 
         TypedNodes.Add(
             $"\nFuncDef: {node.Identifier.Name} ({node.Parameters.Parameters.Count}) " +
-            $"- Type: {FQN(boundNode.Overload.ReturnType)}"
+            $"- Type: {FQN(boundNode.Symbol.ReturnType)}"
         );
 
         base.Visit(node);

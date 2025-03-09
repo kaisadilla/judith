@@ -67,15 +67,12 @@ public class Binder {
     }
 
     public BoundFunctionDefinition BindFunctionDefinition (
-        FunctionDefinition funcDef,
-        FunctionSymbol symbol,
-        FunctionOverloadSymbol overload,
-        SymbolTable scope
+        FunctionDefinition funcDef, FunctionSymbol symbol, SymbolTable scope
     ) {
         if (TryGetBoundNode(
             funcDef, out BoundFunctionDefinition? boundFuncDef
         ) == false) {
-            boundFuncDef = new(funcDef, symbol, overload, scope);
+            boundFuncDef = new(funcDef, symbol, scope);
             BoundNodes[funcDef] = boundFuncDef;
         }
 

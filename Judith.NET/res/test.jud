@@ -3,8 +3,8 @@ const i2 = 1
 const cycles = 20
 
 fib_recur(i1, i2, cycles)
-print("")
-print("Fiboňácĉi for you!")
+print_str("")
+print_str("Fiboňácĉi for you!")
 
 func _old_fib (var a, b, const cycles: Num)
     var i = 0
@@ -31,6 +31,6 @@ func print (n: Num)
     __p_print n
 end
 
-func print (str: String)
+func print_str (str: String)
     __p_print str
 end
