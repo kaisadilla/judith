@@ -22,7 +22,7 @@ public class FunctionSymbol : Symbol {
     /// <summary>
     /// Returns true if this function's overload types are all resolved.
     /// </summary>
-    public bool IsResolved () {
+    public bool AreParamsResolved () {
         foreach (var type in ParamTypes) {
             if (TypeSymbol.IsResolved(type) == false) return false;
         }

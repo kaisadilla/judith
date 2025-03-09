@@ -54,8 +54,8 @@ public class SymbolTableBuilder : SyntaxVisitor {
         var symbol = _scope.Current.AddSymbol(
             tbl => new FunctionSymbol(tbl, paramTypes, name, tbl.Qualify(name))
         );
+        symbol.Type = _cmp.Native.Types.Function;
         var scope = _scope.Current.CreateChildTable(ScopeKind.FunctionBlock, symbol);
-
         _scope.BeginScope(scope);
         Visit(node.Parameters);
         Visit(node.Body);

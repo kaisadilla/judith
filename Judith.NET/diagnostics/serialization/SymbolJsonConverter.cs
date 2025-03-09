@@ -47,7 +47,7 @@ public class SymbolJsonConverter : JsonConverter<Symbol> {
         if (value is FunctionSymbol f) {
             obj["ParamTypes"] = JToken.FromObject(f.ParamTypes, serializer);
             obj["ReturnType"] = f.ReturnType == null ? null : JToken.FromObject(f.ReturnType, serializer);
-            obj["IsResolved"] = f.IsResolved();
+            obj["IsResolved"] = f.AreParamsResolved();
         }
         else if (value is TypeSymbol t) {
         }

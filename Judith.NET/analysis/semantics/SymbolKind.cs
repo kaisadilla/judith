@@ -12,6 +12,7 @@ public enum SymbolKind {
     PrimitiveType,
     StringType,
     CharType,
+    FunctionType,
     AliasType,
     UnionType,
     SetType,

@@ -70,10 +70,6 @@ public class ProjectCompilation : ICompilation {
         // 5. Resolve types & 6. Resolve block types.
         ResolveTypes();
         if (Messages.HasErrors) return;
-        ResolveTypes();
-        if (Messages.HasErrors) return;
-        ResolveTypes();
-        if (Messages.HasErrors) return;
 
         // 7. Evaluate wellformedness (semantically).
         // 7.1. Type analysis.
@@ -98,6 +94,14 @@ public class ProjectCompilation : ICompilation {
             typeResolver.Analyze(cu);
         }
         Messages.Add(typeResolver.Messages);
+
+        int passes = 0; // TODO: Temporary.
+        while (typeResolver.IsComplete == false) {
+            typeResolver.CompleteAnalysis();
+            passes++;
+
+            if (passes > 256) throw new("256 passes???");
+        }
 
         BlockTypeResolver blockTypeResolver = new(this);
         foreach (var cu in Units) {

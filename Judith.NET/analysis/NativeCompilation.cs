@@ -23,36 +23,37 @@ public class NativeCompilation : ICompilation {
     public static NativeCompilation Ver1 () {
         var nc = new NativeCompilation();
         nc.Types = new() {
-            Unresolved = nc.AddPseudoType(SymbolKind.UnresolvedType, "!Unresolved", "#"),
-            UnresolvedFunction = nc.AddPseudoType(SymbolKind.UnresolvedType, "!Function", "#"),
+            Unresolved = nc.AddPseudoType(SymbolKind.UnresolvedType, "!Unresolved"),
 
-            Error = nc.AddPseudoType(SymbolKind.ErrorType, "<error-type", "#"),
+            Error = nc.AddPseudoType(SymbolKind.ErrorType, "<error-type"),
 
-            NoType = nc.AddPseudoType(SymbolKind.PseudoType, "<no-type>", "#"),
-            Anonymous = nc.AddPseudoType(SymbolKind.PseudoType, "<anonymous-object>", "#"),
-            Void = nc.AddType(SymbolKind.PseudoType, "Void", "V"),
+            NoType = nc.AddPseudoType(SymbolKind.PseudoType, "<no-type>"),
+            Anonymous = nc.AddPseudoType(SymbolKind.PseudoType, "<anonymous-object>"),
+            Void = nc.AddType(SymbolKind.PseudoType, "Void"),
 
-            F32 = nc.AddType(SymbolKind.PrimitiveType, "F32", "F32"),
-            F64 = nc.AddType(SymbolKind.PrimitiveType, "F64", "F64"),
+            F32 = nc.AddType(SymbolKind.PrimitiveType, "F32"),
+            F64 = nc.AddType(SymbolKind.PrimitiveType, "F64"),
 
-            I8 = nc.AddType(SymbolKind.PrimitiveType, "I8", "I8"),
-            I16 = nc.AddType(SymbolKind.PrimitiveType, "I16", "I16"),
-            I32 = nc.AddType(SymbolKind.PrimitiveType, "I32", "I32"),
-            I64 = nc.AddType(SymbolKind.PrimitiveType, "I64", "I64"),
+            I8 = nc.AddType(SymbolKind.PrimitiveType, "I8"),
+            I16 = nc.AddType(SymbolKind.PrimitiveType, "I16"),
+            I32 = nc.AddType(SymbolKind.PrimitiveType, "I32"),
+            I64 = nc.AddType(SymbolKind.PrimitiveType, "I64"),
 
-            Ui8 = nc.AddType(SymbolKind.PrimitiveType, "Ui8", "U8"),
-            Ui16 = nc.AddType(SymbolKind.PrimitiveType, "Ui16", "U16"),
-            Ui32 = nc.AddType(SymbolKind.PrimitiveType, "Ui32", "U32"),
-            Ui64 = nc.AddType(SymbolKind.PrimitiveType, "Ui64", "U64"),
+            Ui8 = nc.AddType(SymbolKind.PrimitiveType, "Ui8"),
+            Ui16 = nc.AddType(SymbolKind.PrimitiveType, "Ui16"),
+            Ui32 = nc.AddType(SymbolKind.PrimitiveType, "Ui32"),
+            Ui64 = nc.AddType(SymbolKind.PrimitiveType, "Ui64"),
 
-            Bool = nc.AddType(SymbolKind.PrimitiveType, "Bool", "B"),
-            String = nc.AddType(SymbolKind.StringType, "String", "S"),
-            Char = nc.AddType(SymbolKind.CharType, "Char", "C"),
+            Bool = nc.AddType(SymbolKind.PrimitiveType, "Bool"),
+            String = nc.AddType(SymbolKind.StringType, "String"),
+            Char = nc.AddType(SymbolKind.CharType, "Char"),
 
-            Byte = nc.AddType(SymbolKind.AliasType, "Byte", "U8"),
-            Int = nc.AddType(SymbolKind.AliasType, "Int", "I64"),
-            Float = nc.AddType(SymbolKind.AliasType, "Float", "F64"),
-            Num = nc.AddType(SymbolKind.AliasType, "Num", "F64"),
+            Byte = nc.AddType(SymbolKind.AliasType, "Byte"),
+            Int = nc.AddType(SymbolKind.AliasType, "Int"),
+            Float = nc.AddType(SymbolKind.AliasType, "Float"),
+            Num = nc.AddType(SymbolKind.AliasType, "Num"),
+
+            Function = nc.AddType(SymbolKind.FunctionType, "Function"),
         };
         nc.Types.Init();
 
@@ -129,12 +130,12 @@ public class NativeCompilation : ICompilation {
         }
     }
 
-    private TypeSymbol AddPseudoType (SymbolKind kind, string name, string signatureName) {
-        return _pseudoSymbols.AddSymbol(TypeSymbol.Define(kind, name, signatureName));
+    private TypeSymbol AddPseudoType (SymbolKind kind, string name) {
+        return _pseudoSymbols.AddSymbol(TypeSymbol.Define(kind, name));
     }
 
-    private TypeSymbol AddType (SymbolKind kind, string name, string signatureName) {
-        return SymbolTable.AddSymbol(TypeSymbol.Define(kind, name, signatureName));
+    private TypeSymbol AddType (SymbolKind kind, string name) {
+        return SymbolTable.AddSymbol(TypeSymbol.Define(kind, name));
     }
 
     public class TypeCollection {
@@ -142,7 +143,6 @@ public class NativeCompilation : ICompilation {
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         // Unresolved types:
         public TypeSymbol Unresolved { get; init; }
-        public TypeSymbol UnresolvedFunction { get; init; }
 
         // Error types:
         public TypeSymbol Error { get; init; }
@@ -178,11 +178,12 @@ public class NativeCompilation : ICompilation {
         public TypeSymbol Int { get; init; } // Default: I64
         public TypeSymbol Float { get; init; } // Default: F64
         public TypeSymbol Num { get; init; } // Default: Float
+
+        public TypeSymbol Function { get; init; } // TODO: Turn into FuncTypeSymbol
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
         public void Init () {
             Unresolved.Type = NoType;
-            UnresolvedFunction.Type = NoType;
 
             Error.Type = NoType;
 
@@ -211,6 +212,8 @@ public class NativeCompilation : ICompilation {
             Int.Type = NoType;
             Float.Type = NoType;
             Num.Type = NoType;
+
+            Function.Type = NoType;
         }
     }
 }

@@ -21,22 +21,13 @@ public class TypeResolver : SyntaxVisitor {
     private readonly ProjectCompilation _cmp;
     private readonly ScopeResolver _scope;
 
-    private Dictionary<SyntaxNode, NodeState> _nodeStates = [];
-
-    /// <summary>
-    /// The amount of nodes that were partially or fully resolved in the last
-    /// pass.
-    /// </summary>
-    public int Resolutions { get; private set; } = 0;
-    /// <summary>
-    /// The amount of nodes that are still unresolved.
-    /// </summary>
-    public int IncompleteNodes => _nodeStates.Values.Count(
-        v => v != NodeState.Completed
-    );
+    private NodeStateManager _nodeStates = new();
+    private bool _resolutionMade = false;
 
     private Binder Binder => _cmp.Binder;
     private NativeCompilation.TypeCollection NativeTypes => _cmp.Native.Types;
+
+    public bool IsComplete => _nodeStates.AreAllComplete();
 
     public TypeResolver (ProjectCompilation cmp) {
         _cmp = cmp;
@@ -51,8 +42,22 @@ public class TypeResolver : SyntaxVisitor {
         if (unit.ImplicitFunction != null) Visit(unit.ImplicitFunction);
     }
 
+    public void CompleteAnalysis () {
+        var incompleteNodes = _nodeStates.GetIncompleteNodes();
+
+        foreach (var node in incompleteNodes) {
+            if (_nodeStates.TryGetScope(node, out var scope) == false) throw new(
+                "Incomplete node should have a scope linked to it."
+            );
+
+            _scope.BeginScope(scope);
+            Visit(node);
+            // Do not end scope, we may be in the global scope.
+        }
+    }
+
     public override void Visit (FunctionDefinition node) {
-        bool resolved = true;
+        bool isResolved = true;
 
         var boundNode = Binder.GetBoundNodeOrThrow<BoundFunctionDefinition>(node);
 
@@ -75,22 +80,21 @@ public class TypeResolver : SyntaxVisitor {
                 boundNode.Symbol.ReturnType = NativeTypes.Void;
             }
 
-            if (TypeSymbol.IsResolved(boundNode.Symbol.ReturnType)) {
-                Resolutions++;
-            }
-            else {
-                resolved = false;
-            }
+            isResolved = TypeSymbol.IsResolved(boundNode.Symbol.ReturnType);
         }
 
-        if (boundNode.Symbol.IsResolved() == false) {
+        if (boundNode.Symbol.AreParamsResolved() == false) {
             // ParamTypes will always be the same size as overload's param types.
             var paramTypes = Binder.GetParamTypes(node.Parameters);
 
             for (int i = 0; i < paramTypes.Count; i++) {
                 boundNode.Symbol.ParamTypes[i] = paramTypes[i];
             }
+            
+            isResolved = isResolved && boundNode.Symbol.AreParamsResolved();
         }
+
+        _nodeStates.Mark(node, isResolved, _scope.Current);
     }
 
     public override void Visit (StructTypeDefinition node) {
@@ -99,6 +103,8 @@ public class TypeResolver : SyntaxVisitor {
         _scope.BeginScope(node);
         Visit(node.MemberFields);
         _scope.EndScope();
+
+        _nodeStates.Mark(node, true, _scope.Current);
     }
 
     public override void Visit (LocalDeclarationStatement node) {
@@ -122,6 +128,8 @@ public class TypeResolver : SyntaxVisitor {
             }
         }
 
+        bool isResolved = true;
+
         var inheritedType = implicitType; // Scaffolding.
         foreach (var localDecl in node.DeclaratorList.Declarators) {
             var boundLocalDecl = Binder.GetBoundNodeOrThrow<BoundLocalDeclarator>(localDecl);
@@ -136,10 +144,14 @@ public class TypeResolver : SyntaxVisitor {
                 }
 
                 boundLocalDecl.Type = boundLocalDecl.Symbol.Type;
+
+                isResolved = isResolved && TypeSymbol.IsResolved(boundLocalDecl.Type);
             }
 
             implicitType = boundLocalDecl.Type ?? NativeTypes.Unresolved;
         }
+
+        _nodeStates.Mark(node, isResolved, _scope.Current);
     }
 
     public override void Visit (ReturnStatement node) {
@@ -157,15 +169,23 @@ public class TypeResolver : SyntaxVisitor {
 
             boundNode.Type = boundExpr.Type;
         }
+
+        bool isResolved = TypeSymbol.IsResolved(boundNode.Type);
+        _nodeStates.Mark(node, isResolved, _scope.Current);
     }
 
     public override void Visit (YieldStatement node) {
         var boundNode = _cmp.Binder.BindYieldStatement(node);
 
+        if (TypeSymbol.IsResolved(boundNode.Type)) return;
+
         Visit(node.Expression);
 
         var boundExpr = _cmp.Binder.GetBoundNodeOrThrow<BoundExpression>(node.Expression);
         boundNode.Type = boundExpr.Type;
+
+        bool isResolved = TypeSymbol.IsResolved(boundNode.Type);
+        _nodeStates.Mark(node, isResolved, _scope.Current);
     }
 
     public override void Visit (IfExpression node) {
@@ -186,6 +206,8 @@ public class TypeResolver : SyntaxVisitor {
         }
 
         _scope.EndScope();
+
+        _nodeStates.Mark(node, true, _scope.Current);
     }
 
     public override void Visit (WhileExpression node) {
@@ -194,6 +216,8 @@ public class TypeResolver : SyntaxVisitor {
         _scope.BeginScope(node);
         Visit(node.Body);
         _scope.EndScope();
+
+        _nodeStates.Mark(node, true, _scope.Current);
     }
 
     public override void Visit (AssignmentExpression node) {
@@ -206,6 +230,9 @@ public class TypeResolver : SyntaxVisitor {
 
         var boundRight = _cmp.Binder.GetBoundNodeOrThrow<BoundExpression>(node.Right);
         boundNode.Type = boundRight.Type ?? NativeTypes.Unresolved;
+
+        bool isResolved = TypeSymbol.IsResolved(boundNode.Type);
+        _nodeStates.Mark(node, isResolved, _scope.Current);
     }
 
     public override void Visit (BinaryExpression node) {
@@ -224,7 +251,7 @@ public class TypeResolver : SyntaxVisitor {
             case OperatorKind.Multiply:
             case OperatorKind.Divide:
                 ResolveMathOperation();
-                return;
+                break;
 
             // Comparisons - they always return bool.
             case OperatorKind.Equals:
@@ -237,13 +264,13 @@ public class TypeResolver : SyntaxVisitor {
             case OperatorKind.GreaterThan:
             case OperatorKind.GreaterThanOrEqualTo:
                 boundNode.Type = _cmp.Native.Types.Bool;
-                return;
+                break;
 
             // Logical and / or - they return a union of both types.
             case OperatorKind.LogicalAnd:
             case OperatorKind.LogicalOr:
                 boundNode.Type = _cmp.Native.Types.Bool; // TODO: Scaffolding.
-                return;
+                break;
 
             // Operators that aren't used in binary expressions:
             case OperatorKind.Assignment:
@@ -255,6 +282,9 @@ public class TypeResolver : SyntaxVisitor {
                     $"'{node.Operator.OperatorKind}'."
                 );
         }
+
+        bool isResolved = TypeSymbol.IsResolved(boundNode.Type);
+        _nodeStates.Mark(node, isResolved, _scope.Current);
 
         void ResolveMathOperation () {
             var opKind = node.Operator.OperatorKind;
@@ -301,6 +331,9 @@ public class TypeResolver : SyntaxVisitor {
         var boundExpr = Binder.GetBoundNodeOrThrow<BoundExpression>(node.Expression);
 
         boundNode.Type = boundExpr.Type ?? NativeTypes.Unresolved;
+
+        bool isResolved = TypeSymbol.IsResolved(boundNode.Type);
+        _nodeStates.Mark(node, isResolved, _scope.Current);
     }
 
     public override void Visit (ObjectInitializationExpression node) {
@@ -311,6 +344,8 @@ public class TypeResolver : SyntaxVisitor {
 
         if (node.Provider == null) {
             boundNode.Type = NativeTypes.Anonymous;
+
+            _nodeStates.Mark(node, true, _scope.Current);
             return;
         }
         
@@ -318,12 +353,17 @@ public class TypeResolver : SyntaxVisitor {
 
         if (boundProvider is not IBoundIdentifyingExpression boundProvAsId) {
             Messages.Add(CompilerMessage.Analyzers.TypeExpected(node.Provider.Line));
+            boundNode.Type = NativeTypes.Error;
+
+            _nodeStates.Mark(node, true, _scope.Current);
             return;
         }
 
         // If the provider hasn't been resolved, we can't resolve this node either.
         if (TypeSymbol.IsResolved(boundProvAsId.Type) == false) {
             boundNode.Type = NativeTypes.Unresolved;
+
+            _nodeStates.Mark(node, false, _scope.Current);
             return;
         }
 
@@ -333,6 +373,9 @@ public class TypeResolver : SyntaxVisitor {
         else {
             boundNode.Type = boundProvAsId.Type;
         }
+
+        bool isResolved = TypeSymbol.IsResolved(boundNode.Type);
+        _nodeStates.Mark(node, isResolved, _scope.Current);
     }
 
     public override void Visit (CallExpression node) {
@@ -343,11 +386,6 @@ public class TypeResolver : SyntaxVisitor {
 
         if (TypeSymbol.IsResolved(boundNode.Type)) return;
         boundNode.Type = NativeTypes.Unresolved;
-
-        var paramTypes = GetOverload(node.Arguments);
-        foreach (var type in paramTypes) {
-            if (TypeSymbol.IsResolved(type) == false) return;
-        }
 
         if (node.Callee.Kind == SyntaxKind.IdentifierExpression) {
             var boundCallee = Binder.GetBoundNodeOrThrow<BoundIdentifierExpression>(
@@ -362,6 +400,9 @@ public class TypeResolver : SyntaxVisitor {
                 throw new NotImplementedException("Cannot call dynamically yet!");
             }
         }
+
+        bool isResolved = TypeSymbol.IsResolved(boundNode.Type);
+        _nodeStates.Mark(node, isResolved, _scope.Current);
     }
 
     public override void Visit (AccessExpression node) {
@@ -392,7 +433,9 @@ public class TypeResolver : SyntaxVisitor {
 
             var boundNode = _cmp.Binder.BindAccessExpression(node, member);
             boundNode.Type = member.Type;
-            // TODO: Mark as complete.
+
+            bool isResolved = TypeSymbol.IsResolved(boundNode.Type);
+            _nodeStates.Mark(node, isResolved, _scope.Current);
         }
         else {
             if (boundReceiver.Type != NativeTypes.NoType) {
@@ -414,6 +457,9 @@ public class TypeResolver : SyntaxVisitor {
         var boundExpr = _cmp.Binder.GetBoundNodeOrThrow<BoundExpression>(node.Expression);
 
         boundNode.Type = boundExpr.Type ?? NativeTypes.Unresolved;
+
+        bool isResolved = TypeSymbol.IsResolved(boundNode.Type);
+        _nodeStates.Mark(node, isResolved, _scope.Current);
     }
 
     public override void Visit (IdentifierExpression node) {
@@ -428,16 +474,17 @@ public class TypeResolver : SyntaxVisitor {
         else {
             boundNode.Type = boundNode.Symbol.Type ?? NativeTypes.Unresolved;
         }
+
+        bool isResolved = TypeSymbol.IsResolved(boundNode.Type);
+        _nodeStates.Mark(node, isResolved, _scope.Current);
     }
 
     public override void Visit (LiteralExpression node) {
         _cmp.Binder.BindLiteralExpression(node);
 
         // Type calculation is done by the binder.
-    }
 
-    public override void Visit (EqualsValueClause node) {
-        Visit(node.Value);
+        _nodeStates.Mark(node, true, _scope.Current);
     }
 
     public override void Visit (Parameter node) {
@@ -450,15 +497,18 @@ public class TypeResolver : SyntaxVisitor {
 
         Visit(node.Declarator.TypeAnnotation);
 
-        var boundParam = Binder.GetBoundNodeOrThrow<BoundParameter>(node);
+        var boundNode = Binder.GetBoundNodeOrThrow<BoundParameter>(node);
 
-        if (TypeSymbol.IsResolved(boundParam.Symbol.Type)) return;
+        if (TypeSymbol.IsResolved(boundNode.Symbol.Type)) return;
 
         var boundAnnot = Binder.GetBoundNodeOrThrow<BoundTypeAnnotation>(
             node.Declarator.TypeAnnotation
         );
 
-        boundParam.Symbol.Type = boundAnnot.Type;
+        boundNode.Symbol.Type = boundAnnot.Type;
+
+        bool isResolved = TypeSymbol.IsResolved(boundNode.Symbol.Type);
+        _nodeStates.Mark(node, isResolved, _scope.Current);
     }
 
     public override void Visit (MemberField node) {
@@ -472,25 +522,13 @@ public class TypeResolver : SyntaxVisitor {
         );
 
         boundNode.Symbol.Type = boundAnnot.Type;
+
+        bool isResolved = TypeSymbol.IsResolved(boundNode.Symbol.Type);
+        _nodeStates.Mark(node, isResolved, _scope.Current);
     }
 
 
     private TypeSymbol GetType (TypeAnnotation node) {
         return Binder.GetBoundNodeOrThrow<BoundTypeAnnotation>(node).Type;
-    }
-
-
-    private List<TypeSymbol> GetOverload (ArgumentList args) {
-        List<TypeSymbol> overload = [];
-
-        foreach (var arg in args.Arguments) {
-            var boundArg = _cmp.Binder.GetBoundNodeOrThrow<BoundExpression>(
-                arg.Expression
-            );
-
-            overload.Add(boundArg.Type ?? NativeTypes.Unresolved);
-        }
-
-        return overload;
     }
 }

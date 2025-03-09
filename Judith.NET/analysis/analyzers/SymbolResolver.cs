@@ -54,7 +54,7 @@ public class SymbolResolver : SyntaxVisitor {
 
         if (_nodeStates.IsComplete(node) == false) {
             Resolutions++;
-            _nodeStates.Completed(node);
+            _nodeStates.Mark(node, true, _scope.Current);
         }
     }
 
@@ -79,7 +79,7 @@ public class SymbolResolver : SyntaxVisitor {
 
         if (_nodeStates.IsComplete(node) == false) {
             Resolutions++;
-            _nodeStates.Completed(node);
+            _nodeStates.Mark(node, true, _scope.Current);
         }
     }
 
@@ -92,7 +92,7 @@ public class SymbolResolver : SyntaxVisitor {
 
         if (_nodeStates.IsComplete(node) == false) {
             Resolutions++;
-            _nodeStates.Completed(node);
+            _nodeStates.Mark(node, true, _scope.Current);
         }
     }
 
@@ -106,7 +106,7 @@ public class SymbolResolver : SyntaxVisitor {
         Visit(node.Receiver);
 
         Resolutions++;
-        _nodeStates.Completed(node);
+        _nodeStates.Mark(node, true, _scope.Current);
     }
 
     public override void Visit (IdentifierExpression node) {
@@ -127,7 +127,7 @@ public class SymbolResolver : SyntaxVisitor {
         }
 
         Resolutions++;
-        _nodeStates.Completed(node);
+        _nodeStates.Mark(node, true, _scope.Current);
     }
 
     public override void Visit (TypeAnnotation node) {
@@ -148,7 +148,7 @@ public class SymbolResolver : SyntaxVisitor {
 
 
         Resolutions++;
-        _nodeStates.Completed(node);
+        _nodeStates.Mark(node, true, _scope.Current);
     }
 
     private T GetBoundNodeOrThrow<T> (SyntaxNode node) where T : BoundNode {
