@@ -57,4 +57,7 @@ public class Identifier : SyntaxNode {
             IsEscaped = false;
         }
     }
+    public override string ToString () {
+        return $"{Kind} ({Name}) [Line: {Line}, Span: {Span.Start} - {Span.End}]";
+    }
 }

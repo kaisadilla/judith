@@ -32,6 +32,12 @@ public class SymbolTable {
     public string Name { get; protected set; }
 
     /// <summary>
+    /// The owner of this table.
+    /// </summary>
+    [JsonIgnore]
+    public ICompilation? Owner { get; init; }
+
+    /// <summary>
     /// The table that contains this table, if any.
     /// </summary>
     [JsonIgnore]
@@ -91,9 +97,11 @@ public class SymbolTable {
         Symbol = symbol;
     }
 
-    public static SymbolTable CreateGlobalTable () {
+    public static SymbolTable CreateGlobalTable (ICompilation? owner) {
         Symbol symbol = new(null!, SymbolKind.Module, "", "");
-        SymbolTable tbl = new(ScopeKind.Global, "", null, symbol);
+        SymbolTable tbl = new(ScopeKind.Global, "", null, symbol) {
+            Owner = owner,
+        };
         tbl.Symbol!.Table = tbl;
 
         return tbl;
@@ -157,19 +165,6 @@ public class SymbolTable {
         return symbol;
     }
 
-    public (FunctionOverloadSymbol, SymbolTable) AddOverloadSymbol (
-        string name, Func<SymbolTable, string, FunctionOverloadSymbol> createSymbol
-    ) {
-        name = GetAvailableName(name);
-
-        var symbol = createSymbol(this, name);
-        Symbols[name] = symbol;
-
-        var scope = CreateChildTable(ScopeKind.FunctionBlock, symbol);
-
-        return (symbol, scope);
-    }
-
     /// <summary>
     /// Creates a child table of the kind given. If the symbol is null, an
     /// anonymous table will be created. If the symbol's name already exist,
@@ -184,7 +179,9 @@ public class SymbolTable {
         // The name under which the scope will be indexed.
         string name = GetAvailableName(symbol?.Name ?? "<anonymous-scope>");
 
-        SymbolTable tbl = new(kind, name, this, symbol);
+        SymbolTable tbl = new(kind, name, this, symbol) {
+            Owner = Owner,
+        };
 
         ChildTables[name] = tbl;
         return tbl;

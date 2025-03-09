@@ -83,7 +83,8 @@ public class JasmGenerator : SyntaxVisitor {
 
         void _AddFunction (FunctionDefinition func) {
             var boundFunc = _cmp.Binder.GetBoundNodeOrThrow<BoundFunctionDefinition>(func);
-            FunctionRefs.Add(boundFunc.Symbol.FullyQualifiedName, new(
+
+            FunctionRefs.Add(boundFunc.Overload.GetSignatureString(), new(
                 block: blockIndex,
                 index: functionCount
             ));

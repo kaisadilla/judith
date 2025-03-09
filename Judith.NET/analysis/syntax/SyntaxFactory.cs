@@ -268,8 +268,8 @@ public static class SyntaxFactory {
         Expression? receiver, Operator op, Identifier member
     ) {
         var accessExpr = new AccessExpression(receiver, op, member);
-        accessExpr.SetSpan(new(receiver.Span.Start, member.Span.End));
-        accessExpr.SetLine(receiver.Line);
+        accessExpr.SetSpan(new(receiver?.Span.Start ?? op.Span.Start, member.Span.End));
+        accessExpr.SetLine(receiver?.Line ?? op.Line);
 
         return accessExpr;
     }

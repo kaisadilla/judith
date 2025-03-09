@@ -15,9 +15,13 @@ public class Symbol {
     /// The symbol table this symbol belongs to.
     /// </summary>
     public SymbolTable Table { get; set; }
+
     public SymbolKind Kind { get; set; }
+
     public string Name { get; set; }
+
     public string FullyQualifiedName { get; set; }
+
     /// <summary>
     /// The type this symbol resolves to when used. Locals will resolve to the
     /// type they were assigned, functions will resolve to function types, and
@@ -25,7 +29,7 @@ public class Symbol {
     /// This CANNOT be used to resolve the type of a typedef, as the symbol
     /// itself is the type.
     /// </summary>
-    public TypeSymbol? Type { get; set; } // TODO: For functions, this is the type of the function signature (e.g. (Int, Int) => Void), not the return type, as that's determined by overloads.
+    public TypeSymbol? Type { get; set; }
 
     public Symbol (
         SymbolTable table, SymbolKind kind, string name, string fullyQualifiedName

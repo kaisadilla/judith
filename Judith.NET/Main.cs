@@ -30,6 +30,9 @@ Console.WriteLine(
     $"Total build time: {s.ElapsedMilliseconds} ms. " +
     $"Errors: {compiler.Messages.Errors.Count}."
 );
+
+PrintMessages(compiler.Messages);
+
 Console.WriteLine("Generating debug files...");
 CompilerDiagnostics.GenerateCompilationFiles(compiler, OUT_DIR, "test");
 Console.WriteLine("Debug files generated.");
@@ -43,4 +46,16 @@ if (compiler.Assembly != null) {
 
     DllDisassembler disassembler = new(compiler.Assembly);
     disassembler.Disassemble();
+}
+
+void PrintMessages (MessageContainer messages) {
+    foreach (var m in messages.Errors) {
+        Console.WriteLine("ERROR: " + m.Message);
+    }
+    foreach (var m in messages.Warnings) {
+        Console.WriteLine("WARNING: " + m.Message);
+    }
+    foreach (var m in messages.Infos) {
+        Console.WriteLine("INFO: " + m.Message);
+    }
 }

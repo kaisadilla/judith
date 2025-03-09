@@ -62,7 +62,7 @@ public class FunctionOverloadSymbol : Symbol {
             return "{{unresolved}}";
         }
 
-        var sb = new StringBuilder('(');
+        var sb = new StringBuilder(Function.Name + "(");
 
         foreach (var type in ParamTypes) {
             sb.Append(type.SignatureName);

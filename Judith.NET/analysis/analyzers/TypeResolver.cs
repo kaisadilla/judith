@@ -70,13 +70,9 @@ public class TypeResolver : SyntaxVisitor {
 
                 boundNode.Overload.ReturnType = type;
             }
-            // Else, if it's inferred from its body.
+            // Else, it's implicitly "Void".
             else {
-                var boundBody = Binder.GetBoundNodeOrThrow<BoundBlockStatement>(
-                    node.Body
-                );
-
-                boundNode.Overload.ReturnType = boundBody.Type;
+                boundNode.Overload.ReturnType = NativeTypes.Void;
             }
 
             if (TypeSymbol.IsResolved(boundNode.Overload.ReturnType)) {

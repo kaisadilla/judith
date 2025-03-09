@@ -103,8 +103,8 @@ public static class CompilerDiagnostics {
     ) {
         var gen = new AstTypePrinter(cmp);
         gen.Analyze();
-        string json = Serialize(string.Join('\n', gen.TypedNodes));
-        WriteFile(folderPath, fileName + ".node-types.txt", json);
+        string txt = string.Join('\n', gen.TypedNodes);
+        WriteFile(folderPath, fileName + ".node-types.txt", txt);
     }
 
     private static string Serialize (object o) {

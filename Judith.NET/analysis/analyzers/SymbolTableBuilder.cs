@@ -60,10 +60,12 @@ public class SymbolTableBuilder : SyntaxVisitor {
             funcSymbol = _scope.Current.AddSymbol(FunctionSymbol.Define(name));
         }
 
-        var (overloadSymbol, scope) = _scope.Current.AddOverloadSymbol(
-            name,
-            (tbl, name) => new FunctionOverloadSymbol(tbl, funcSymbol, paramTypes, name)
+        var overloadName = funcSymbol.GetNextOverloadName();
+        var overloadSymbol = new FunctionOverloadSymbol(
+            _scope.Current, funcSymbol, paramTypes, overloadName
         );
+        funcSymbol.Overloads.Add(overloadSymbol);
+        var scope = _scope.Current.CreateChildTable(ScopeKind.FunctionBlock, symbol);
 
         _scope.BeginScope(scope);
         Visit(node.Parameters);

@@ -62,4 +62,8 @@ public class Literal : SyntaxNode {
             || kind == TokenKind.KwNull
             || kind == TokenKind.KwUndefined;
     }
+
+    public override string ToString () {
+        return $"{Kind} ({Source}) [Line: {Line}, Span: {Span.Start} - {Span.End}]";
+    }
 }

@@ -43,7 +43,7 @@ public abstract class SyntaxNode {
     public abstract T? Accept<T>(SyntaxVisitor<T> visitor);
 
     public override string ToString () {
-        return $"{Kind} (Line: {Line}, Span: {Span.Start} - {Span.End})";
+        return $"{Kind} [Line: {Line}, Span: {Span.Start} - {Span.End}]";
     }
 }
 

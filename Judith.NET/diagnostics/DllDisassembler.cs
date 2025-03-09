@@ -12,8 +12,8 @@ public class DllDisassembler {
 
     public string ChunkString { get; private set; } = string.Empty;
 
-    private StringTable _stringTable = null;
-    private Chunk _chunk = null;
+    private StringTable _stringTable = null!;
+    private Chunk _chunk = null!;
 
     private static string[] _sizeUnits = ["KiB", "MiB", "GiB", "TiB"];
 

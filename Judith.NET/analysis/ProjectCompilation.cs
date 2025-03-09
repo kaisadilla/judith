@@ -5,7 +5,7 @@ using Judith.NET.message;
 
 namespace Judith.NET.analysis;
 
-public class ProjectCompilation {
+public class ProjectCompilation : ICompilation {
     public MessageContainer Messages { get; private set; } = new();
 
     /// <summary>
@@ -31,14 +31,14 @@ public class ProjectCompilation {
 
         Dependencies = dependencies;
         Units = units;
-        SymbolTable = SymbolTable.CreateGlobalTable();
+        SymbolTable = SymbolTable.CreateGlobalTable(this);
         Binder = new(this);
         Native = native;
         TypeTable = new();
     }
 
     public void Analyze () {
-        // Add implicit nodes (such as implicit return statements) to the tree.
+        // 1. Add implicit nodes.
         ImplicitNodeAnalyzer implicitNodeAnalyzer = new(this);
         foreach (var cu in Units) {
             implicitNodeAnalyzer.Analyze(cu);
@@ -46,8 +46,10 @@ public class ProjectCompilation {
         Messages.Add(implicitNodeAnalyzer.Messages);
         if (Messages.HasErrors) return;
 
-        // TODO: -1. Evaluate wellformedness (semantically agnostic)
+        // 2. Evaluate wellformedness (semantically agnostic).
+        // TODO.
 
+        // 3. Build symbol table.
         // Add all the different symbols that exist in the program to the table,
         // and binds declarations to the symbols they create.
         SymbolTableBuilder symbolTableBuilder = new(this);
@@ -56,6 +58,7 @@ public class ProjectCompilation {
         }
         if (Messages.HasErrors) return;
 
+        // 4. Resolve symbols.
         // Resolves which symbol each identifier is referring to.
         SymbolResolver symbolResolver = new(this);
         foreach (var cu in Units) {
@@ -64,6 +67,7 @@ public class ProjectCompilation {
         Messages.Add(symbolResolver.Messages);
         if (Messages.HasErrors) return;
 
+        // 5. Resolve types & 6. Resolve block types.
         ResolveTypes();
         if (Messages.HasErrors) return;
         ResolveTypes();
@@ -71,14 +75,14 @@ public class ProjectCompilation {
         ResolveTypes();
         if (Messages.HasErrors) return;
 
+        // 7. Evaluate wellformedness (semantically).
+        // 7.1. Type analysis.
         TypeAnalyzer typeAnalizer = new(this);
         foreach (var cu in Units) {
             typeAnalizer.Analyze(cu);
         }
         Messages.Add(typeAnalizer.Messages);
         if (Messages.HasErrors) return;
-
-        //Binder.ResolveIncomplete();
 
         Messages.Add(Binder.Messages);
 

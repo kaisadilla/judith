@@ -8,14 +8,17 @@ using System.Threading.Tasks;
 namespace Judith.NET.analysis;
 
 public class NativeCompilation : ICompilation {
-    public SymbolTable SymbolTable { get; } = SymbolTable.CreateGlobalTable();
+    public SymbolTable SymbolTable { get; }
     public TypeTable TypeTable { get; } = new();
 
     public TypeCollection Types { get; private set; } = new();
 
-    private SymbolTable _pseudoSymbols = SymbolTable.CreateGlobalTable();
+    private SymbolTable _pseudoSymbols;
 
-    private NativeCompilation () { }
+    private NativeCompilation () {
+        SymbolTable = SymbolTable.CreateGlobalTable(this);
+        _pseudoSymbols = SymbolTable.CreateGlobalTable(this);
+    }
 
     public static NativeCompilation Ver1 () {
         var nc = new NativeCompilation();

@@ -82,6 +82,7 @@ public enum TokenKind {
     KwGoto,
     KwFunc,
     KwGenerator,
+    KwOper,
     KwTypedef,
     KwStruct,
     KwInterface,

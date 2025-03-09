@@ -31,12 +31,12 @@ public class FunctionRefTable {
         get => Array[i];
     }
 
-    public void Add (string fullyQualifiedName, FunctionRef functionRef) {
-        if (_dictionary.ContainsKey(fullyQualifiedName)) {
-            throw new($"Function definition for '{fullyQualifiedName}' already exists.");
+    public void Add (string signature, FunctionRef functionRef) {
+        if (_dictionary.ContainsKey(signature)) {
+            throw new($"Function definition for '{signature}' already exists.");
         }
         Array.Add(functionRef);
-        _dictionary[fullyQualifiedName] = Array.Count - 1;
+        _dictionary[signature] = Array.Count - 1;
     }
 
     public bool TryGetFunctionRef (string fullyQualifiedName, out int index) {

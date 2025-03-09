@@ -17,17 +17,44 @@ public class SymbolJsonConverter : JsonConverter<Symbol> {
             ["FullyQualifiedName"] = JToken.FromObject(value.FullyQualifiedName, serializer),
         };
 
-        if (value.Type == value) {
-            obj["Type"] = "(itself)";
-        }
-        else {
-            obj["Type"] = value.Type != null ? JToken.FromObject(value.Type, serializer) : null;
-        }
+        //if (value.Type == value) {
+        //    obj["Type"] = "(itself)";
+        //}
+        //else if (value.Name == "!Undefined") {
+        //    obj["Type"] = "=> !Undefined";
+        //}
+        //else if (value.Name == "!Function") {
+        //    obj["Type"] = "=> !Function";
+        //}
+        //else if (value.Name == "<no-type>") {
+        //    obj["Type"] = "=> <no-type>";
+        //}
+        //else if (value.Name == "<error-type>") {
+        //    obj["Type"] = "=> <error-type>";
+        //}
+        //else if (value.Name == "<anonymous-type>") {
+        //    obj["Type"] = "=> <anonymous-type>";
+        //}
+        //else if (value.Name == "Void") {
+        //    obj["Type"] = "=> Void";
+        //}
+        //else {
+        //    obj["Type"] = value.Type != null ? JToken.FromObject(value.Type, serializer) : null;
+        //}
 
-        if (value is FunctionSymbol funcSymbol) {
-            obj["Overloads"] = JToken.FromObject(funcSymbol.Overloads, serializer);
+        obj["Type"] = value.Type == null ? null : $"=> {value.Type?.FullyQualifiedName}";
+
+        if (value is FunctionSymbol f) {
+            obj["Overloads"] = JToken.FromObject(f.Overloads, serializer);
         }
-        else if (value is TypeSymbol typeSymbol) {
+        else if (value is FunctionOverloadSymbol fol) {
+            obj["ParamTypes"] = JToken.FromObject(fol.ParamTypes, serializer);
+            obj["ReturnType"] = fol.ReturnType == null ? null : JToken.FromObject(fol.ReturnType, serializer);
+            obj["IsDuplicate"] = fol.IsDuplicate;
+            obj["IsResolved"] = fol.IsResolved();
+            obj["Signature"] = fol.GetSignatureString();
+        }
+        else if (value is TypeSymbol t) {
         }
 
         obj.WriteTo(writer);

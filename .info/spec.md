@@ -955,6 +955,76 @@ You can call a value of a function type as if it was a function:
 binary_op(5, 8) -- Returns '40', as "binary_op" points to "multiply()".
 ```
 
+## Lambda functions
+Functions can be defined with lambda syntax. Functions defined as lambda syntax are expressions and evaluate to the function itself.
+
+```judith
+const add = (a: Num, b: Num) : Num
+    return a + b
+end
+```
+
+In this example, we can see every feature of a lambda function, although most of them can be omitted. The type annotation in the parameters are only necessary when the type of said parameters cannot be infered from context. Return type can also be omitted - unlike regular function syntax, return type `Void` is not implied, but instead the return type is infered from usage. Finally, the body of the function can be replaced with an arrow expression. In this case, the value of the expression will become the return type of the lambda function.
+
+With all of these features, this is the shortest way to write a lambda function:
+
+```judith
+const add: (Num, Num) => Num = (a, b) => a + b
+```
+
+## Function composition
+
+### Function chaining
+Functions can be combined with the `.and_then` method. This method returns a new function that calls the function followed by a new function with the same signature:
+
+```judith
+func increase_by_2 (x: Num) : Num return x + 2 end
+func multiply_by_3 (x: Num) : Num return x * 3 end
+
+const increase_and_multiply = increase_by_2.and_then(multiply_by_3)
+
+Console::log(increase_and_multiply(10)) -- prints 36 (result of (10 + 2) * 3).
+```
+
+### Partial resolution
+Functions can be partially resolved by providing it some of its parameters, but not others. The result of partially calling a function is a new function that requires the missing parameters:
+
+```judith
+func add (x: Num, y: Num) : Num return x + y end
+
+const add_2 = add(?, 2) -- add_2's type is '(Num) => Num'.
+
+Console::log(add_2(5)) -- prints 7.
+```
+
+Casting `?` to a type may be needed to disambiguate between function overloads.
+
+```judith
+func do_something(x: Num, y: Num) : Num end
+func do_something(x: String, y: Num) : Num end
+
+const partial = do_something(?:String, 5)
+```
+
+This can be combined with function chaining:
+
+```judith
+const increase_and_multiply = add_2(?, 2).and_then(mult(?, 3))
+Console::log(increase_and_multiply(10)) -- prints 36 (same as above).
+```
+
+Under the hood, partial call syntax is just syntactic sugar for lambda functions. This:
+
+```judith
+const add_2 = add(?, 2)
+```
+
+is equivalent to this:
+
+```judith
+const add_2 = (x: Int) => add(x, 2)
+```
+
 # Local shadowing
 Judith allows local fields to be shadowed:
 

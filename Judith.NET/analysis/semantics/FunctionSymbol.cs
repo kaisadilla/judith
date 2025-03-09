@@ -24,6 +24,13 @@ public class FunctionSymbol : Symbol {
     }
 
     /// <summary>
+    /// Returns the first available name for an overload for this function.
+    /// </summary>
+    public string GetNextOverloadName () {
+        return $"{Name}`{Overloads.Count}";
+    }
+
+    /// <summary>
     /// Finds the overload that matches the parameter types given (in the same
     /// order). This function will not check overloads that aren't fully
     /// resolved, so failure to find an overload shouldn't be taken as an error.

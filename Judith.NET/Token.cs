@@ -120,6 +120,14 @@ public class Token {
             TokenKind.KwFunc => "func",
             TokenKind.KwGenerator => "generator",
             TokenKind.KwHid => "hid",
+            TokenKind.KwOper => "oper",
+            TokenKind.KwTypedef => "typedef",
+            TokenKind.KwStruct => "struct",
+            TokenKind.KwInterface => "interface",
+            TokenKind.KwClass => "class",
+            TokenKind.KwPub => "pub",
+            TokenKind.KwMut => "mut",
+            TokenKind.KwStatic => "static",
 
             // Private keywords
             TokenKind.PkwPrint => "__p_print",
