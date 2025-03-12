@@ -6,8 +6,8 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace Judith.NET.analysis;
-
-public interface IAssemblyHeader {
+public interface IJudithHeader {
     string Name { get; }
-    Dictionary<string, Symbol> Symbols { get; }
+    Dictionary<string, TypeSymbol> Types { get; }
+    Dictionary<string, FunctionSymbol> Functions { get; }
 }

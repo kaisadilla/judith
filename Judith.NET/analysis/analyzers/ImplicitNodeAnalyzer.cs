@@ -13,7 +13,7 @@ using RetInfo = (bool hasReturn, bool hasYield);
 internal class ImplicitNodeAnalyzer : SyntaxVisitor<RetInfo?> {
     public MessageContainer Messages { get; private set; } = new();
 
-    private readonly Compilation _cmp;
+    private readonly JudithCompilation _cmp;
     private readonly ScopeResolver _scope;
 
     private Stack<bool> _returnRequiredStack = [];
@@ -26,7 +26,7 @@ internal class ImplicitNodeAnalyzer : SyntaxVisitor<RetInfo?> {
     private bool ReturnAllowed => _returnAllowedStack.Peek();
     private bool YieldAllowed => _yieldAllowedStack.Peek();
 
-    public ImplicitNodeAnalyzer (Compilation cmp) {
+    public ImplicitNodeAnalyzer (JudithCompilation cmp) {
         _cmp = cmp;
         _scope = new(_cmp);
     }

@@ -14,7 +14,5 @@ public interface IJudithCompiler {
     List<Token>? Tokens { get; }
     List<SyntaxNode>? Ast { get; }
     List<CompilerUnit>? CompilerUnits { get; }
-    NativeHeader Native { get; }
-    List<AssemblyHeader>? Dependencies { get; }
-    Compilation? Compilation { get; }
+    JudithCompilation? Compilation { get; }
 }

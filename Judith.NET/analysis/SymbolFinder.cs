@@ -9,14 +9,10 @@ using static System.Formats.Asn1.AsnWriter;
 namespace Judith.NET.analysis;
 
 public class SymbolFinder {
-    NativeHeader _native;
-    List<AssemblyHeader> _dependencies;
-    Compilation _cmp;
+    JudithCompilation _cmp;
 
-    public SymbolFinder (Compilation cmp) {
+    public SymbolFinder (JudithCompilation cmp) {
         _cmp = cmp;
-        _native = _cmp.Native;
-        _dependencies = _cmp.Dependencies;
     }
 
     /// <summary>
@@ -39,10 +35,12 @@ public class SymbolFinder {
         // Dependencies will be searched by fully qualified name.
         var fqn = originScope.Qualify(name);
 
-        if (_native.Symbols.ContainsKey(fqn)) return true;
+        if (_cmp.Program.NativeHeader.Types.ContainsKey(fqn)) return true;
+        if (_cmp.Program.NativeHeader.Functions.ContainsKey(fqn)) return true;
 
-        foreach (var dep in _dependencies) {
-            if (dep.Symbols.ContainsKey(fqn)) return true;
+        foreach (var dep in _cmp.Program.Dependencies) {
+            if (dep.Types.ContainsKey(fqn)) return true;
+            if (dep.Functions.ContainsKey(fqn)) return true;
         }
 
         return false;
@@ -84,13 +82,19 @@ public class SymbolFinder {
             if (scope.CanBeSplit && scope.Symbol != null) {
                 var fqn = scope.Qualify(name);
 
-                if (_native.Symbols.TryGetValue(fqn, out symbol)) {
-                    return [symbol];
+                if (_cmp.Program.NativeHeader.Types.TryGetValue(fqn, out var ts)) {
+                    return [ts];
+                }
+                if (_cmp.Program.NativeHeader.Functions.TryGetValue(fqn, out var fs)) {
+                    return [fs];
                 }
 
-                foreach (var dep in _dependencies) {
-                    if (dep.Symbols.TryGetValue(fqn, out symbol)) {
-                        return [symbol];
+                foreach (var dep in _cmp.Program.Dependencies) {
+                    if (dep.Types.TryGetValue(fqn, out ts)) {
+                        return [ts];
+                    }
+                    if (dep.Functions.TryGetValue(fqn, out fs)) {
+                        return [fs];
                     }
                 }
             }

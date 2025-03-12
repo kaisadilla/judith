@@ -11,4 +11,8 @@ public readonly struct Version (int major, int minor, int patch, int build) {
     public int Minor { get; init; } = minor;
     public int Patch { get; init; } = patch;
     public int Build { get; init; } = build;
+
+    public override string ToString () {
+        return $"{Major}.{Minor}.{Patch}.{Build}";
+    }
 }

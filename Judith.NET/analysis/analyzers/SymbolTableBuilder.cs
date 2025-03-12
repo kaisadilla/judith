@@ -17,7 +17,7 @@ namespace Judith.NET.analysis.analyzers;
 public class SymbolTableBuilder : SyntaxVisitor {
     public MessageContainer Messages { get; private set; } = new();
 
-    private Compilation _cmp;
+    private JudithCompilation _cmp;
 
     private ScopeResolver _scope;
     private SymbolFinder _finder;
@@ -25,7 +25,7 @@ public class SymbolTableBuilder : SyntaxVisitor {
     private Dictionary<SyntaxNode, NodeState> _nodeStates = [];
     private int _resolutions = 0;
 
-    public SymbolTableBuilder (Compilation cmp) {
+    public SymbolTableBuilder (JudithCompilation cmp) {
         _cmp = cmp;
         _scope = new(_cmp);
         _finder = new(_cmp);
@@ -52,9 +52,9 @@ public class SymbolTableBuilder : SyntaxVisitor {
         var paramTypes = _cmp.Binder.GetParamTypes(node.Parameters);
 
         var symbol = _scope.Current.AddSymbol(tbl => new FunctionSymbol(
-            paramTypes, name, tbl.Qualify(name), _cmp.Name
+            paramTypes, name, tbl.Qualify(name), _cmp.AssemblyName
         ));
-        symbol.Type = _cmp.Native.Types.Function;
+        symbol.Type = _cmp.PseudoTypes.Function;
         var scope = _scope.Current.CreateChildTable(ScopeKind.FunctionBlock, symbol);
         _scope.BeginScope(scope);
         Visit(node.Parameters);
@@ -77,9 +77,9 @@ public class SymbolTableBuilder : SyntaxVisitor {
         }
 
         TypeSymbol symbol = _scope.Current.AddSymbol(tbl => new TypeSymbol(
-            SymbolKind.StructType, name, tbl.Qualify(name), _cmp.Name
+            SymbolKind.StructType, name, tbl.Qualify(name), _cmp.AssemblyName
         ));
-        symbol.Type = _cmp.Native.Types.NoType;
+        symbol.Type = _cmp.PseudoTypes.NoType;
 
         var scope = _scope.Current.CreateChildTable(ScopeKind.StructSpace, symbol);
         var boundNode = _cmp.Binder.BindStructTypeDefinition(node, symbol, scope);
@@ -142,7 +142,10 @@ public class SymbolTableBuilder : SyntaxVisitor {
 
     public override void Visit (LocalDeclarator node) {
         var symbol = _scope.Current.AddSymbol(tbl => new Symbol(
-            SymbolKind.Local, node.Identifier.Name, tbl.Qualify(node.Identifier.Name), _cmp.Name
+            SymbolKind.Local,
+            node.Identifier.Name,
+            tbl.Qualify(node.Identifier.Name),
+            _cmp.AssemblyName
         ));
 
         _cmp.Binder.BindLocalDeclarator(node, symbol);
@@ -155,7 +158,7 @@ public class SymbolTableBuilder : SyntaxVisitor {
             SymbolKind.Parameter,
             node.Declarator.Identifier.Name,
             tbl.Qualify(node.Declarator.Identifier.Name),
-            _cmp.Name
+            _cmp.AssemblyName
         ));
 
         _cmp.Binder.BindParameter(node, symbol);
@@ -189,7 +192,7 @@ public class SymbolTableBuilder : SyntaxVisitor {
                 SymbolKind.MemberField,
                 node.Identifier.Name,
                 tbl.Qualify(node.Identifier.Name),
-                _cmp.Name
+                _cmp.AssemblyName
             ));
 
             _cmp.Binder.BindMemberField(node, memberSymbol);

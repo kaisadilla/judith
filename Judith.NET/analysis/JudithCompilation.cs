@@ -1,47 +1,62 @@
 ﻿using Judith.NET.analysis.analyzers;
 using Judith.NET.analysis.semantics;
 using Judith.NET.analysis.syntax;
+using Judith.NET.ir;
 using Judith.NET.message;
 
 namespace Judith.NET.analysis;
 
-public class Compilation {
-    public string Name { get; private init; }
+public class JudithCompilation {
+    public string AssemblyName { get; private init; }
 
-    public MessageContainer Messages { get; private set; } = new();
+    public JudithProgram Program { get; private set; }
 
-    /// <summary>
-    /// All the compiler units that make up this program.
-    /// </summary>
-    public List<CompilerUnit> Units { get; private set; } = new();
-
-    public NativeHeader Native { get; private set; }
-    public List<AssemblyHeader> Dependencies { get; private set; } = new();
+    public PseudoTypeCollection PseudoTypes { get; private set; }
     public SymbolTable SymbolTable { get; private set; }
     public Binder Binder { get; private set; }
 
+    public MessageContainer Messages { get; private set; } = new();
+
     public bool IsValidProgram { get; private set; } = false;
 
-    public Compilation (
-        string name,
-        NativeHeader nativeHeader,
-        List<AssemblyHeader> dependencies,
-        List<CompilerUnit> units
+    public JudithCompilation (
+        string assemblyName, List<CompilerUnit> units
     ) {
-        Name = name;
+        AssemblyName = assemblyName;
 
-        Native = nativeHeader;
-        Dependencies = dependencies;
-        Units = units;
+        var noType = TypeSymbol.FreeSymbol(SymbolKind.PseudoType, "<error-type>");
 
-        SymbolTable = SymbolTable.CreateGlobalTable(Name);
+        PseudoTypes = new() {
+            NoType = noType,
+
+            Unresolved = TypeSymbol.FreeSymbol(SymbolKind.UnresolvedPseudoType, "!Unresolved"),
+
+            Error = TypeSymbol.FreeSymbol(SymbolKind.ErrorPseudoType, "<error-type>"),
+
+            Void = TypeSymbol.FreeSymbol(SymbolKind.PseudoType, "Void"),
+            Anonymous = TypeSymbol.FreeSymbol(SymbolKind.PseudoType, "<anonymous-type>"),
+            Function = TypeSymbol.FreeSymbol(SymbolKind.FunctionType, "Function"),
+        };
+
+        PseudoTypes.Unresolved.Type = noType;
+        PseudoTypes.Error.Type = noType;
+        PseudoTypes.Void.Type = noType;
+        PseudoTypes.Function.Type = noType;
+
+        Program = new() {
+            Units = units,
+            NativeHeader = new(IRNativeHeader.Ver1(), noType),
+            Dependencies = [],
+        };
+
+        SymbolTable = SymbolTable.CreateGlobalTable(AssemblyName);
         Binder = new(this);
     }
 
     public void Analyze () {
         // 1. Add implicit nodes.
         ImplicitNodeAnalyzer implicitNodeAnalyzer = new(this);
-        foreach (var cu in Units) {
+        foreach (var cu in Program.Units) {
             implicitNodeAnalyzer.Analyze(cu);
         }
         Messages.Add(implicitNodeAnalyzer.Messages);
@@ -54,7 +69,7 @@ public class Compilation {
         // Add all the different symbols that exist in the program to the table,
         // and binds declarations to the symbols they create.
         SymbolTableBuilder symbolTableBuilder = new(this);
-        foreach (var cu in Units) {
+        foreach (var cu in Program.Units) {
             symbolTableBuilder.Analyze(cu);
         }
         if (Messages.HasErrors) return;
@@ -62,7 +77,7 @@ public class Compilation {
         // 4. Resolve symbols.
         // Resolves which symbol each identifier is referring to.
         SymbolResolver symbolResolver = new(this);
-        foreach (var cu in Units) {
+        foreach (var cu in Program.Units) {
             symbolResolver.Analyze(cu);
         }
         Messages.Add(symbolResolver.Messages);
@@ -75,7 +90,7 @@ public class Compilation {
         // 7. Evaluate wellformedness (semantically).
         // 7.1. Type analysis.
         TypeAnalyzer typeAnalizer = new(this);
-        foreach (var cu in Units) {
+        foreach (var cu in Program.Units) {
             typeAnalizer.Analyze(cu);
         }
         Messages.Add(typeAnalizer.Messages);
@@ -91,7 +106,7 @@ public class Compilation {
         // reference other nodes (whose type may not be resolved yet), this
         // pass will leave some types unresolved.
         TypeResolver typeResolver = new(this);
-        foreach (var cu in Units) {
+        foreach (var cu in Program.Units) {
             typeResolver.Analyze(cu);
         }
         Messages.Add(typeResolver.Messages);
@@ -105,9 +120,21 @@ public class Compilation {
         }
 
         BlockTypeResolver blockTypeResolver = new(this);
-        foreach (var cu in Units) {
+        foreach (var cu in Program.Units) {
             blockTypeResolver.Analyze(cu);
         }
         Messages.Add(blockTypeResolver.Messages);
+    }
+
+    public class PseudoTypeCollection {
+        public required TypeSymbol NoType { get; init; }
+
+        public required TypeSymbol Unresolved { get; init; }
+
+        public required TypeSymbol Error { get; init; }
+
+        public required TypeSymbol Void { get; init; }
+        public required TypeSymbol Anonymous { get; init; }
+        public required TypeSymbol Function { get; init; }
     }
 }

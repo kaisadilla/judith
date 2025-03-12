@@ -13,13 +13,12 @@ namespace Judith.NET.analysis.analyzers;
 public class TypeAnalyzer : SyntaxVisitor {
     public MessageContainer Messages { get; private set; } = new();
 
-    private readonly Compilation _cmp;
+    private readonly JudithCompilation _cmp;
     private readonly ScopeResolver _scope;
 
     private Binder Binder => _cmp.Binder;
-    private NativeHeader.TypeCollection NativeTypes => _cmp.Native.Types;
 
-    public TypeAnalyzer (Compilation cmp) {
+    public TypeAnalyzer (JudithCompilation cmp) {
         _cmp = cmp;
         _scope = new(_cmp);
     }

@@ -8,9 +8,15 @@ using System.Threading.Tasks;
 namespace Judith.NET.ir;
 
 public class IRBlock {
+    public string Name { get; }
     public List<IRFunction> Functions { get; } = [];
+    public List<IRType> Types { get; } = [];
 
     private readonly Dictionary<string, IRFunction> _funcDictionary = [];
+
+    public IRBlock (string name) {
+        Name = name;
+    }
 
     public void AddFunction (IRFunction function) {
         Functions.Add(function);

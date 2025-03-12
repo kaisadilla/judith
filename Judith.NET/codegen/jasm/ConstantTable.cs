@@ -7,19 +7,6 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.codegen.jasm;
 
-/// <summary>
-/// The type of a constant from the constant table. This is unrelated to Judith
-/// types, but instead refers to the different types of data the VM can handle.
-/// </summary>
-public enum ConstantType : byte {
-    Error = 0,
-    Int64,
-    Float64,
-    UnsignedInt64,
-    StringASCII,
-    Bool,
-}
-
 public class ConstantTable {
     public List<byte> Bytes { get; private init; } = new();
     /// <summary>
@@ -54,7 +41,7 @@ public class ConstantTable {
         }
 
         Offsets.Add(Bytes.Count);
-        Bytes.Add((byte)ConstantType.Int64);
+        Bytes.Add((byte)JasmConstantType.Int64);
 
         byte[] bytes = BitConverter.GetBytes(i64);
         if (BitConverter.IsLittleEndian == false) {
@@ -77,7 +64,7 @@ public class ConstantTable {
         }
 
         Offsets.Add(Bytes.Count);
-        Bytes.Add((byte)ConstantType.Float64);
+        Bytes.Add((byte)JasmConstantType.Float64);
 
         byte[] bytes = BitConverter.GetBytes(f64);
         if (BitConverter.IsLittleEndian == false) {
@@ -100,7 +87,7 @@ public class ConstantTable {
         }
 
         Offsets.Add(Bytes.Count);
-        Bytes.Add((byte)ConstantType.UnsignedInt64);
+        Bytes.Add((byte)JasmConstantType.UnsignedInt64);
 
         PutUnsignedInt64(ui64);
 
@@ -116,7 +103,7 @@ public class ConstantTable {
         }
 
         Offsets.Add(Bytes.Count);
-        Bytes.Add((byte)ConstantType.StringASCII);
+        Bytes.Add((byte)JasmConstantType.StringUtf8);
 
         byte[] bytes = Encoding.ASCII.GetBytes(str);
         PutUnsignedInt64((ulong)bytes.Length + 1); // +1 for null-terminator.

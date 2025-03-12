@@ -1,18 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Judith.NET.codegen.jasm;
+﻿namespace Judith.NET.codegen.jasm;
 
 public class JasmAssembly {
-    public Version Version { get; private init; }
-    public FunctionRefTable FunctionRefTable { get; private init; }
-    public List<BinaryBlock> Blocks { get; private init; }
-
-    public JasmAssembly (FunctionRefTable functionRefArray, List<BinaryBlock> blocks) {
-        FunctionRefTable = functionRefArray;
-        Blocks = blocks;
-    }
+    public required int JudithVersion { get; init; }
+    public required Version Version { get; init; }
+    public StringTable NameTable { get; init; } = new();
+    public JasmRefTable TypeRefTable { get; init; } = new();
+    public JasmRefTable FunctionRefTable { get; init; } = new();
+    public List<JasmBlock> Blocks { get; init; } = [];
 }

@@ -25,7 +25,7 @@ public static class CompilerDiagnostics {
 
         if (compiler.Compilation == null) return;
 
-        foreach (var cu in compiler.Compilation.Units) {
+        foreach (var cu in compiler.Compilation.Program.Units) {
             EmitSimpleAst(cu, folderPath, fileName);
         }
 
@@ -68,21 +68,21 @@ public static class CompilerDiagnostics {
     }
 
     public static void EmitSymbolTable (
-        Compilation cmp, string folderPath, string fileName
+        JudithCompilation cmp, string folderPath, string fileName
     ) {
         string json = Serialize(cmp.SymbolTable);
         WriteFile(folderPath, fileName + ".symbol-table.json", json);
     }
 
     public static void EmitBinder (
-        Compilation cmp, string folderPath, string fileName
+        JudithCompilation cmp, string folderPath, string fileName
     ) {
         string json = Serialize(cmp.Binder);
         WriteFile(folderPath, fileName + ".binder.json", json);
     }
 
     public static void EmitTypeTable (
-        Compilation cmp, string folderPath, string fileName
+        JudithCompilation cmp, string folderPath, string fileName
     ) {
         var gen = new TypeTableGenerator();
         gen.Analyze(cmp.SymbolTable);
@@ -91,15 +91,15 @@ public static class CompilerDiagnostics {
     }
 
     public static void EmitSemanticAst (
-        Compilation cmp, string folderPath, string fileName
+        JudithCompilation cmp, string folderPath, string fileName
     ) {
         var gen = new AstWithSemanticsPrinter(cmp);
-        string json = Serialize(gen.Visit(cmp.Units[0]));
+        string json = Serialize(gen.Visit(cmp.Program.Units[0]));
         WriteFile(folderPath, fileName + ".ast-semantic.json", json);
     }
 
     public static void EmitNodeTypes (
-        Compilation cmp, string folderPath, string fileName
+        JudithCompilation cmp, string folderPath, string fileName
     ) {
         var gen = new AstTypePrinter(cmp);
         gen.Analyze();

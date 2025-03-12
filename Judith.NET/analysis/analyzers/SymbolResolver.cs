@@ -19,14 +19,14 @@ namespace Judith.NET.analysis.analyzers;
 public class SymbolResolver : SyntaxVisitor {
     public MessageContainer Messages { get; private set; } = new();
 
-    private readonly Compilation _cmp;
+    private readonly JudithCompilation _cmp;
     private readonly ScopeResolver _scope;
     private readonly SymbolFinder _finder;
 
     private NodeStateManager _nodeStates = new();
     public int Resolutions { get; private set; } = 0;
 
-    public SymbolResolver (Compilation cmp) {
+    public SymbolResolver (JudithCompilation cmp) {
         _cmp = cmp;
         _scope = new(_cmp);
         _finder = new(_cmp);
@@ -120,7 +120,7 @@ public class SymbolResolver : SyntaxVisitor {
         var boundNode = _cmp.Binder.BindIdentifierExpression(node, symbol);
 
         if (symbol is TypeSymbol typeSymbol) {
-            boundNode.Type = _cmp.Native.Types.NoType;
+            boundNode.Type = _cmp.PseudoTypes.NoType;
             boundNode.AssociatedType = typeSymbol;
         }
 
@@ -141,7 +141,7 @@ public class SymbolResolver : SyntaxVisitor {
         }
         else {
             Messages.Add(CompilerMessage.Analyzers.TypeExpected(node.Identifier.Line));
-            _cmp.Binder.BindTypeAnnotation(node, _cmp.Native.Types.Error);
+            _cmp.Binder.BindTypeAnnotation(node, _cmp.PseudoTypes.Error);
         }
 
 

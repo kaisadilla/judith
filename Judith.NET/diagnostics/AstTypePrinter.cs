@@ -13,14 +13,14 @@ namespace Judith.NET.diagnostics;
 public class AstTypePrinter : SyntaxVisitor {
     public List<string> TypedNodes { get; private set; } = new();
 
-    private Compilation _cmp;
+    private JudithCompilation _cmp;
 
-    public AstTypePrinter (Compilation cmp) {
+    public AstTypePrinter (JudithCompilation cmp) {
         _cmp = cmp;
     }
 
     public void Analyze () {
-        foreach (var u in _cmp.Units) {
+        foreach (var u in _cmp.Program.Units) {
             Visit(u);
         }
     }

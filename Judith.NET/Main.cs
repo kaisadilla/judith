@@ -37,9 +37,9 @@ PrintMessages(compiler.Messages);
 Console.WriteLine("Generating debug files...");
 CompilerDiagnostics.GenerateCompilationFiles(compiler, OUT_DIR, "test");
 
-if (compiler.IR != null) {
+if (compiler.IRProgram != null) {
     int count = 0;
-    foreach (var ir in compiler.IR) {
+    foreach (var ir in compiler.IRProgram.Blocks) {
         var printer = new IRSourcePrinter(ir);
         printer.Print();
 
@@ -57,8 +57,9 @@ if (compiler.Assembly != null) {
     Console.WriteLine("===============================");
     Console.WriteLine("");
 
-    DllDisassembler disassembler = new(compiler.Assembly);
-    disassembler.Disassemble();
+    JdllDisassembler dasm = new(compiler.Assembly);
+    dasm.Disassemble();
+    Console.WriteLine(dasm.Disassembly);
 }
 
 static void PrintMessages (MessageContainer messages) {

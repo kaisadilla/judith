@@ -8,10 +8,10 @@ namespace Judith.NET.ir.syntax;
 
 public class IRMathUnaryExpression : IRExpression {
     public IRExpression Expression { get; private set; }
-    public IRMathOperation Operation { get; private set; }
+    public IRUnaryOperation Operation { get; private set; }
 
     public IRMathUnaryExpression (
-        IRExpression expr, IRMathOperation operation, string type
+        IRExpression expr, IRUnaryOperation operation, string type
     )
         : base(type)
     {

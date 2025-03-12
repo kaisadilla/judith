@@ -12,9 +12,9 @@ namespace Judith.NET.analysis;
 public class ScopeResolver {
     public SymbolTable Current { get; private set; }
 
-    private Compilation _cmp;
+    private JudithCompilation _cmp;
 
-    public ScopeResolver (Compilation cmp) {
+    public ScopeResolver (JudithCompilation cmp) {
         _cmp = cmp;
         Current = _cmp.SymbolTable;
     }

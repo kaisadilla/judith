@@ -38,7 +38,13 @@ public class StringTable {
         }
     }
 
-    public int WriteStringUtf8 (string str) {
+    /// <summary>
+    /// Returns the index of the string given in this table. If the string is
+    /// not yet in this table, it gets added.
+    /// </summary>
+    /// <param name="str">The string whose index to get.</param>
+    /// <returns></returns>
+    public int GetStringIndex (string str) {
         if (_existingStrings.TryGetValue(str, out int index)) {
             return index;
         }

@@ -9,18 +9,32 @@ using System.Xml.Linq;
 namespace Judith.NET.ir;
 
 public class JudithIRGenerator {
-    private Compilation _cmp;
+    private JudithCompilation _cmp;
     private IRNativeHeader _native;
 
-    public IRNativeHeader.TypeCollection NativeTypes => _native.TypeRefs;
+    private IRNativeHeader.TypeCollection NativeTypes => _native.TypeRefs;
 
-    public JudithIRGenerator (Compilation cmp, IRNativeHeader nativeHeader) {
+    public IRProgram? Program { get; private set; } = null;
+
+    public JudithIRGenerator (JudithCompilation cmp, IRNativeHeader nativeHeader) {
         _cmp = cmp;
         _native = nativeHeader;
     }
 
-    public IRBlock GenerateBlock (CompilerUnit unit) {
-        IRBlock block = new();
+    [MemberNotNull(nameof(Program))]
+    public void Generate () {
+        Program = new() {
+            NativeHeader = _native,
+            Dependencies = [], // TODO
+        };
+
+        foreach (var cu in _cmp.Program.Units) {
+            Program.Blocks.Add(GenerateBlock(cu));
+        }
+    }
+
+    private IRBlock GenerateBlock (CompilerUnit unit) {
+        IRBlock block = new(unit.FileName);
 
         if (unit.ImplicitFunction != null) {
             block.AddFunction(CompileFunction(unit.ImplicitFunction));
@@ -290,9 +304,9 @@ public class JudithIRGenerator {
             case OperatorKind.NotEquals:
                 return CompileComparisonExpression(left, right, type, IRComparisonOperation.NotEquals);
             case OperatorKind.ReferenceEquals:
-                return CompileComparisonExpression(left, right, type, IRComparisonOperation.ReferenceEquals);
+                throw new NotImplementedException("Reference comparison not yet implemented.");
             case OperatorKind.ReferenceNotEquals:
-                return CompileComparisonExpression(left, right, type, IRComparisonOperation.ReferenceNotEquals);
+                throw new NotImplementedException("Reference comparison not yet implemented.");
             case OperatorKind.LessThan:
                 return CompileComparisonExpression(left, right, type, IRComparisonOperation.LessThan);
             case OperatorKind.LessThanOrEqualTo:
@@ -317,14 +331,8 @@ public class JudithIRGenerator {
         var expr = CompileExpression(node.Expression);
 
         switch (node.Operator.OperatorKind) {
-            case OperatorKind.Add:
-                return CompileUnaryAddExpression(expr, type, IRMathOperation.Add);
             case OperatorKind.Subtract:
-                return CompileUnaryAddExpression(expr, type, IRMathOperation.Subtract);
-            case OperatorKind.Multiply:
-                return CompileUnaryAddExpression(expr, type, IRMathOperation.Multiply);
-            case OperatorKind.Divide:
-                return CompileUnaryAddExpression(expr, type, IRMathOperation.Divide);
+                return CompileUnaryAddExpression(expr, type, IRUnaryOperation.Negate);
             default:
                 throw new NotImplementedException(
                     $"Cannot yet compile binary expression with operator " +
@@ -358,7 +366,7 @@ public class JudithIRGenerator {
     }
 
     private IRExpression CompileUnaryAddExpression(
-        IRExpression expr, string type, IRMathOperation op
+        IRExpression expr, string type, IRUnaryOperation op
     ) {
         if (expr.Type == NativeTypes.F64.Name) {
             return new IRMathUnaryExpression(expr, op, type);
@@ -432,7 +440,7 @@ public class JudithIRGenerator {
     }
 
     [DoesNotReturn]
-    private void ThrowIncompleteNode (SyntaxNode node) {
+    private static void ThrowIncompleteNode (SyntaxNode node) {
         throw new($"{node} is not complete.");
     }
 

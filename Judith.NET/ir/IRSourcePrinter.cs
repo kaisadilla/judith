@@ -23,12 +23,12 @@ public class IRSourcePrinter {
 
     [MemberNotNull(nameof(Source))]
     public void Print () {
+        _buffer.Clear();
         foreach (var func in _block.Functions) {
             PrintFunction(func);
         }
 
         Source = _buffer.ToString();
-        _buffer.Clear();
     }
 
     public void PrintFunction (IRFunction func) {
@@ -229,7 +229,7 @@ public class IRSourcePrinter {
     }
 
     public void PrintMathUnaryExpression (IRMathUnaryExpression expr) {
-        WriteMathOperator(expr.Operation);
+        WriteUnaryOperator(expr.Operation);
         Write("(");
         PrintExpression(expr.Expression);
         Write(")");
@@ -328,6 +328,14 @@ public class IRSourcePrinter {
         }
     }
 
+    private void WriteUnaryOperator (IRUnaryOperation op) {
+        switch (op) {
+            case IRUnaryOperation.Negate:
+                Write("-");
+                break;
+        }
+    }
+
     private void WriteComparisonOperator (IRComparisonOperation op) {
         switch (op) {
             case IRComparisonOperation.Equals:
@@ -335,12 +343,6 @@ public class IRSourcePrinter {
                 break;
             case IRComparisonOperation.NotEquals:
                 Write("!=");
-                break;
-            case IRComparisonOperation.ReferenceEquals:
-                Write("===");
-                break;
-            case IRComparisonOperation.ReferenceNotEquals:
-                Write("!==");
                 break;
             case IRComparisonOperation.LessThan:
                 Write("<");

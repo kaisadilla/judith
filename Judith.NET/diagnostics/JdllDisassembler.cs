@@ -1,4 +1,5 @@
 ﻿using Judith.NET.codegen.jasm;
+using Judith.NET.ir;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,77 +8,138 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.diagnostics;
 
-public class DllDisassembler {
-    private JasmAssembly _dll;
-
-    public string ChunkString { get; private set; } = string.Empty;
-
-    private StringTable _stringTable = null!;
-    private Chunk _chunk = null!;
-
+public class JdllDisassembler {
     private static string[] _sizeUnits = ["KiB", "MiB", "GiB", "TiB"];
 
-    public DllDisassembler (JasmAssembly dll) {
-        _dll = dll;
+    private JasmAssembly _assembly;
+    private StringBuilder _buffer = new();
+
+    private JasmBlock _block = null!;
+    private Chunk _chunk = null!;
+
+    public string? Disassembly { get; private set; }
+
+    public JdllDisassembler (JasmAssembly dll) {
+        _assembly = dll;
     }
 
     public void Disassemble () {
-        ChunkString = string.Empty;
+        _buffer.Clear();
 
-        Console.WriteLine("===== Function reference table =====");
-        Console.WriteLine("ADDRESS | Block index | Func index   ");
-        for (int i = 0; i < _dll.FunctionRefTable.Size; i++) {
-            var fr = _dll.FunctionRefTable[i];
-            Console.WriteLine($" 0x{i,4:X4} |    {fr.Block,8} |    {fr.Index,8 }");
+        _buffer.Append("=== HEADER ===\n");
+        _buffer.Append($"judith_version: {_assembly.JudithVersion}\n");
+        _buffer.Append($"version: {_assembly.Version}\n");
+        _buffer.Append('\n');
+
+        _buffer.Append($"=== NAME TABLE ({Size(_assembly.NameTable.Size)}) ===\n");
+        DisassembleStringTable(_assembly.NameTable);
+        _buffer.Append('\n');
+
+        _buffer.Append("=== TYPE REFERENCE TABLE ===\n");
+        DisassembleRefTable(_assembly.TypeRefTable);
+        _buffer.Append('\n');
+
+        _buffer.Append("=== FUNCTION REFERENCE TABLE ===\n");
+        DisassembleRefTable(_assembly.FunctionRefTable);
+        _buffer.Append('\n');
+
+        _buffer.Append($"=== BLOCKS ({_assembly.Blocks.Count}) ===\n");
+
+        for (int i = 0; i < _assembly.Blocks.Count; i++) {
+            DisassembleBlock(_assembly.Blocks[i], i);
         }
 
-        Console.WriteLine("");
-        Console.WriteLine("===== Blocks =====");
+        Disassembly = _buffer.ToString();
+    }
 
-        for (int i = 0; i < _dll.Blocks.Count; i++) {
-            DisassembleBlock(_dll.Blocks[i], i);
+    public void DisassembleRefTable (JasmRefTable table) {
+        for (int i = 0; i < table.Size; i++) {
+            _buffer.Append($"0x{i,4:X4}:\n");
+            _buffer.Append($" - type: {table[i].RefType}");
+
+            switch (table[i]) {
+                case JasmInternalRef internalRef: {
+                    _buffer.Append($" - block: {internalRef.Block}\n");
+                    _buffer.Append($" - index: {internalRef.Index}\n");
+                    break;
+                }
+                case JasmNativeRef nativeRef: {
+                    _buffer.Append($" - index: {nativeRef.Index}\n");
+                    break;
+                }
+                case JasmExternalRef externalRef: {
+                    var blockName = _assembly.NameTable[externalRef.BlockName];
+                    var itemName = _assembly.NameTable[externalRef.ItemName];
+
+                    _buffer.Append($" - block: {externalRef.BlockName}\n");
+                    _buffer.Append($" - item: {externalRef.ItemName}\n");
+                    break;
+                }
+            }
         }
     }
 
-    public void DisassembleBlock (BinaryBlock block, int blockIndex) {
-        Console.WriteLine($"==== Block #0x{blockIndex,4:X4} ====");
-        Console.WriteLine($"Name: {block.Name}");
-        Console.WriteLine("");
+    public void DisassembleBlock (JasmBlock block, int blockIndex) {
+        _block = block;
 
-        Console.WriteLine($"=== String table ({Size(block.StringTable.Size)}) ===");
+        string blockName = _assembly.NameTable[block.NameIndex];
+
+        _buffer.Append($"== Block #0x{blockIndex,4:X4} ==\n");
+        _buffer.Append($"Name: {block.NameIndex} ; \"{blockName}\"\n");
+        _buffer.Append('\n');
+
+        _buffer.Append($"== String table ({Size(block.StringTable.Size)}) ==\n");
         DisassembleStringTable(block.StringTable);
-        Console.WriteLine("");
+        _buffer.Append('\n');
 
-        Console.WriteLine("=== Functions ===");
-        for (int i = 0; i < block.Functions.Count; i++) {
-            DisassembleFunction(block.Functions[i], i);
+        _buffer.Append($"== Types ==\n");
+        // TODO.
+        _buffer.Append('\n');
+
+        _buffer.Append($"== Functions ==\n");
+        for (int i = 0; i < block.FunctionTable.Count; i++) {
+            DisassembleFunction(block, i);
         }
+        _buffer.Append('\n');
+
     }
 
     public void DisassembleStringTable (StringTable strTable) {
-        _stringTable = strTable;
-
         for (int i = 0; i < strTable.Count; i++) {
             int offset = strTable.Offsets[i];
 
-            Console.WriteLine(
-                $"{i,4}   0x{offset:X4}    \"{strTable[i]}\""
-            );
+            _buffer.Append($"{i,4}   0x{offset:X4}    \"{strTable[i]}\"\n");
         }
-
-        Console.WriteLine("");
     }
 
-    public void DisassembleFunction (BinaryFunction func, int funcIndex) {
-        Console.WriteLine($"== Function #0x{funcIndex,4:X4} ==");
-        Console.WriteLine($"Name: {func.Name}");
-        Console.WriteLine($"Name index: #0x{func.NameIndex,4:X4}");
-        Console.WriteLine($"MaxLocals: {func.MaxLocals}");
-        Console.WriteLine($"Parameters ({func.Arity}): Not implemented yet.");
-        Console.WriteLine("");
-        Console.WriteLine("= CHUNK =");
+    public void DisassembleFunction (JasmBlock block, int funcIndex) {
+        var func = block.FunctionTable[funcIndex];
+        string funcName = block.StringTable[func.NameIndex];
+
+        _buffer.Append($"Function #0x{funcIndex,4:X4}:\n");
+        _buffer.Append($"Name: {func.NameIndex} ; \"{funcName}\"\n");
+        _buffer.Append($"MaxLocals: {func.MaxLocals}\n");
+        // TODO: Max stack.
+
+        _buffer.Append($"Parameters ({func.Arity}):\n");
+        for (int i = 0; i < func.Parameters.Count; i++) {
+            DisassembleParameters(block, func, i);
+        }
+        _buffer.Append('\n');
+
+        _buffer.Append("Chunk:\n");
         DisassembleChunk(func.Chunk);
-        Console.WriteLine("");
+        _buffer.Append('\n');
+    }
+
+    public void DisassembleParameters (
+        JasmBlock block, JasmFunction func, int paramIndex
+    ) {
+        var p = func.Parameters[paramIndex];
+        string paramName = block.StringTable[p.NameIndex];
+
+        _buffer.Append($"{paramIndex,4} - name: {p.NameIndex} ; \"{paramName}\"\n");
+
     }
 
     public void DisassembleChunk (Chunk chunk) {
@@ -86,17 +148,13 @@ public class DllDisassembler {
         int index = 0;
         while (index < chunk.Code.Count) {
             index = DisassembleInstruction(index);
-            ChunkString += "\n";
+            _buffer.Append('\n');
         }
-
-        Console.WriteLine(ChunkString); // TODO - don't do it like this.
-        ChunkString = string.Empty;
     }
-
 
     private int DisassembleInstruction (int index) {
         OpCode opCode = (OpCode)_chunk.Code[index];
-        ChunkString += $"Line {_chunk.Lines[index],-5} | {HexByteStr(index)} ";
+        _buffer.Append($"Line {-10,-5} | {HexByteStr(index)} ");
 
         switch (opCode) {
             case OpCode.NOOP:
@@ -240,15 +298,15 @@ public class DllDisassembler {
     }
 
     private int SimpleInstruction (string name, int index) {
-        ChunkString += IdStr(name);
+        _buffer.Append(IdStr(name));
         return index + 1;
     }
 
     private int ByteInstruction (string name, int index) {
         var val = _chunk.Code[index + 1];
 
-        ChunkString += IdStr(name) + " ";
-        ChunkString += HexByteStr(val) + " ";
+        _buffer.Append(IdStr(name) + " ");
+        _buffer.Append(HexByteStr(val) + " ");
 
         return index + 2;
     }
@@ -256,8 +314,8 @@ public class DllDisassembler {
     private int SByteInstruction (string name, int index) {
         sbyte val = unchecked((sbyte)_chunk.Code[index + 1]);
 
-        ChunkString += IdStr(name) + " ";
-        ChunkString += HexSByteStr(val) + " ";
+        _buffer.Append(IdStr(name) + " ");
+        _buffer.Append(HexSByteStr(val) + " ");
 
         return index + 2;
     }
@@ -266,8 +324,8 @@ public class DllDisassembler {
         var val = _chunk.Code[index + 1]
             | (_chunk.Code[index + 2] << 8);
 
-        ChunkString += IdStr(name) + " ";
-        ChunkString += HexIntegerStr(val) + " ";
+        _buffer.Append(IdStr(name) + " ");
+        _buffer.Append(HexIntegerStr(val) + " ");
 
         return index + 3;
     }
@@ -278,8 +336,8 @@ public class DllDisassembler {
             | (_chunk.Code[index + 3] << 16)
             | (_chunk.Code[index + 4] << 24);
 
-        ChunkString += IdStr(name) + " ";
-        ChunkString += HexIntegerStr(val) + " ";
+        _buffer.Append(IdStr(name) + " ");
+        _buffer.Append(HexIntegerStr(val) + " ");
 
         return index + 5;
     }
@@ -294,8 +352,8 @@ public class DllDisassembler {
             | (_chunk.Code[index + 7] << 48)
             | (_chunk.Code[index + 8] << 56);
 
-        ChunkString += IdStr(name) + " ";
-        ChunkString += HexIntegerStr(val) + " ";
+        _buffer.Append(IdStr(name) + " ");
+        _buffer.Append(HexIntegerStr(val) + " ");
 
         return index + 9;
     }
@@ -303,8 +361,8 @@ public class DllDisassembler {
     private int ConstantInstruction (string name, int index) {
         var constant = _chunk.Code[index + 1];
 
-        ChunkString += IdStr(name) + " ";
-        ChunkString += HexByteStr(constant) + " ; " + constant;
+        _buffer.Append(IdStr(name) + " ");
+        _buffer.Append(HexByteStr(constant) + " ; " + constant);
 
         return index + 2;
     }
@@ -315,8 +373,8 @@ public class DllDisassembler {
             | (_chunk.Code[index + 3] << 16)
             | (_chunk.Code[index + 4] << 24);
 
-        ChunkString += IdStr(name) + " ";
-        ChunkString += HexIntegerStr(constant) + " ; " + constant;
+        _buffer.Append(IdStr(name) + " ");
+        _buffer.Append(HexIntegerStr(constant) + " ; " + constant);
 
         return index + 5;
     }
@@ -331,8 +389,8 @@ public class DllDisassembler {
             | (_chunk.Code[index + 7] << 48)
             | (_chunk.Code[index + 8] << 56);
 
-        ChunkString += IdStr(name) + " ";
-        ChunkString += HexIntegerStr(constant) + " ; " + constant;
+        _buffer.Append(IdStr(name) + " ");
+        _buffer.Append(HexIntegerStr(constant) + " ; " + constant);
 
         return index + 9;
     }
@@ -340,8 +398,8 @@ public class DllDisassembler {
     private int StringConstantInstruction (string name, int index) {
         var strIndex = _chunk.Code[index + 1];
 
-        ChunkString += IdStr(name) + " ";
-        ChunkString += HexByteStr(strIndex) + " ; " + _stringTable[strIndex];
+        _buffer.Append(IdStr(name) + " ");
+        _buffer.Append(HexByteStr(strIndex) + " ; " + _block.StringTable[strIndex]);
 
         return index + 2;
     }
@@ -352,8 +410,8 @@ public class DllDisassembler {
             | (_chunk.Code[index + 3] << 16)
             | (_chunk.Code[index + 4] << 24);
 
-        ChunkString += IdStr(name) + " ";
-        ChunkString += HexIntegerStr(strIndex) + " ; " + _stringTable[strIndex];
+        _buffer.Append(IdStr(name) + " ");
+        _buffer.Append(HexIntegerStr(strIndex) + " ; " + _block.StringTable[strIndex]);
 
         return index + 5;
     }
@@ -361,8 +419,8 @@ public class DllDisassembler {
     private int JumpInstruction (string name, int index) {
         sbyte val = unchecked((sbyte)_chunk.Code[index + 1]);
 
-        ChunkString += IdStr(name) + " ";
-        ChunkString += HexSByteStr(val) + " ; to " + HexSByteStr(index + val + 2);
+        _buffer.Append(IdStr(name) + " ");
+        _buffer.Append(HexSByteStr(val) + " ; to " + HexSByteStr(index + val + 2));
 
         return index + 2;
     }
@@ -373,8 +431,8 @@ public class DllDisassembler {
             | (_chunk.Code[index + 3] << 16)
             | (_chunk.Code[index + 4] << 24);
 
-        ChunkString += IdStr(name) + " ";
-        ChunkString += HexIntegerStr(val) + " ; to " + HexSByteStr(index + val + 5);
+        _buffer.Append(IdStr(name) + " ");
+        _buffer.Append(HexIntegerStr(val) + " ; to " + HexSByteStr(index + val + 5));
 
         return index + 5;
     }
@@ -382,14 +440,14 @@ public class DllDisassembler {
     private int PrintInstruction (string name, int index) {
         var constType = _chunk.Code[index + 1];
 
-        ChunkString += IdStr(name) + " ";
-        ChunkString += HexByteStr(constType) + " ; " + (ConstantType)constType;
+        _buffer.Append(IdStr(name) + " ");
+        _buffer.Append(HexByteStr(constType) + " ; " + (JasmConstantType)constType);
 
         return index + 2;
     }
 
     private int UnknownInstruction (int index) {
-        ChunkString += $"0x{index:X4} <Unknown>";
+        _buffer.Append($"0x{index:X4} <Unknown>");
         return index + 1;
     }
 

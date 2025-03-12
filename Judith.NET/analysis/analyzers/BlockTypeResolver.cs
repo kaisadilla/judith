@@ -15,10 +15,10 @@ using RetInfo = (SyntaxKind retKind, TypeSymbol type);
 public class BlockTypeResolver : SyntaxVisitor<RetInfo?> {
     public MessageContainer Messages { get; private set; } = new();
 
-    private Compilation _cmp;
+    private JudithCompilation _cmp;
     private ScopeResolver _scope;
 
-    public BlockTypeResolver (Compilation cmp) {
+    public BlockTypeResolver (JudithCompilation cmp) {
         _cmp = cmp;
         _scope = new(_cmp);
     }
@@ -72,9 +72,9 @@ public class BlockTypeResolver : SyntaxVisitor<RetInfo?> {
             // We cannot conclude this blocks's type until every returned type
             // in it is resolved; so we just set its type to unresolved and
             // abort the procedure.
-            if (retInfo.Value.type == _cmp.Native.Types.Unresolved) {
+            if (retInfo.Value.type == _cmp.PseudoTypes.Unresolved) {
                 boundNode.EvaluationKind = BlockEvaluationKind.Return;
-                boundNode.Type = _cmp.Native.Types.Unresolved;
+                boundNode.Type = _cmp.PseudoTypes.Unresolved;
                 return null;
             }
 
@@ -86,14 +86,14 @@ public class BlockTypeResolver : SyntaxVisitor<RetInfo?> {
 
         // Calculate return type.
         if (foundRetTypes.Count == 0) {
-            boundNode.Type = _cmp.Native.Types.Void;
+            boundNode.Type = _cmp.PseudoTypes.Void;
         }
         else {
             HashSet<TypeSymbol> types = [.. foundRetTypes];
 
-            if (types.Contains(_cmp.Native.Types.Void) && types.Count > 1) {
+            if (types.Contains(_cmp.PseudoTypes.Void) && types.Count > 1) {
                 Messages.Add(CompilerMessage.Analyzers.InconsistentReturnBehavior(node.Line));
-                boundNode.Type = _cmp.Native.Types.Error;
+                boundNode.Type = _cmp.PseudoTypes.Error;
             }
             // If we have more than one type, that would form a union, but
             // right now that's not implemented so we throw instead.
@@ -116,10 +116,10 @@ public class BlockTypeResolver : SyntaxVisitor<RetInfo?> {
 
     public override RetInfo? Visit (ReturnStatement node) {
         if (node.Expression == null) {
-            return (SyntaxKind.ReturnStatement, _cmp.Native.Types.Void);
+            return (SyntaxKind.ReturnStatement, _cmp.PseudoTypes.Void);
         }
 
         var boundExpr = _cmp.Binder.GetBoundNodeOrThrow<BoundExpression>(node.Expression);
-        return (SyntaxKind.ReturnStatement, boundExpr.Type ?? _cmp.Native.Types.Unresolved);
+        return (SyntaxKind.ReturnStatement, boundExpr.Type ?? _cmp.PseudoTypes.Unresolved);
     }
 }

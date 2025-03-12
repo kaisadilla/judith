@@ -36,12 +36,9 @@ public class JasmScriptCompiler : IJudithCompiler {
 
     public List<CompilerUnit>? CompilerUnits { get; private set; } = null;
 
-    public NativeHeader? Native { get; private set; } = null;
-    public List<AssemblyHeader>? Dependencies { get; private set; } = null;
+    public JudithCompilation? Compilation { get; private set; } = null;
 
-    public Compilation? Compilation { get; private set; } = null;
-
-    public List<IRBlock>? IR { get; private set; } = null;
+    public IRProgram? IRProgram { get; private set; } = null;
 
     public JasmAssembly? Assembly { get; private set; }
 
@@ -106,16 +103,10 @@ public class JasmScriptCompiler : IJudithCompiler {
 
     [MemberNotNull(nameof(Compilation))]
     public void CreateCompilation () {
-        // 1. Generate compmiler units
+        // 1. Generate compiler units
         GenerateCompilerUnits();
 
-        // 2. Generate the native assembly.
-        AddNativeAssembly();
-
-        // 3. Add headers from dependencies.
-        AddDependencies();
-
-        // 4. Create compilation object
+        // 2. Create compilation object
         CreateCompilationObject();
     }
 
@@ -130,27 +121,14 @@ public class JasmScriptCompiler : IJudithCompiler {
         CompilerUnits.Add(CompilerUnitFactory.FromNodeCollection(FileName, Ast));
     }
 
-    [MemberNotNull(nameof(Native))]
-    public void AddNativeAssembly () {
-        Native = NativeHeader.Ver1();
-    }
-
-    [MemberNotNull(nameof(Dependencies))]
-    public void AddDependencies () {
-        Dependencies = [];
-        // TODO: Actually add dependencies.
-    }
-
-    [MemberNotNull(nameof(Native), nameof(Dependencies), nameof(CompilerUnits), nameof(Compilation))]
+    [MemberNotNull(nameof(CompilerUnits), nameof(Compilation))]
     public void CreateCompilationObject () {
-        if (Native == null || Dependencies == null || CompilerUnits == null) {
-            throw new InvalidStepException(
-                "Dependencies and compiler units have to be built before creating " +
-                "the compilation object."
-            );
-        }
+        if (CompilerUnits == null) throw new InvalidStepException(
+            "Dependencies and compiler units have to be built before creating " +
+            "the compilation object."
+        );
 
-        Compilation = new(FileName, Native, Dependencies, CompilerUnits);
+        Compilation = new(FileName, CompilerUnits);
     }
 
     [MemberNotNull(nameof(Compilation))]
@@ -164,7 +142,7 @@ public class JasmScriptCompiler : IJudithCompiler {
         Messages.Add(Compilation.Messages);
     }
 
-    [MemberNotNull(nameof(IR))]
+    [MemberNotNull(nameof(IRProgram))]
     public void GenerateIR () {
         if (Compilation == null) throw new InvalidStepException(
             "The compilation object has to be built before the IR can be generated. "
@@ -173,28 +151,22 @@ public class JasmScriptCompiler : IJudithCompiler {
             "Cannot generate IR unless the program is a valid program."
         );
 
-        IR = [];
-
         var gen = new JudithIRGenerator(Compilation, IRNativeHeader.Ver1());
-        foreach (var cu in Compilation.Units) {
-             IR.Add(gen.GenerateBlock(cu));
-        }
+        gen.Generate();
+
+        IRProgram = gen.Program;
     }
 
-    [MemberNotNull(nameof(Compilation), nameof(Assembly))]
+    [MemberNotNull(nameof(IRProgram), nameof(Assembly))]
     public void GenerateCode () {
         // TODO: Generate from IR instead.
-        if (Compilation == null) throw new InvalidStepException(
-            "The compilation object has to be built before the compilation can " +
-            "be analyzed."
-        );
-        if (Compilation.IsValidProgram == false) throw new InvalidStepException(
-            "Only valid programs can be compiled. Either the compilation has not" +
-            "been analyzed, or it's not a valid program."
+        if (IRProgram == null) throw new InvalidStepException(
+            "The IR program has to be built before JASM code can be emitted."
         );
 
-        JasmGenerator jasmGen = new(Compilation);
-        Assembly = jasmGen.Generate();
+        JasmGenerator jasmGen = new(IRProgram);
+        jasmGen.Generate();
+        Assembly = jasmGen.Assembly;
     }
 
     [MemberNotNull(nameof(Assembly))]

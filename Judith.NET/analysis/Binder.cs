@@ -21,11 +21,11 @@ public class Binder {
     public MessageContainer Messages { get; private set; } = new();
 
     [JsonIgnore]
-    private Compilation _cmp;
+    private JudithCompilation _cmp;
 
     public Dictionary<SyntaxNode, BoundNode> BoundNodes { get; private set; } = new();
 
-    public Binder (Compilation compilation) {
+    public Binder (JudithCompilation compilation) {
         _cmp = compilation;
     }
 
@@ -322,10 +322,10 @@ public class Binder {
     private BoundLiteralExpression ResolveBooleanLiteralExpression (LiteralExpression expr) {
         BoundLiteralExpression bound;
         if (expr.Literal.TokenKind == TokenKind.KwTrue) {
-            bound = new(expr, _cmp.Native.Types.Bool, new ConstantValue(true));
+            bound = new(expr, _cmp.Program.NativeHeader.TypeRefs.Bool, new ConstantValue(true));
         }
         else if (expr.Literal.TokenKind ==TokenKind.KwFalse) {
-            bound = new(expr, _cmp.Native.Types.Bool, new ConstantValue(false));
+            bound = new(expr, _cmp.Program.NativeHeader.TypeRefs.Bool, new ConstantValue(false));
         }
         else throw new Exception(
             $"Token kind '{expr.Literal.TokenKind}' is not valid for a boolean " +
@@ -401,7 +401,7 @@ public class Binder {
                     value = 0;
                 }
 
-                bound = new(expr, _cmp.Native.Types.Num, new((double)value)); // TODO: F64
+                bound = new(expr, _cmp.Program.NativeHeader.TypeRefs.F64, new((double)value)); // TODO: F64
             }
             else if (suffix == "f32") {
                 try {
@@ -414,13 +414,13 @@ public class Binder {
                     value = 0;
                 }
 
-                bound = new(expr, _cmp.Native.Types.F32, new((double)value));
+                bound = new(expr, _cmp.Program.NativeHeader.TypeRefs.F64, new((double)value)); // TODO: F32
             }
             else {
                 Messages.Add(CompilerMessage.Analyzers.NumberSuffixCannotBeUsedForDecimal(
                     suffix, expr.Literal.Line
                 ));
-                bound = new(expr, _cmp.Native.Types.F64, new(0d));
+                bound = new(expr, _cmp.Program.NativeHeader.TypeRefs.F64, new(0d));
             }
 
         }
@@ -447,19 +447,19 @@ public class Binder {
 
                 // suffixes "i64", "i" and null are always ok. else:
                 if (suffix == "u64" || suffix == "u") {
-                    bound = new(expr, _cmp.Native.Types.Ui64, new((ulong)value));
+                    bound = new(expr, _cmp.Program.NativeHeader.TypeRefs.F64, new((ulong)value)); // TODO: Ui64
                 }
                 else if (suffix == "u32") {
                     CheckUnsignedIntegerSize(value, int.MaxValue, "U32");
-                    bound = new(expr, _cmp.Native.Types.Ui32, new((ulong)value));
+                    bound = new(expr, _cmp.Program.NativeHeader.TypeRefs.F64, new((ulong)value)); // TODO: Ui32
                 }
                 else if (suffix == "u16") {
                     CheckUnsignedIntegerSize(value, int.MaxValue, "U16");
-                    bound = new(expr, _cmp.Native.Types.Ui16, new((ulong)value));
+                    bound = new(expr, _cmp.Program.NativeHeader.TypeRefs.F64, new((ulong)value)); // TODO: Ui16
                 }
                 else if (suffix == "u8") {
                     CheckUnsignedIntegerSize(value, int.MaxValue, "U8");
-                    bound = new(expr, _cmp.Native.Types.Ui8, new((ulong)value));
+                    bound = new(expr, _cmp.Program.NativeHeader.TypeRefs.F64, new((ulong)value)); // TODO: Ui8
                 }
                 else {
                     bound = new(expr, GetSuffixTypeInfo(suffix), new((ulong)value));
@@ -486,19 +486,19 @@ public class Binder {
 
                 // suffixes "i64", "i" and null are always ok. else:
                 if (suffix == "i64" || suffix == "i" || suffix == null) {
-                    bound = new(expr, _cmp.Native.Types.Num, new((double)value)); // TODO: I64, long.
+                    bound = new(expr, _cmp.Program.NativeHeader.TypeRefs.F64, new((double)value)); // TODO: I64, long.
                 }
                 else if (suffix == "i32") {
                     CheckIntegerSize(value, int.MaxValue, "I32");
-                    bound = new(expr, _cmp.Native.Types.I32, new((long)value));
+                    bound = new(expr, _cmp.Program.NativeHeader.TypeRefs.F64, new((long)value)); // TODO: I32
                 }
                 else if (suffix == "i16") {
                     CheckIntegerSize(value, short.MaxValue, "I16");
-                    bound = new(expr, _cmp.Native.Types.I16, new((long)value));
+                    bound = new(expr, _cmp.Program.NativeHeader.TypeRefs.F64, new((long)value)); // TODO: I16
                 }
                 else if (suffix == "i8") {
                     CheckIntegerSize(value, short.MaxValue, "I8");
-                    bound = new(expr, _cmp.Native.Types.I8, new((long)value));
+                    bound = new(expr, _cmp.Program.NativeHeader.TypeRefs.F64, new((long)value)); // TODO: I8
                 }
                 else {
                     bound = new(expr, GetSuffixTypeInfo(suffix), new((long)value));
@@ -507,7 +507,6 @@ public class Binder {
         }
         // TODO: Deal with Decimal (d) and BigInt (ib) types.
         BoundNodes[expr] = bound;
-        bound.Type = _cmp.Native.Types.F64; // TODO: Remove.
         return bound;
 
         void CheckIntegerSize (long value, long max, string type) {
@@ -541,7 +540,7 @@ public class Binder {
             .Replace("\\r", "\r");
 
         BoundLiteralExpression bound = new(
-            expr, _cmp.Native.Types.String, new ConstantValue(str)
+            expr, _cmp.Program.NativeHeader.TypeRefs.String, new ConstantValue(str)
         );
 
         BoundNodes[expr] = bound;
@@ -560,10 +559,10 @@ public class Binder {
 
         foreach (var param in paramList.Parameters) {
             if (TryGetBoundNode(param, out BoundParameter? boundParam) == false) {
-                signature.Add(_cmp.Native.Types.Unresolved);
+                signature.Add(_cmp.PseudoTypes.Unresolved);
             }
             else {
-                signature.Add(boundParam.Symbol.Type ?? _cmp.Native.Types.Unresolved);
+                signature.Add(boundParam.Symbol.Type ?? _cmp.PseudoTypes.Unresolved);
             }
         }
 
@@ -571,21 +570,22 @@ public class Binder {
     }
 
     private TypeSymbol GetSuffixTypeInfo (string? suffix) {
-        return suffix switch {
-            "f64" => _cmp.Native.Types.F64,
-            "f32" => _cmp.Native.Types.F32,
-            "i64" => _cmp.Native.Types.I64,
-            "i32" => _cmp.Native.Types.I32,
-            "i16" => _cmp.Native.Types.I16,
-            "i8" => _cmp.Native.Types.I8,
-            "u64" => _cmp.Native.Types.Ui64,
-            "u32" => _cmp.Native.Types.Ui32,
-            "u16" => _cmp.Native.Types.Ui16,
-            "u8" => _cmp.Native.Types.Ui8,
-            "f" => _cmp.Native.Types.Float,
-            "i" => _cmp.Native.Types.Int,
-            null => _cmp.Native.Types.Num,
-            _ => _cmp.Native.Types.Num,
-        };
+        return _cmp.Program.NativeHeader.TypeRefs.F64;
+        //return suffix switch {
+        //    "f64" => _cmp.Native.TypeRefs.F64,
+        //    "f32" => _cmp.Native.TypeRefs.F32,
+        //    "i64" => _cmp.Native.TypeRefs.I64,
+        //    "i32" => _cmp.Native.TypeRefs.I32,
+        //    "i16" => _cmp.Native.TypeRefs.I16,
+        //    "i8" => _cmp.Native.TypeRefs.I8,
+        //    "u64" => _cmp.Native.TypeRefs.Ui64,
+        //    "u32" => _cmp.Native.TypeRefs.Ui32,
+        //    "u16" => _cmp.Native.TypeRefs.Ui16,
+        //    "u8" => _cmp.Native.TypeRefs.Ui8,
+        //    "f" => _cmp.Native.TypeRefs.Float,
+        //    "i" => _cmp.Native.TypeRefs.Int,
+        //    null => _cmp.Native.TypeRefs.Num,
+        //    _ => _cmp.Native.TypeRefs.Num,
+        //};
     }
 }

@@ -17,6 +17,10 @@ public class TypeSymbol : Symbol {
         : base(kind, name, fullyQualifiedName, assembly)
     {}
 
+    public static TypeSymbol FreeSymbol (SymbolKind kind, string name) {
+        return new(kind, name, name, "");
+    }
+
     public bool TryGetMember (
         string memberName, [NotNullWhen(true)] out MemberSymbol? member
     ) {
@@ -25,6 +29,6 @@ public class TypeSymbol : Symbol {
     }
 
     public static bool IsResolved ([NotNullWhen(true)] TypeSymbol? symbol) {
-        return symbol != null && symbol.Kind != SymbolKind.UnresolvedType;
+        return symbol != null && symbol.Kind != SymbolKind.UnresolvedPseudoType;
     }
 }

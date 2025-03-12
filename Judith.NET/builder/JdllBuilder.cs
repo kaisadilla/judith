@@ -24,14 +24,20 @@ public class JdllBuilder {
 
         WriteMagicNumber(writer); // magic_number: byte[6] = 'JUDITH'
         writer.Write((byte)0); // endianness: byte = 0 -- little-endian
-        writer.Write((byte)0); // judith_version: byte = 0 - pre-alpha
-        WriteVersion(writer, 0, 0, 0, 0); // version: Version = 0.0.0.0 (TODO: Real assembly version)
+        writer.Write((byte)_assembly.JudithVersion); // judith_version: byte = 0 - pre-alpha
+        WriteVersion(writer, _assembly.Version); // version: Version
 
-        WriteFuncRefTable(writer, _assembly.FunctionRefTable); // func_ref_arr
+        WriteStringTable(writer, _assembly.NameTable); // name_count and name_table
+
+        writer.Write((uint)0); // dep_count: Ui32
+        // TODO: dependencies - this is ok because there's 0 dependencies.
+
+        WriteRefTable(writer, _assembly.TypeRefTable); // type_ref_count and type_ref
+        WriteRefTable(writer, _assembly.FunctionRefTable); // func_ref_count and func_ref
 
         writer.Write((uint)_assembly.Blocks.Count); // block_count
 
-        foreach (var block in _assembly.Blocks) {
+        foreach (var block in _assembly.Blocks) { // blocks: Block[block_count]
             WriteBlock(writer, block);
         }
 
@@ -48,39 +54,57 @@ public class JdllBuilder {
         writer.Write((byte)'H');
     }
 
-    private void WriteVersion (
-        BinaryWriter writer, int major, int minor, int patch, int build
-    ) {
-        writer.Write((ushort)major);
-        writer.Write((ushort)minor);
-        writer.Write((ushort)patch);
-        writer.Write((ushort)build);
+    private void WriteVersion (BinaryWriter writer, Version version) {
+        writer.Write((ushort)version.Major);
+        writer.Write((ushort)version.Minor);
+        writer.Write((ushort)version.Patch);
+        writer.Write((ushort)version.Build);
     }
 
-    private void WriteFuncRefTable (BinaryWriter writer, FunctionRefTable table) {
-        writer.Write((uint)table.Array.Count); // ref_count
-
-        foreach (var funcRef in table.Array) { // func_refs
-            writer.Write((uint)funcRef.Block); // block
-            writer.Write((uint)funcRef.Index); // index
-        }
-    }
-
-    private void WriteBlock (BinaryWriter writer, BinaryBlock block) {
-        // string_count: ui32 -- the amount of strings in the table, not its size in bytes.
-        writer.Write((uint)block.StringTable.Count);
-        // string_table: string[string_count]
-        foreach (var ui8 in block.StringTable.Bytes) {
+    public void WriteStringTable (BinaryWriter writer, StringTable table) {
+        writer.Write((uint)table.Count); // name_count
+        // name_table: string[string_count]
+        foreach (var ui8 in table.Bytes) {
             writer.Write((byte)ui8);
         }
+    }
 
-        // has_implicit: bool -- if true, the first function is the implicit function.
-        writer.Write(block.HasImplicitFunction);
+    private void WriteRefTable (BinaryWriter writer, JasmRefTable table) {
+        writer.Write((uint)table.Table.Count); // ref_count
 
-        // function_count: ui32 -- the amount of functions in the function table.
-        writer.Write((uint)block.Functions.Count);
+        foreach (var itemRef in table.Table) {
+            switch (itemRef) {
+                case JasmInternalRef internalRef:
+                    writer.Write((uint)internalRef.RefType); // ref_type (0)
+                    writer.Write((uint)internalRef.Block); // block_index
+                    writer.Write((uint)internalRef.Index); // item_index
+                    break;
+                case JasmNativeRef nativeRef:
+                    writer.Write((uint)nativeRef.RefType); // ref_type (1)
+                    writer.Write((uint)nativeRef.Index); // item_index (1)
+                    break;
+                case JasmExternalRef externalRef:
+                    writer.Write((uint)externalRef.RefType); // ref_type (2)
+                    writer.Write((uint)externalRef.BlockName); // block_name
+                    writer.Write((uint)externalRef.ItemName); // item_name
+                    break;
+            }
+        }
+    }
+
+    private void WriteBlock (BinaryWriter writer, JasmBlock block) {
+        writer.Write((uint)block.NameIndex); // block_name
+
+        WriteStringTable(writer, block.StringTable); // string_count and string_table
+
+        writer.Write((uint)0); // type_count -- TODO
+        // type_table -- TODO
+        
+        // func_count: ui32 -- the amount of functions in the function table.
+        writer.Write((uint)block.FunctionTable.Count);
+
         // function_table: function[function_count]
-        foreach (var func in block.Functions) {
+        foreach (var func in block.FunctionTable) {
             // name: ui32 -- the index of the function's name in the constant table.
             writer.Write((uint)func.NameIndex);
             // param_count: ui16 -- the arity of the function.
@@ -94,7 +118,7 @@ public class JdllBuilder {
             // max_locals: ui16 - The max amount of local slots the function needs.
             writer.Write((ushort)func.MaxLocals);
             // max_stack: ui16 - The max amount of stack slots the function needs.
-            writer.Write((ushort)0);
+            writer.Write((ushort)0); // TODO
 
 
             // code_length: ui32 -- the amount of bytes in the code bloc.
@@ -102,14 +126,6 @@ public class JdllBuilder {
             // code: byte[code_length]
             foreach (var codeByte in func.Chunk.Code) {
                 writer.Write((byte)codeByte);
-            }
-
-            // has_lines: bool -- if true, there's a bloc of i32 with the
-            // same length as "code" mapping each code entry to a line in source.
-            writer.Write(true);
-            // lines: i32[code_length]
-            foreach (var line in func.Chunk.Lines) {
-                writer.Write((int)line);
             }
         }
     }

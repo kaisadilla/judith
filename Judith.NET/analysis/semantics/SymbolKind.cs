@@ -6,8 +6,8 @@ namespace Judith.NET.analysis.semantics;
 [JsonConverter(typeof(StringEnumConverter))]
 public enum SymbolKind {
     Module,
-    UnresolvedType,
-    ErrorType,
+    UnresolvedPseudoType,
+    ErrorPseudoType,
     PseudoType,
     PrimitiveType,
     StringType,
