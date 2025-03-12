@@ -1,6 +1,7 @@
 ﻿using Judith.NET.analysis.binder;
 using Judith.NET.analysis.semantics;
 using Judith.NET.analysis.syntax;
+using Judith.NET.ir;
 using Judith.NET.message;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -20,11 +21,11 @@ public class Binder {
     public MessageContainer Messages { get; private set; } = new();
 
     [JsonIgnore]
-    private ProjectCompilation _cmp;
+    private Compilation _cmp;
 
     public Dictionary<SyntaxNode, BoundNode> BoundNodes { get; private set; } = new();
 
-    public Binder (ProjectCompilation compilation) {
+    public Binder (Compilation compilation) {
         _cmp = compilation;
     }
 
@@ -180,13 +181,13 @@ public class Binder {
         return boundBinaryExpr;
     }
 
-    public BoundLeftUnaryExpression BindLeftUnaryExpression (LeftUnaryExpression leftUnaryExpr) {
-        if (TryGetBoundNode(leftUnaryExpr, out BoundLeftUnaryExpression? boundLeftUnaryExpr) == false) {
-            boundLeftUnaryExpr = new(leftUnaryExpr);
-            BoundNodes[leftUnaryExpr] = boundLeftUnaryExpr;
+    public BoundUnaryExpression BindUnaryExpression (UnaryExpression leftUnaryExpr) {
+        if (TryGetBoundNode(leftUnaryExpr, out BoundUnaryExpression? boundUnaryExpr) == false) {
+            boundUnaryExpr = new(leftUnaryExpr);
+            BoundNodes[leftUnaryExpr] = boundUnaryExpr;
         }
 
-        return boundLeftUnaryExpr;
+        return boundUnaryExpr;
     }
 
     public BoundObjectInitializationExpression BindObjectInitializationExpression (
@@ -506,6 +507,7 @@ public class Binder {
         }
         // TODO: Deal with Decimal (d) and BigInt (ib) types.
         BoundNodes[expr] = bound;
+        bound.Type = _cmp.Native.Types.F64; // TODO: Remove.
         return bound;
 
         void CheckIntegerSize (long value, long max, string type) {

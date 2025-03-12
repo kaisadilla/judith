@@ -9,12 +9,14 @@ using static System.Formats.Asn1.AsnWriter;
 namespace Judith.NET.analysis;
 
 public class SymbolFinder {
-    List<ICompilation> _dependencies;
-    ProjectCompilation _cmp;
+    NativeHeader _native;
+    List<AssemblyHeader> _dependencies;
+    Compilation _cmp;
 
-    public SymbolFinder (ProjectCompilation cmp) {
-        _dependencies = cmp.Dependencies;
+    public SymbolFinder (Compilation cmp) {
         _cmp = cmp;
+        _native = _cmp.Native;
+        _dependencies = _cmp.Dependencies;
     }
 
     /// <summary>
@@ -24,19 +26,23 @@ public class SymbolFinder {
     /// <param name="name">The name to search.</param>
     /// <param name="originScope">The scope from which it's searched.</param>
     /// <returns></returns>
-    public bool ContainsSymbol (string name, SymbolTable originScope) {
+    public bool IsSymbolDefinedInScope (string name, SymbolTable originScope) {
+        // If the scope contains the symbol, then it is defined.
         if (originScope.ContainsSymbol(name)) return true;
 
-        if (originScope.CanBeSplit && originScope.Symbol != null) {
-            foreach (var dep in _dependencies) {
-                var depScope = dep.SymbolTable.GetTableInTree(
-                    originScope.Symbol.FullyQualifiedName
-                );
+        // If the scope cannot be split (basically, every kind of scope other
+        // than modules), then the scope doesn't contain the symbol.
+        if (originScope.CanBeSplit == false || originScope.Symbol == null) {
+            return false;
+        }
 
-                if (depScope == null) continue;
+        // Dependencies will be searched by fully qualified name.
+        var fqn = originScope.Qualify(name);
 
-                if (depScope.ContainsSymbol(name)) return true;
-            }
+        if (_native.Symbols.ContainsKey(fqn)) return true;
+
+        foreach (var dep in _dependencies) {
+            if (dep.Symbols.ContainsKey(fqn)) return true;
         }
 
         return false;
@@ -69,8 +75,6 @@ public class SymbolFinder {
         // top table (the global namespace), and after that iteration is complete,
         // "scope" will become "null" and the loop will end.
         SymbolTable? scope = originScope;
-        SymbolTable?[] dependencyScopes = _dependencies
-            .Select(_ => (SymbolTable?)null).ToArray();
 
         while (scope != null) {
             if (scope.TryGetSymbol(name, out symbol)) {
@@ -78,16 +82,14 @@ public class SymbolFinder {
             }
 
             if (scope.CanBeSplit && scope.Symbol != null) {
-                for (int i = 0; i < _dependencies.Count; i++) {
-                    dependencyScopes[i] = _dependencies[i].SymbolTable.GetTableInTree(
-                        scope.Symbol.FullyQualifiedName
-                    );
+                var fqn = scope.Qualify(name);
+
+                if (_native.Symbols.TryGetValue(fqn, out symbol)) {
+                    return [symbol];
                 }
 
-                foreach (var depScope in dependencyScopes) {
-                    if (depScope == null) continue;
-
-                    if (depScope.TryGetSymbol(name, out symbol)) {
+                foreach (var dep in _dependencies) {
+                    if (dep.Symbols.TryGetValue(fqn, out symbol)) {
                         return [symbol];
                     }
                 }
@@ -106,26 +108,10 @@ public class SymbolFinder {
         // For this reason, in this step we collect every symbol we find rather
         // than returning as soon as we find one.
 
-        List<SymbolTable?> importScopes = [];
-        SymbolTable thisCompilationRoot = originScope.GetRootTable();
-
         List<Symbol> results = [];
         
         foreach (var import in imports) {
-            importScopes.Clear();
-            importScopes.Add(thisCompilationRoot.GetTableInTree(import));
-
-            foreach (var dep in _dependencies) {
-                importScopes.Add(dep.SymbolTable.GetTableInTree(import));
-            }
-
-            foreach (var importScope in importScopes) {
-                if (importScope == null) continue;
-
-                if (importScope.TryGetSymbol(name, out Symbol? importedSymbol)) {
-                    results.Add(importedSymbol);
-                }
-            }
+            // TODO: Search through imports.
         }
 
         return results;

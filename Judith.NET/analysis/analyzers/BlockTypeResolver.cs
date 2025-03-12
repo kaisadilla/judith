@@ -15,10 +15,10 @@ using RetInfo = (SyntaxKind retKind, TypeSymbol type);
 public class BlockTypeResolver : SyntaxVisitor<RetInfo?> {
     public MessageContainer Messages { get; private set; } = new();
 
-    private ProjectCompilation _cmp;
+    private Compilation _cmp;
     private ScopeResolver _scope;
 
-    public BlockTypeResolver (ProjectCompilation cmp) {
+    public BlockTypeResolver (Compilation cmp) {
         _cmp = cmp;
         _scope = new(_cmp);
     }

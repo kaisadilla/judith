@@ -13,9 +13,9 @@ namespace Judith.NET.diagnostics;
 public class AstTypePrinter : SyntaxVisitor {
     public List<string> TypedNodes { get; private set; } = new();
 
-    private ProjectCompilation _cmp;
+    private Compilation _cmp;
 
-    public AstTypePrinter (ProjectCompilation cmp) {
+    public AstTypePrinter (Compilation cmp) {
         _cmp = cmp;
     }
 
@@ -75,7 +75,7 @@ public class AstTypePrinter : SyntaxVisitor {
     }
 
     public override void Visit (LeftUnaryExpression node) {
-        var boundNode = _cmp.Binder.GetBoundNodeOrThrow<BoundLeftUnaryExpression>(node);
+        var boundNode = _cmp.Binder.GetBoundNodeOrThrow<BoundUnaryExpression>(node);
 
         TypedNodes.Add($"LeftUnaryExpr: {node} - Type: {FQN(boundNode.Type)}");
     }

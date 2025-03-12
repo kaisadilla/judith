@@ -12,9 +12,9 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 namespace Judith.NET.diagnostics;
 
 public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
-    private ProjectCompilation _cmp;
+    private Compilation _cmp;
 
-    public AstWithSemanticsPrinter (ProjectCompilation cmp) {
+    public AstWithSemanticsPrinter (Compilation cmp) {
         _cmp = cmp;
     }
 

@@ -3,6 +3,7 @@ using Judith.NET.analysis.syntax;
 using Judith.NET.builder;
 using Judith.NET.codegen;
 using Judith.NET.codegen.jasm;
+using Judith.NET.ir;
 using Judith.NET.message;
 using System;
 using System.Collections.Generic;
@@ -35,9 +36,12 @@ public class JasmScriptCompiler : IJudithCompiler {
 
     public List<CompilerUnit>? CompilerUnits { get; private set; } = null;
 
-    public List<ICompilation>? Dependencies { get; private set; } = null;
+    public NativeHeader? Native { get; private set; } = null;
+    public List<AssemblyHeader>? Dependencies { get; private set; } = null;
 
-    public ProjectCompilation? Compilation { get; private set; } = null;
+    public Compilation? Compilation { get; private set; } = null;
+
+    public List<IRBlock>? IR { get; private set; } = null;
 
     public JasmAssembly? Assembly { get; private set; }
 
@@ -55,13 +59,13 @@ public class JasmScriptCompiler : IJudithCompiler {
 
         // 3. Analyze.
         Analyze();
-        
-        // 4. Generate IR
-        // TODO
 
         if (Compilation.IsValidProgram == false) {
             return;
         }
+
+        // 4. Generate IR
+        GenerateIR();
 
         // 5. Generate code
         GenerateCode();
@@ -109,7 +113,7 @@ public class JasmScriptCompiler : IJudithCompiler {
         AddNativeAssembly();
 
         // 3. Add headers from dependencies.
-        // TODO.
+        AddDependencies();
 
         // 4. Create compilation object
         CreateCompilationObject();
@@ -126,20 +130,27 @@ public class JasmScriptCompiler : IJudithCompiler {
         CompilerUnits.Add(CompilerUnitFactory.FromNodeCollection(FileName, Ast));
     }
 
-    [MemberNotNull(nameof(Dependencies))]
+    [MemberNotNull(nameof(Native))]
     public void AddNativeAssembly () {
-        var nativeComp = NativeCompilation.Ver1();
-        Dependencies = [nativeComp];
+        Native = NativeHeader.Ver1();
     }
 
-    [MemberNotNull(nameof(Dependencies), nameof(CompilerUnits), nameof(Compilation))]
-    public void CreateCompilationObject () {
-        if (Dependencies == null || CompilerUnits == null) throw new InvalidStepException(
-            "Dependencies and compiler units have to be built before creating " +
-            "the compilation object."
-        );
+    [MemberNotNull(nameof(Dependencies))]
+    public void AddDependencies () {
+        Dependencies = [];
+        // TODO: Actually add dependencies.
+    }
 
-        Compilation = new(Dependencies, CompilerUnits);
+    [MemberNotNull(nameof(Native), nameof(Dependencies), nameof(CompilerUnits), nameof(Compilation))]
+    public void CreateCompilationObject () {
+        if (Native == null || Dependencies == null || CompilerUnits == null) {
+            throw new InvalidStepException(
+                "Dependencies and compiler units have to be built before creating " +
+                "the compilation object."
+            );
+        }
+
+        Compilation = new(FileName, Native, Dependencies, CompilerUnits);
     }
 
     [MemberNotNull(nameof(Compilation))]
@@ -151,6 +162,23 @@ public class JasmScriptCompiler : IJudithCompiler {
 
         Compilation.Analyze();
         Messages.Add(Compilation.Messages);
+    }
+
+    [MemberNotNull(nameof(IR))]
+    public void GenerateIR () {
+        if (Compilation == null) throw new InvalidStepException(
+            "The compilation object has to be built before the IR can be generated. "
+        );
+        if (Compilation.IsValidProgram == false) throw new InvalidStepException(
+            "Cannot generate IR unless the program is a valid program."
+        );
+
+        IR = [];
+
+        var gen = new JudithIRGenerator(Compilation, IRNativeHeader.Ver1());
+        foreach (var cu in Compilation.Units) {
+             IR.Add(gen.GenerateBlock(cu));
+        }
     }
 
     [MemberNotNull(nameof(Compilation), nameof(Assembly))]
@@ -176,6 +204,6 @@ public class JasmScriptCompiler : IJudithCompiler {
         );
 
         JdllBuilder builder = new(Assembly);
-        builder.BuildLibrary(outPath);
+        builder.BuildJdll(outPath);
     }
 }

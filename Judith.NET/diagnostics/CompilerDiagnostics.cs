@@ -68,21 +68,21 @@ public static class CompilerDiagnostics {
     }
 
     public static void EmitSymbolTable (
-        ProjectCompilation cmp, string folderPath, string fileName
+        Compilation cmp, string folderPath, string fileName
     ) {
         string json = Serialize(cmp.SymbolTable);
         WriteFile(folderPath, fileName + ".symbol-table.json", json);
     }
 
     public static void EmitBinder (
-        ProjectCompilation cmp, string folderPath, string fileName
+        Compilation cmp, string folderPath, string fileName
     ) {
         string json = Serialize(cmp.Binder);
         WriteFile(folderPath, fileName + ".binder.json", json);
     }
 
     public static void EmitTypeTable (
-        ProjectCompilation cmp, string folderPath, string fileName
+        Compilation cmp, string folderPath, string fileName
     ) {
         var gen = new TypeTableGenerator();
         gen.Analyze(cmp.SymbolTable);
@@ -91,7 +91,7 @@ public static class CompilerDiagnostics {
     }
 
     public static void EmitSemanticAst (
-        ProjectCompilation cmp, string folderPath, string fileName
+        Compilation cmp, string folderPath, string fileName
     ) {
         var gen = new AstWithSemanticsPrinter(cmp);
         string json = Serialize(gen.Visit(cmp.Units[0]));
@@ -99,7 +99,7 @@ public static class CompilerDiagnostics {
     }
 
     public static void EmitNodeTypes (
-        ProjectCompilation cmp, string folderPath, string fileName
+        Compilation cmp, string folderPath, string fileName
     ) {
         var gen = new AstTypePrinter(cmp);
         gen.Analyze();

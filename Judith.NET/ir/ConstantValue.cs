@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Judith.NET.analysis.binder;
+namespace Judith.NET.ir;
 
 public enum ConstantValueKind {
     Integer,

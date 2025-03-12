@@ -9,12 +9,12 @@ public class FunctionSymbol : Symbol {
     public TypeSymbol? ReturnType { get; set; }
 
     public FunctionSymbol (
-        SymbolTable table,
         List<TypeSymbol> paramTypes,
         string name,
-        string fullyQualifiedName
+        string fullyQualifiedName,
+        string assembly
     )
-        : base(table, SymbolKind.Function, name, fullyQualifiedName)
+        : base(SymbolKind.Function, name, fullyQualifiedName, assembly)
     {
         ParamTypes = paramTypes;
     }

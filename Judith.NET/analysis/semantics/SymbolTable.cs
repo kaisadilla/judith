@@ -32,12 +32,6 @@ public class SymbolTable {
     public string Name { get; protected set; }
 
     /// <summary>
-    /// The owner of this table.
-    /// </summary>
-    [JsonIgnore]
-    public ICompilation? Owner { get; init; }
-
-    /// <summary>
     /// The table that contains this table, if any.
     /// </summary>
     [JsonIgnore]
@@ -97,12 +91,9 @@ public class SymbolTable {
         Symbol = symbol;
     }
 
-    public static SymbolTable CreateGlobalTable (ICompilation? owner) {
-        Symbol symbol = new(null!, SymbolKind.Module, "", "");
-        SymbolTable tbl = new(ScopeKind.Global, "", null, symbol) {
-            Owner = owner,
-        };
-        tbl.Symbol!.Table = tbl;
+    public static SymbolTable CreateGlobalTable (string assembly) {
+        Symbol symbol = new(SymbolKind.Module, "", "", assembly);
+        SymbolTable tbl = new(ScopeKind.Global, "", null, symbol);
 
         return tbl;
     }
@@ -153,7 +144,7 @@ public class SymbolTable {
     /// <typeparam name="T">The type of the symbol to add.</typeparam>
     /// <param name="createSymbol">The definer function for this symbol.</param>
     /// <returns></returns>
-    public T AddSymbol<T> (Symbol.DefinerFunc<T> createSymbol) where T : Symbol {
+    public T AddSymbol<T> (Func<SymbolTable, T> createSymbol) where T : Symbol {
         var symbol = createSymbol(this);
 
         if (Symbols.ContainsKey(symbol.Name)) throw new Exception(
@@ -179,9 +170,7 @@ public class SymbolTable {
         // The name under which the scope will be indexed.
         string name = GetAvailableName(symbol?.Name ?? "<anonymous-scope>");
 
-        SymbolTable tbl = new(kind, name, this, symbol) {
-            Owner = Owner,
-        };
+        SymbolTable tbl = new(kind, name, this, symbol);
 
         ChildTables[name] = tbl;
         return tbl;

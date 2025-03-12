@@ -12,9 +12,9 @@ public class TypeSymbol : Symbol {
     public List<MemberSymbol> MemberFields { get; private set; } = [];
 
     public TypeSymbol (
-        SymbolTable table, SymbolKind kind, string name, string fullyQualifiedName
+        SymbolKind kind, string name, string fullyQualifiedName, string assembly
     )
-        : base(table, kind, name, fullyQualifiedName)
+        : base(kind, name, fullyQualifiedName, assembly)
     {}
 
     public bool TryGetMember (
@@ -22,16 +22,6 @@ public class TypeSymbol : Symbol {
     ) {
         member = MemberFields.Find(m => m.Name == memberName);
         return member != null;
-    }
-
-    /// <summary>
-    /// Returns a function that will create symbols with the kind and name given.
-    /// </summary>
-    /// <param name="kind">The kind of symbol.</param>
-    /// <param name="name">The name of the symbol.</param>
-    /// <returns></returns>
-    public static new DefinerFunc<TypeSymbol> Define (SymbolKind kind, string name) {
-        return table => new TypeSymbol(table, kind, name, table.Qualify(name));
     }
 
     public static bool IsResolved ([NotNullWhen(true)] TypeSymbol? symbol) {

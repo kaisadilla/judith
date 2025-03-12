@@ -19,14 +19,14 @@ namespace Judith.NET.analysis.analyzers;
 public class SymbolResolver : SyntaxVisitor {
     public MessageContainer Messages { get; private set; } = new();
 
-    private readonly ProjectCompilation _cmp;
+    private readonly Compilation _cmp;
     private readonly ScopeResolver _scope;
     private readonly SymbolFinder _finder;
 
     private NodeStateManager _nodeStates = new();
     public int Resolutions { get; private set; } = 0;
 
-    public SymbolResolver (ProjectCompilation cmp) {
+    public SymbolResolver (Compilation cmp) {
         _cmp = cmp;
         _scope = new(_cmp);
         _finder = new(_cmp);
@@ -113,8 +113,6 @@ public class SymbolResolver : SyntaxVisitor {
         if (_nodeStates.IsComplete(node)) return;
 
         string name = node.Identifier.Name;
-
-        var candidates = _finder.FindRecursively(name, _scope.Current, []);
 
         var symbol = FindSymbolOrErrorMsg(name, node.Identifier.Line);
         if (symbol == null) return;

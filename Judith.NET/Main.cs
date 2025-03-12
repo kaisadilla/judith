@@ -6,6 +6,7 @@ using Judith.NET.codegen;
 using Judith.NET.codegen.jasm;
 using Judith.NET.compilation;
 using Judith.NET.diagnostics;
+using Judith.NET.ir;
 using Judith.NET.message;
 using Newtonsoft.Json;
 using System.Diagnostics;
@@ -35,6 +36,18 @@ PrintMessages(compiler.Messages);
 
 Console.WriteLine("Generating debug files...");
 CompilerDiagnostics.GenerateCompilationFiles(compiler, OUT_DIR, "test");
+
+if (compiler.IR != null) {
+    int count = 0;
+    foreach (var ir in compiler.IR) {
+        var printer = new IRSourcePrinter(ir);
+        printer.Print();
+
+        File.WriteAllText(Path.Join(OUT_DIR, "test." + count + ".jir"), printer.Source);
+        count++;
+    }
+}
+
 Console.WriteLine("Debug files generated.");
 
 if (compiler.Assembly != null) {
@@ -48,7 +61,7 @@ if (compiler.Assembly != null) {
     disassembler.Disassemble();
 }
 
-void PrintMessages (MessageContainer messages) {
+static void PrintMessages (MessageContainer messages) {
     foreach (var m in messages.Errors) {
         Console.WriteLine("ERROR: " + m.Message);
     }

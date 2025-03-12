@@ -12,7 +12,7 @@ public static class SyntaxFactory {
         Identifier name,
         ParameterList parameters,
         TypeAnnotation? returnType,
-        Statement body
+        BlockStatement body
     ) {
         var funcItem = new FunctionDefinition(
             false, hidToken != null, name, parameters, returnType, body

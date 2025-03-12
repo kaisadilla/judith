@@ -7,20 +7,22 @@ using System.Threading.Tasks;
 namespace Judith.NET.analysis.syntax;
 
 public abstract class UnaryExpression : Expression {
-    protected UnaryExpression (SyntaxKind kind) : base(kind) { }
-}
-
-public class LeftUnaryExpression : UnaryExpression {
     public Operator Operator { get; init; }
     public Expression Expression { get; init; }
 
-    public LeftUnaryExpression (Operator op, Expression expr)
-        : base(SyntaxKind.LeftUnaryExpression) {
+    protected UnaryExpression (SyntaxKind kind, Operator op, Expression expr)
+        : base(kind)
+    {
         Operator = op;
         Expression = expr;
-
         Children.Add(Operator, Expression);
     }
+}
+
+public class LeftUnaryExpression : UnaryExpression {
+
+    public LeftUnaryExpression (Operator op, Expression expr)
+        : base(SyntaxKind.LeftUnaryExpression, op, expr) {}
 
     public override void Accept (SyntaxVisitor visitor) {
         visitor.Visit(this);

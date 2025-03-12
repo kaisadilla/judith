@@ -1,5 +1,6 @@
 ﻿using Judith.NET.analysis.semantics;
 using Judith.NET.analysis.syntax;
+using Judith.NET.ir;
 using System;
 using System.Collections.Generic;
 using System.Linq;

@@ -17,7 +17,7 @@ namespace Judith.NET.analysis.analyzers;
 public class SymbolTableBuilder : SyntaxVisitor {
     public MessageContainer Messages { get; private set; } = new();
 
-    private ProjectCompilation _cmp;
+    private Compilation _cmp;
 
     private ScopeResolver _scope;
     private SymbolFinder _finder;
@@ -25,7 +25,7 @@ public class SymbolTableBuilder : SyntaxVisitor {
     private Dictionary<SyntaxNode, NodeState> _nodeStates = [];
     private int _resolutions = 0;
 
-    public SymbolTableBuilder (ProjectCompilation cmp) {
+    public SymbolTableBuilder (Compilation cmp) {
         _cmp = cmp;
         _scope = new(_cmp);
         _finder = new(_cmp);
@@ -42,7 +42,7 @@ public class SymbolTableBuilder : SyntaxVisitor {
     public override void Visit (FunctionDefinition node) {
         string name = node.Identifier.Name;
 
-        if (_finder.ContainsSymbol(name, _scope.Current)) {
+        if (_finder.IsSymbolDefinedInScope(name, _scope.Current)) {
             Messages.Add(CompilerMessage.Analyzers.DefinitionAlreadyExist(
                 name, node.Line
             ));
@@ -51,9 +51,9 @@ public class SymbolTableBuilder : SyntaxVisitor {
 
         var paramTypes = _cmp.Binder.GetParamTypes(node.Parameters);
 
-        var symbol = _scope.Current.AddSymbol(
-            tbl => new FunctionSymbol(tbl, paramTypes, name, tbl.Qualify(name))
-        );
+        var symbol = _scope.Current.AddSymbol(tbl => new FunctionSymbol(
+            paramTypes, name, tbl.Qualify(name), _cmp.Name
+        ));
         symbol.Type = _cmp.Native.Types.Function;
         var scope = _scope.Current.CreateChildTable(ScopeKind.FunctionBlock, symbol);
         _scope.BeginScope(scope);
@@ -69,16 +69,16 @@ public class SymbolTableBuilder : SyntaxVisitor {
     public override void Visit (StructTypeDefinition node) {
         string name = node.Identifier.Name;
 
-        if (_finder.ContainsSymbol(name, _scope.Current)) {
+        if (_finder.IsSymbolDefinedInScope(name, _scope.Current)) {
             Messages.Add(CompilerMessage.Analyzers.DefinitionAlreadyExist(
                 name, node.Line
             ));
             return;
         }
 
-        TypeSymbol symbol = _scope.Current.AddSymbol(
-            TypeSymbol.Define(SymbolKind.StructType, name)
-        );
+        TypeSymbol symbol = _scope.Current.AddSymbol(tbl => new TypeSymbol(
+            SymbolKind.StructType, name, tbl.Qualify(name), _cmp.Name
+        ));
         symbol.Type = _cmp.Native.Types.NoType;
 
         var scope = _scope.Current.CreateChildTable(ScopeKind.StructSpace, symbol);
@@ -141,9 +141,9 @@ public class SymbolTableBuilder : SyntaxVisitor {
     }
 
     public override void Visit (LocalDeclarator node) {
-        var symbol = _scope.Current.AddSymbol(
-            Symbol.Define(SymbolKind.Local, node.Identifier.Name)
-        );
+        var symbol = _scope.Current.AddSymbol(tbl => new Symbol(
+            SymbolKind.Local, node.Identifier.Name, tbl.Qualify(node.Identifier.Name), _cmp.Name
+        ));
 
         _cmp.Binder.BindLocalDeclarator(node, symbol);
 
@@ -151,9 +151,12 @@ public class SymbolTableBuilder : SyntaxVisitor {
     }
 
     public override void Visit (Parameter node) {
-        var symbol = _scope.Current.AddSymbol(
-            Symbol.Define(SymbolKind.Parameter, node.Declarator.Identifier.Name)
-        );
+        var symbol = _scope.Current.AddSymbol(tbl => new Symbol(
+            SymbolKind.Parameter,
+            node.Declarator.Identifier.Name,
+            tbl.Qualify(node.Declarator.Identifier.Name),
+            _cmp.Name
+        ));
 
         _cmp.Binder.BindParameter(node, symbol);
 
@@ -182,9 +185,12 @@ public class SymbolTableBuilder : SyntaxVisitor {
     ) {
         foreach (var node in nodes) {
             // TODO: Check member methods.
-            var memberSymbol = _scope.Current.AddSymbol(
-                MemberSymbol.Define(SymbolKind.MemberField, node.Identifier.Name)
-            );
+            var memberSymbol = _scope.Current.AddSymbol(tbl => new MemberSymbol(
+                SymbolKind.MemberField,
+                node.Identifier.Name,
+                tbl.Qualify(node.Identifier.Name),
+                _cmp.Name
+            ));
 
             _cmp.Binder.BindMemberField(node, memberSymbol);
             typeSymbol.MemberFields.Add(memberSymbol);

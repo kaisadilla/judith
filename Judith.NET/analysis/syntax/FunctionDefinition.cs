@@ -15,7 +15,7 @@ public class FunctionDefinition : Item {
     public Identifier Identifier { get; private init; }
     public ParameterList Parameters { get; private init; }
     public TypeAnnotation? ReturnTypeAnnotation { get; private init; }
-    public Statement Body { get; private init; }
+    public BlockStatement Body { get; private init; }
 
     public Token? HidToken { get; init; }
     public Token? FuncToken { get; init; }
@@ -27,9 +27,10 @@ public class FunctionDefinition : Item {
         Identifier name,
         ParameterList parameters,
         TypeAnnotation? returnType,
-        Statement body
+        BlockStatement body
     )
-        : base(SyntaxKind.FunctionDefinition) {
+        : base(SyntaxKind.FunctionDefinition)
+    {
         IsImplicit = isImplicit;
         IsHidden = isHidden;
         Identifier = name;

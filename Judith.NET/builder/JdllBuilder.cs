@@ -14,20 +14,18 @@ public class JdllBuilder {
         _assembly = assembly;
     }
 
-    public void BuildLibrary (string outPath) {
+    public void BuildJdll (string outPath) {
         string dir = Path.GetDirectoryName(outPath) ?? throw new(
             $"Couldn't determine out path's directory. Out path: '{outPath}'"
         );
 
-        List<byte> fileBytes = new();
+        using var mstream = new MemoryStream();
+        using var writer = new BinaryWriter(mstream);
 
-        using var ms = new MemoryStream();
-        using var writer = new BinaryWriter(ms);
-
-        WriteMagicNumber(writer); // magic_number: byte[12] = 'AZARIAJUDITH'
+        WriteMagicNumber(writer); // magic_number: byte[6] = 'JUDITH'
         writer.Write((byte)0); // endianness: byte = 0 -- little-endian
-        writer.Write((byte)0); // major_version: byte = 0
-        writer.Write((byte)0); // minor_version: byte = 0
+        writer.Write((byte)0); // judith_version: byte = 0 - pre-alpha
+        WriteVersion(writer, 0, 0, 0, 0); // version: Version = 0.0.0.0 (TODO: Real assembly version)
 
         WriteFuncRefTable(writer, _assembly.FunctionRefTable); // func_ref_arr
 
@@ -38,22 +36,25 @@ public class JdllBuilder {
         }
 
         Directory.CreateDirectory(dir);
-        File.WriteAllBytes(outPath, ms.ToArray());
+        File.WriteAllBytes(outPath, mstream.ToArray());
     }
 
     private void WriteMagicNumber (BinaryWriter writer) {
-        writer.Write((byte)'A');
-        writer.Write((byte)'Z');
-        writer.Write((byte)'A');
-        writer.Write((byte)'R');
-        writer.Write((byte)'I');
-        writer.Write((byte)'A');
         writer.Write((byte)'J');
         writer.Write((byte)'U');
         writer.Write((byte)'D');
         writer.Write((byte)'I');
         writer.Write((byte)'T');
         writer.Write((byte)'H');
+    }
+
+    private void WriteVersion (
+        BinaryWriter writer, int major, int minor, int patch, int build
+    ) {
+        writer.Write((ushort)major);
+        writer.Write((ushort)minor);
+        writer.Write((ushort)patch);
+        writer.Write((ushort)build);
     }
 
     private void WriteFuncRefTable (BinaryWriter writer, FunctionRefTable table) {

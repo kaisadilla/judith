@@ -21,26 +21,39 @@ JuDoc comments are introduced with `---` and follow roughly the same syntax as J
 --- @param a - The first number to add.
 --- @param b - The second number to add.
 --- @returns The two numbers added together.
-func add (a, b: Num) : Num
+func add (a, b: Num) -> Num
     return a + b
 end
 ```
 
 # Modularization
 
-## Module
-Modules organize top-level items into separate regions. All top-level items in Judith belong to a module. If no module is defined in a file, then items declared in that file will be included in the global module. Libraries are not allowed to include anything in the global module.
+## Modules
+Modules group top-level items. All top-level items in Judith belong to a module. Modules can be nested (e.g. `module game` and `module game::physics`).
 
-Each file may only contain one module declaration, and that declaration must precede any other item in the file (excluding import nodes, which must appear at the top of the file).
+Judith projects always have a root module, which can be a nested one (e.g. `some_dev::json`). By default, the root module matches the name of the project's folder, using `.` to divide modules (e.g. the project `some_dev.json/` would have `some_dev::json` as its root module).
 
-When a file is included in a module, that module is implicitly imported into the file.
-```judith
-module awesome_game -- all items in this file will be inside this module.
-```
+Modules cannot be split between packages. If `some_dev.json` defines the modules `some_dev::json` and `some_dev::json::bson`; then a project using said library cannot define these two modules, but it can define other modules such as `some_dev::json::extra`. While extremely unlikely, if two dependencies define the same module, then at least one of them must have its root module aliased, so the modules in both of them can be referenced unambiguously.
 
-Modules can contain other modules. In this case, the module and all of its ancestors are imported into the file
+Root module names `judith` and `std`, along with all of their nested modules, are reserved and should not be used by anyone. The name `global` cannot be used as the name of a module.
+
+Each file may only contain one module declaration, and that declaration must precede any other item in the file (excluding import nodes, which must appear at the top of the file). By default, the folder structure of the project must match the module structure of the source files (e.g. the file `my_game/physics/RigidBody.jud` must belong to the module `module my_game::physics`), although this can be changed in the project's settings.
+
+On top of all modules lies the global module. The global module has no name, although it can be explicitly referenced with the `global` name. (e.g. `global::Num` or `global::some_dev::json`). The global module contains only native Judith features such as primitive types.
+
+Scripts (a single file, rather than a project) do not belong to any module, and instead use the global module.
+
+## Imports
+By default, the module a file belongs to, as well as all of its parent modules are imported into the file.
+
 ```judith
 module awesome_game::physics -- this file will have access to awesome_game, too.
+```
+
+`import` is used to add additional modules to the list of available modules in the file. `import` only imports the specified module into the file, not any of its parent or child modules.
+
+```judith
+import std::collections
 ```
 
 Members of a module can also be accessed explicitly, using their fully qualified name:
@@ -55,24 +68,25 @@ import awesome_game
 typedef struct Game end
 
 const game = new Game() -- error, as Game here is referring to the Game struct we
-                     -- just defined, which doesn't have a constructor.
+                        -- just defined, which doesn't have a constructor.
 const game = new awesome_game::Game() -- Fine, it's referring to the correct type.
 ```
 
-The global module can be accessed with the name `global`:
-```judith
-module awesome_game
-const global_game = global::Game {} -- This refers to the `Game` struct we
-                                    -- just defined in the global module.
-```
+## Name resolution
+When referencing a name that doesn't exist in the local scope, Judith tries to resolve it in the following places:
 
-## Namespace
+1. If the scope is contained within another scope (e.g. a function inside another function), then the outer scope, recursively.
+1. The module the file belongs to.
+2. The module's parent module. This is done recursively, until the global module (inclusive) is reached.
+3. All of the imported modules. No imported module has any precedence over any other, so if more than one imported module contains the name, then the reference is ambiguous and, thus, invalid.
+
+## Namespaces
 Namespaces are similar to modules, but they cannot be imported explicitly. They can be thought of as static classes in other languages when they are used as method containers (i.e. they do not have state):
 ```judith
 namespace Math
     symbol PI = 3.1415
 
-    func pow (a, b: Num) : Num
+    func pow (a, b: Num) -> Num
         var r = a
         for i in 1..b do
             r *= a
@@ -167,9 +181,9 @@ const name: String = "Kevin" -- local of type String.
 name = 3 -- ERROR: Num cannot be assigned to local of type String.
 ```
 
-Even though locals always have a type in Judith, that type may be infered from context:
+Even though locals always have a type in Judith, that type may be inferred from context:
 ```judith
-var score = 12 -- "score" is of type Num, as infered from its initialization.
+var score = 12 -- "score" is of type Num, as inferred from its initialization.
 var score = "Alyce" -- ERROR: String cannot be assigned to local of type Num.
 ```
 
@@ -228,7 +242,7 @@ const person = player.person -- Valid. Because 'player' is constant, the type of
                              -- its member 'person' becomes 'const Person'.
 ```
 
-# Primitives
+# <a name="primitives">Primitives</a>
 Primitives are the basic types of Judith. These types are not defined in the language itself, but implemented by the compiler and the VM.
 
 ## Basic primitives
@@ -314,7 +328,7 @@ Judith features some pseudo-types. These types represent concepts relating to ty
 * `Void`: Used to represent the absence of a type where a type has to be referenced. For example, the signature of a function that doesn't return any value needs `Void` to indicate its return type: `(Int, Int) => Void`.
 * `Unknown`: Denotes the type of a value whose type is not known. A value of type `Unknown` does not allow any operation on it, other than operations that are always available regarding of type (such as testing its type with `is`, or the `str()` method). `Unknown` can be used normally as the type of a local.
 * `Never`: Denotes a type that cannot exist. This type can appear when narrowing down a type until no type is left. For example, after exhausting all possible types of a union type, in the next test the value will be of type `Never`, as it can never reach that test. `Never` cannot be used as the type of a value.
-* `Auto`: Denotes a type that is infered from context in places where a type cannot be omitted. This is used for a few syntactic features where the decision to infer type is opt-in rather than opt-out (notably return types in functions).
+* `Auto`: Denotes a type that is inferred from context in places where a type cannot be omitted. This is used for a few syntactic features where the decision to infer type is opt-in rather than opt-out (notably return types in functions).
 * `Null`: A type whose only possible value is `null`.
 * `<error-type>`: This type appears when something that is not a type is used as a type. In general, developers will see this type when trying to reference types that don't exist.
 
@@ -781,7 +795,7 @@ Jumptables are not named `switch` to discourage developers coming from languages
 Functions are defined by the keyword `func`:
 
 ```judith
-func get_value_plus_10 (const value: Num) : Num
+func get_value_plus_10 (const value: Num) -> Num
     return value + 10
 end
 ```
@@ -789,7 +803,7 @@ end
 Functions may return a value, or no value at all. In this case, their return type is `Void`.
 
 ```judith
-func hello_world () : Void
+func hello_world () -> Void
     Console::log("Hello world")
 end
 ```
@@ -797,7 +811,7 @@ end
 Functions can return `const` values. These values cannot be assigned to mutable locals or fields:
 
 ```judith
-func get_immutable_person (id: String) : const Person
+func get_immutable_person (id: String) -> const Person
     -- statements
     return person
 end
@@ -818,7 +832,7 @@ end
 To infer the return type of a function, an explicit 'Auto' must be used.
 
 ```judith
-func add (a, b: Num) : Auto -- infered to be 'Num'
+func add (a, b: Num) -> Auto -- inferred to be 'Num'
     return a + b
 end
 ```
@@ -830,7 +844,7 @@ Judith does not allow function overloading.
 Variadic functions can take any number of arguments. To define a variadic function, its last parameter has to use the spread operator, and the type of said parameter has to be a type that can be initialized as a list (i.e. any type that can be initialized with [a, b, c] syntax).
 
 ```judith
-func add_many_numbers (...nums: List<Num>) : Num
+func add_many_numbers (...nums: List<Num>) -> Num
     var sum = 0
     for n in nums do sum += n end
     return sum
@@ -899,7 +913,7 @@ world.start() -- ERROR local 'world' is no longer accessible.
 The return type of a function can be `Never`. This means that the function never returns (because it always throws an error, contains an infinite loop, etc). `return` statements are explicitly forbidden inside `Never` and, if the function has a path that can return, it will result in a compile error.
 
 ```judith
-func start () : Never
+func start () -> Never
     loop {
         -- statements
     }
@@ -931,15 +945,15 @@ Functions in Judith are first-class, which means they can be treated like any ot
 A function's type is defined by its signature:
 
 ```judith
-func add (a, b: Num) : Num
+func add (a, b: Num) -> Num
     return a + b
 end
 
-func multiply (a, b: Num) : Num
+func multiply (a, b: Num) -> Num
     return a + b
 end
 
-func negate (a: Num) : Num
+func negate (a: Num) -> Num
     return -a
 end
 ```
@@ -962,12 +976,12 @@ binary_op(5, 8) -- Returns '40', as "binary_op" points to "multiply()".
 Functions can be defined with lambda syntax. Functions defined as lambda syntax are expressions and evaluate to the function itself.
 
 ```judith
-const add = (a: Num, b: Num) : Num
+const add = (a: Num, b: Num) -> Num
     return a + b
 end
 ```
 
-In this example, we can see every feature of a lambda function, although most of them can be omitted. The type annotation in the parameters are only necessary when the type of said parameters cannot be infered from context. Return type can also be omitted - unlike regular function syntax, return type `Void` is not implied, but instead the return type is infered from usage. Finally, the body of the function can be replaced with an arrow expression. In this case, the value of the expression will become the return type of the lambda function.
+In this example, we can see every feature of a lambda function, although most of them can be omitted. The type annotation in the parameters are only necessary when the type of said parameters cannot be inferred from context. Return type can also be omitted - unlike regular function syntax, return type `Void` is not implied, but instead the return type is inferred from usage. Finally, the body of the function can be replaced with an arrow expression. In this case, the value of the expression will become the return type of the lambda function.
 
 With all of these features, this is the shortest way to write a lambda function:
 
@@ -981,8 +995,8 @@ const add: (Num, Num) => Num = (a, b) => a + b
 Functions can be combined with the `.and_then` method. This method returns a new function that calls the function followed by a new function with the same signature:
 
 ```judith
-func increase_by_2 (x: Num) : Num return x + 2 end
-func multiply_by_3 (x: Num) : Num return x * 3 end
+func increase_by_2 (x: Num) -> Num return x + 2 end
+func multiply_by_3 (x: Num) -> Num return x * 3 end
 
 const increase_and_multiply = increase_by_2.and_then(multiply_by_3)
 
@@ -993,7 +1007,7 @@ Console::log(increase_and_multiply(10)) -- prints 36 (result of (10 + 2) * 3).
 Functions can be partially resolved by providing it some of its parameters, but not others. The result of partially calling a function is a new function that requires the missing parameters:
 
 ```judith
-func add (x: Num, y: Num) : Num return x + y end
+func add (x: Num, y: Num) -> Num return x + y end
 
 const add_2 = add(?, 2) -- add_2's type is '(Num) => Num'.
 
@@ -1074,7 +1088,7 @@ const scores: Array<Int, 4> = [3, 5, 9, 15]
 ```
 
 ## Array types
-_See [User-defined types § Array type](#user-types-array)._
+_See [User-defined types § Array type](#types-array)._
 
 ## Dictionary
 Dictionaries are the basic collection of key-value pairs.
@@ -1279,7 +1293,7 @@ func get_area (shape: Circle | Square)
 end
 ```
 
-Here, `shape` is infered to be of type `Circle` inside the `if` scope, as it's the only possible type in `Circle | Square` that can have a `kind` member with the value of `"Circle"`.
+Here, `shape` is inferred to be of type `Circle` inside the `if` scope, as it's the only possible type in `Circle | Square` that can have a `kind` member with the value of `"Circle"`.
 
 Keep in mind that values of an unsealed interface cannot be narrowed down, as the amount of available subtypes is not known at compile time.
 
@@ -1288,7 +1302,7 @@ When matching types, unreachable paths do not require superfluous code:
 ```judith
 typedef Id = String | Num
 
-func get_person (id: Id) : Person
+func get_person (id: Id) -> Person
     return get_person_by_string(id) when id is String
     return get_person_by_num(id) when id is Num
     
@@ -1298,46 +1312,101 @@ end
 
 In this example, even though there's no "general" return statement, the compiler recognizes that it's impossible for the function not to have exited after the second return statement, so it doesn't require the developer to write a superfluous `return` afterwards.
 
-# User-defined types
-Developers can define their own types with the `typedef` keyword.
+# Types
+Types in Judith are divided between value types and reference types. Value types are allocated on the stack, and locals contain the value itself. Reference types are allocated on the heap, and locals contain pointers to the actual value. The behavior of both kinds of types in Judith is mostly the same, as Judith abstracts away implementation details like memory management. However, they present some differences:
+* Only reference types can be compared by reference (`===` and `!==`).
 
-## Alias type
-An alias type is a type that maps to another type. Aliases can be implicit or explicit.
+## Primitive types
+_For a full explanation of primitive types, see [Primitives]_(#primitives).
 
-### Implicit alias
-Implicit aliases allow the defined type to be used as if it was the original type.
+* `Bool`: A boolean value: true or false.
+* `Num`
+* `String`\*
+* `Char`
+* `Regex`\*
+* `I8`, `I16`, `I32`, `I64`, `BigInt`
+* `Ui8`, `Ui16`, `Ui32`, `Ui64`
+* `F32`, `F64`
+* `Decimal`
+
+_\* Type is a reference type._
+
+## Function types
+Function types are types that define functions. The type of a function depends on its signature (type of each of its parameter and return type). Function types are expressed with the following syntax: `(<&lt;>parameter types separated by commas>) -> <return type>`. For example:
 
 ```judith
-typedef UniqueId = Int
-const id: UniqueId = 32 -- valid, as UniqueId is Int.
-const integer: Int = id -- valid, as UniqueId can be used as an Int.
+func get_person (id: Num, office: Office) -> Person end
+
+const getter: (Num, Office) -> Person = get_person
 ```
 
-The compiler in this example sees `UniqueId` as `Int`.
+Values of a function type are _callable_, which mean that they can be used in call expressions: `<callable>(<arglist>)`. Function types are always reference types.
 
-### Explicit alias
-Explicit aliases are equivalent to the type they are derived from, but a value whose type is the alias type cannot be used as if it was the original type.
+## <a name="types-array">Array type</a>
+An array type (not to be confused with the type `Array<_T, _size>`) is a type that defines an array where the type of each value inside it is explicitly defined. Array types are similar to tuple types in other languages.
 
 ```judith
-typedef expl UniqueId = Int
-const id: UniqueId = 32 -- valid, as UniqueId is initialized like Int.
-const integer: Int = id -- ERROR: cannot assign 'UniqueId' to 'Int'.
-const integer: Int = id:Int -- valid, explicit cast is allowed.
+const info: [String, Num] = ["Kevin", 36]
+info[0] -- inferred to be of type "String".
+info[1] -- inferred to be of type "Num".
+info[2] -- inferred to be "undefined".
+
+const n = get_num()
+info[n] -- inferred to be of type "String | Num | undefined".
+```
+
+When all of the members of an array share the same type, it can be defined with he following syntax:
+
+```judith
+const five_names: String[5] = ["Kevin", "Alyce", "Grant", "Ruby", "Annie"]
+```
+
+We may want to initialize many indices to the same value. This can be achieved by using the `;` token and defining the value that will fill the rest:
+```judith
+const ten_numbers: Num[10] = [3, 5; 9] -- produces [3, 5, 9, 9, 9, 9, 9, 9, 9, 9].
+const ten_42s: Num[10] = [; 42] -- produces [42, 42, 42, 42, 42, 42, 42, 42, 42, 42].
+```
+
+Note that the size of an array type is always known at compile time, so this syntax cannot be used dynamically:
+
+```judith
+const amount = get_amount()
+const nums: Num[amount] = [; 42] -- ERROR: array size must be known at compile time.
+```
+
+## Object type
+An object type is a struct-like type defined by its member fields:
+
+```judith
+const anon = {
+    username = "x__the_best__x",
+    score = 500_000_000,
+} -- type is inferred as "{username: String, score: Num}"
+
+anon.username -- valid, evaluates to a String.
+anon.id -- invalid, 'anon' doesn't contain field 'id'.
+```
+
+## Literal type
+A literal type is just a literal used as a type
+
+```judith
+var country: "Germany" = "Germany" -- This value can only equal "Germany"
+country = "France" -- error, String is not assignable to "Germany".
 ```
 
 ## Union type
 A union type defines a type that is the union of several types. As such, a relationship is established between the Union type and the types it's derived from, where all of the derived types are also the Union type, and the Union type could be any of the derived types.
 
 ```judith
-typedef Id = Num | String
-var id: Id = 36 -- valid, as "Num" is an "Id".
-id = "string_id -- valid, as "String" is also an "Id".
+var id: Num | String = 36 -- valid, as "Num" is a member of "Num | String".
+id = "string_id" -- valid, as "String" is also a "Num | String".
 ```
 
 We can downcast a union into any of its conforming types:
 
 ```judith
-const num: Num = Id:?Num
+const num: Num = id:?Num
 ```
 
 Unions of string literals will raise a warning, as a set is preferred:
@@ -1352,19 +1421,38 @@ Unions with literal `null` will raise a warning, as it would make them inferior 
 typedef Animal = Dog | Cat | null -- WARNING: Don't include 'null'.
 ```
 
-## Literal type
-A literal type is just a literal used as a type
+## User-defined types
+Developers can define their own types with the `typedef` keyword.
+
+### Alias type
+An alias type is a type that maps to another type. Aliases can be implicit or explicit. Any type can be aliased, including unions, array types, function types, etc.
+
+#### Implicit alias
+Implicit aliases allow the defined type to be used as if it was the original type.
 
 ```judith
-var country: "Germany" = "Germany" -- This value can only equal "Germany"
-country = "France" -- error, String is not assignable to "Germany".
+typedef UniqueId = Int
+const id: UniqueId = 32 -- valid, as UniqueId is Int.
+const integer: Int = id -- valid, as UniqueId can be used as an Int.
 ```
 
-## Set
-A set type is defined as a group of string literals. Literals used in a set use single quotes rather than double quotes.
+The compiler in this example sees `UniqueId` as `Int`.
+
+#### Explicit alias
+Explicit aliases are equivalent to the type they are derived from, but a value whose type is the alias type cannot be used as if it was the original type.
 
 ```judith
-typedef set Country
+typedef expl UniqueId = Int
+const id: UniqueId = 32 -- valid, as UniqueId is initialized like Int.
+const integer: Int = id -- ERROR: cannot assign 'UniqueId' to 'Int'.
+const integer: Int = id:Int -- valid, explicit cast is allowed.
+```
+
+### Option
+A option type is defined as a group of string literals. Literals used in an option are not strings, and so use single quotes rather than double quotes.
+
+```judith
+typedef option Country
     'Germany'
     'Sweden'
     'France'
@@ -1373,42 +1461,18 @@ typedef set Country
 end
 
 var country: Country = 'Germany'
-country = "Great Britain" -- invalid, as "Great Britain" is not part of the set.
+country = 'Great Britain' -- invalid, as 'Great Britain' is not part of the option.
 ```
 
-Set types cannot be used as a `String`, but can be upcasted into one:
+Option types cannot be used as a `String`, but can be upcasted into one:
 
 ```judith
 const country_name: String = country:String
 ```
 
-## <a name="user-types-array">Array type</a>
-An array type is a type that defines an array where the type of each value inside it is explicitly defined.
+Options are designed to be efficient: they compile into `Bool` when they contain two values or `Int` otherwise. The only costly operation associated to them is turning them into `String`.
 
-```judith
-const info: [String, Num] = ["Kevin", 36]
-info[0] -- infered to be of type "String".
-info[1] -- infered to be of type "Num".
-info[2] -- infered to be "undefined".
-
-const n = get_num()
-info[n] -- infered to be of type "String | Num | undefined".
-```
-
-## Object type
-An object type is a struct-like type defined by its member fields:
-
-```judith
-const anon = {
-    username = "x__the_best__x",
-    score = 500_000_000,
-} -- type is infered as "{username: String, score: Num}"
-
-anon.username -- valid, evaluates to a String.
-anon.id -- invalid, 'anon' doesn't contain field 'id'.
-```
-
-## Struct
+### Struct
 Structs define an object that contains a number of member fields. They are used to define POD (plain old data) types.
 
 ```judith
@@ -1469,7 +1533,7 @@ employee:Person.salary -- We can still cast employee to person to access
                        -- Person.salary (type: Decimal).
 ```
 
-## Interface
+### Interface
 If structs hold data, interfaces define behavior. Objects cannot be of an interface type, but instead interfaces are implemented into types to give them new functionalities.
 
 ```judith
@@ -1477,20 +1541,20 @@ If structs hold data, interfaces define behavior. Objects cannot be of an interf
 typedef interface ISummarizable
     -- Abstract methods: methods declared by the interface that must be
     -- implemented by the type.
-    func summary () : Void
+    func summary () -> Void
     
     -- As any other method, these methods may be pure or impure.
-    impure func mark_as_read () : Void
+    impure func mark_as_read () -> Void
 
     -- As interfaces cannot have member fields, any member data that wants to
     -- be guaranteed must be exposed through a getter method:
-    func is_read () : Bool
+    func is_read () -> Bool
 
     -- Concrete methods: methods provided by the interface. These methods are
     -- inherited by the types that implement the interface, so there's no need
     -- to cast them back to the interface type to use them (unless they collide
     -- with members of that type).
-    func extended_summary () : Bool
+    func extended_summary () -> Bool
         -- Note that the interface still has access to a "self". This "self" is
         -- the object this method is being called off, casted to the interface
         -- type.
@@ -1580,7 +1644,7 @@ post:ISummarizable.summary() -- calling ISummarizable.summary()
 
 Note that, as interfaces are open-ended by design, it is not possible to exhaustively test an interface type, because nothing guarantees that new subtypes of the interface will be created by other libraries or at runtime.
 
-## Class
+### Class
 Classes are the most complex type in Judith. They represent state machines, whose behavior is encapsulated and controlled by the class. For this purpose, classes feature privacy rules.
 
 ```judith
@@ -1650,7 +1714,7 @@ typedef class Person
         .name = "New name" -- error: pure function cannot mutate the instance.
     end
 
-    func get_age () : Num
+    func get_age () -> Num
         -- Methods defined inside the class can access hidden members.
         const age = .calc_age()
 
@@ -1673,7 +1737,7 @@ typedef class Person
         .country = new_country
     end
 
-    hid func calc_age () : Num
+    hid func calc_age () -> Num
         return Date::now().year() - .birth_year
     end
 
@@ -1766,7 +1830,7 @@ const id: Vehicle::Id = {
 };
 ```
 
-### Methods
+#### Methods
 Methods are functions that are members of a type, and implicitly take an instance of that class as their first parameter (named `self`). This parameter can ommited when using member access syntax (i.e. `self.length` can be expressed as `.length`) In practice, "method" is simply what instance function members are called.
 
 # Extension methods and constructors
@@ -1782,7 +1846,7 @@ end
 Extension static functions are also allowed:
 
 ```judith
-impl static func Person::turn_into_array (person: Person) : Auto
+impl static func Person::turn_into_array (person: Person) -> Auto
     return [.name, .age, .country, .salary]
 end
 ```
@@ -1830,7 +1894,7 @@ These operators take two values of any type and return a new value of any type.
 
 ```judith
 #symmetric
-oper + (a: Fraction, b: Num) : Fraction
+oper + (a: Fraction, b: Num) -> Fraction
     return {
         num: a + (b * den),
         den: den,
@@ -2309,6 +2373,24 @@ qnameof(Person.name) -- equals "Person.name"
 qnameof(my_proj::hr::Person.name) -- equals "my_proj::hr::Person.name
 ```
 
+## `Auto` type name
+The `Auto` type name represents a type name that is inferred from the context, in places where such inferrence is not automatic. For example, a function that does not specify its return type is assumed not to return any value (i.e. inferred to return `Void`). However, you may want the function to return a value, but to have that value's type be inferred from the function's body. In this case, specifying a return value of `Auto` allows you to do that:
+
+```judith
+func get_num_or_str (val: Num) -> Auto -- type is inferred to be 'Num | String'
+    return val when val < 10
+    return val.str()
+end
+```
+
+**_`EXPERIMENTAL`_** When initializing a value whose type is known, `Auto` represents the type of said field or local. This can be used to call constructors of said type:
+
+```judith
+var vals: Array<Num, 5>;
+
+vals = Array<Num, 5>::fill(0) -- long form
+vals = Auto::fill(0) -- inferred to be Array<Num, 5>.
+```
 
 # TODO
 

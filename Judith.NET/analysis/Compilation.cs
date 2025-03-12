@@ -5,7 +5,9 @@ using Judith.NET.message;
 
 namespace Judith.NET.analysis;
 
-public class ProjectCompilation : ICompilation {
+public class Compilation {
+    public string Name { get; private init; }
+
     public MessageContainer Messages { get; private set; } = new();
 
     /// <summary>
@@ -13,28 +15,27 @@ public class ProjectCompilation : ICompilation {
     /// </summary>
     public List<CompilerUnit> Units { get; private set; } = new();
 
-    public List<ICompilation> Dependencies { get; private set; } = new();
-    public TypeTable TypeTable { get; private set; }
-    public NativeCompilation Native { get; private set; }
+    public NativeHeader Native { get; private set; }
+    public List<AssemblyHeader> Dependencies { get; private set; } = new();
     public SymbolTable SymbolTable { get; private set; }
     public Binder Binder { get; private set; }
 
     public bool IsValidProgram { get; private set; } = false;
 
-    public ProjectCompilation (List<ICompilation> dependencies, List<CompilerUnit> units) {
-        if (dependencies.Count == 0) {
-            throw new("At least the native dependency must exist.");
-        }
-        if (dependencies[0] is not NativeCompilation native) {
-            throw new("The first dependency must be the native dependency.");
-        }
+    public Compilation (
+        string name,
+        NativeHeader nativeHeader,
+        List<AssemblyHeader> dependencies,
+        List<CompilerUnit> units
+    ) {
+        Name = name;
 
+        Native = nativeHeader;
         Dependencies = dependencies;
         Units = units;
-        SymbolTable = SymbolTable.CreateGlobalTable(this);
+
+        SymbolTable = SymbolTable.CreateGlobalTable(Name);
         Binder = new(this);
-        Native = native;
-        TypeTable = new();
     }
 
     public void Analyze () {

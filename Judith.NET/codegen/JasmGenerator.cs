@@ -16,7 +16,7 @@ namespace Judith.NET.codegen;
 public class JasmGenerator : SyntaxVisitor {
     const int MAX_LOCALS = ushort.MaxValue + 1;
 
-    private ProjectCompilation _cmp;
+    private Compilation _cmp;
     private ScopeResolver _scope;
     private LocalBlock? _localBlock = null;
 
@@ -44,7 +44,7 @@ public class JasmGenerator : SyntaxVisitor {
     private BinaryBlock CurrentBlock => Blocks[^1];
     private int CurrentBlockIndex => Blocks.Count - 1;
 
-    public JasmGenerator (ProjectCompilation cmp) {
+    public JasmGenerator (Compilation cmp) {
         _cmp = cmp;
         _scope = new(_cmp);
     }
@@ -214,7 +214,8 @@ public class JasmGenerator : SyntaxVisitor {
 
     public override void Visit (ReturnStatement node) {
         RequireFunction();
-        // TODO: Compile expression.
+
+        VisitIfNotNull(node.Expression);
 
         CurrentFunc.Chunk.WriteInstruction(OpCode.RET, node.Line);
     }
@@ -295,7 +296,10 @@ public class JasmGenerator : SyntaxVisitor {
 
         // TODO: When type alias desugaring is added, this compares directly to
         // F64, F32, I64, I32, etc.
-        if (boundNode.Type == _cmp.Native.Types.Num) {
+        if (boundNode.Type == _cmp.Native.Types.F64) {
+            EmitF64Const(boundNode.Value.AsFloat, node.Line);
+        }
+        else if (boundNode.Type == _cmp.Native.Types.Num) {
             EmitF64Const(boundNode.Value.AsFloat, node.Line);
         }
         else if (boundNode.Type == _cmp.Native.Types.Int) {

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.analysis;
 
-public interface ICompilation {
-    public SymbolTable SymbolTable { get; }
-    public TypeTable TypeTable { get; }
+public interface IAssemblyHeader {
+    string Name { get; }
+    Dictionary<string, Symbol> Symbols { get; }
 }

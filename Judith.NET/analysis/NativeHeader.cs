@@ -7,21 +7,19 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.analysis;
 
-public class NativeCompilation : ICompilation {
-    public SymbolTable SymbolTable { get; }
-    public TypeTable TypeTable { get; } = new();
+public class NativeHeader : IAssemblyHeader {
+    public string Name { get; } = string.Empty;
 
-    public TypeCollection Types { get; private set; } = new();
+    public Dictionary<string, Symbol> Symbols { get; } = [];
 
-    private SymbolTable _pseudoSymbols;
+    /// <summary>
+    /// An object that contains the symbols for all the native types.
+    /// </summary>
+    public TypeCollection Types { get; private set; } = null!;
 
-    private NativeCompilation () {
-        SymbolTable = SymbolTable.CreateGlobalTable(this);
-        _pseudoSymbols = SymbolTable.CreateGlobalTable(this);
-    }
 
-    public static NativeCompilation Ver1 () {
-        var nc = new NativeCompilation();
+    public static NativeHeader Ver1 () {
+        var nc = new NativeHeader();
         nc.Types = new() {
             Unresolved = nc.AddPseudoType(SymbolKind.UnresolvedType, "!Unresolved"),
 
@@ -131,56 +129,57 @@ public class NativeCompilation : ICompilation {
     }
 
     private TypeSymbol AddPseudoType (SymbolKind kind, string name) {
-        return _pseudoSymbols.AddSymbol(TypeSymbol.Define(kind, name));
+        return new TypeSymbol(kind, name, name, "");
     }
 
     private TypeSymbol AddType (SymbolKind kind, string name) {
-        return SymbolTable.AddSymbol(TypeSymbol.Define(kind, name));
+        var symbol = new TypeSymbol(kind, name, name, "");
+        Symbols[symbol.FullyQualifiedName] = symbol;
+
+        return symbol;
     }
 
     public class TypeCollection {
         // Warning supressed as creating a constructor for this would be horrible.
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         // Unresolved types:
-        public TypeSymbol Unresolved { get; init; }
+        public required TypeSymbol Unresolved { get; init; }
 
         // Error types:
-        public TypeSymbol Error { get; init; }
+        public required TypeSymbol Error { get; init; }
 
         // Pseudotypes:
-        public TypeSymbol NoType { get; init; }
-        public TypeSymbol Anonymous { get; init; }
-        public TypeSymbol Void { get; init; }
+        public required TypeSymbol NoType { get; init; }
+        public required TypeSymbol Anonymous { get; init; }
+        public required TypeSymbol Void { get; init; }
 
         // Floating-point types:
-        public TypeSymbol F32 { get; init; }
-        public TypeSymbol F64 { get; init; }
+        public required TypeSymbol F32 { get; init; }
+        public required TypeSymbol F64 { get; init; }
 
         // Signed integer types:
-        public TypeSymbol I8 { get; init; }
-        public TypeSymbol I16 { get; init; }
-        public TypeSymbol I32 { get; init; }
-        public TypeSymbol I64 { get; init; }
+        public required TypeSymbol I8 { get; init; }
+        public required TypeSymbol I16 { get; init; }
+        public required TypeSymbol I32 { get; init; }
+        public required TypeSymbol I64 { get; init; }
 
         // Unsigned integer types:
-        public TypeSymbol Ui8 { get; init; }
-        public TypeSymbol Ui16 { get; init; }
-        public TypeSymbol Ui32 { get; init; }
-        public TypeSymbol Ui64 { get; init; }
+        public required TypeSymbol Ui8 { get; init; }
+        public required TypeSymbol Ui16 { get; init; }
+        public required TypeSymbol Ui32 { get; init; }
+        public required TypeSymbol Ui64 { get; init; }
 
         // Other native types:
-        public TypeSymbol Bool { get; init; }
-        public TypeSymbol String { get; init; }
-        public TypeSymbol Char { get; init; }
+        public required TypeSymbol Bool { get; init; }
+        public required TypeSymbol String { get; init; }
+        public required TypeSymbol Char { get; init; }
 
         // Default aliased types:
-        public TypeSymbol Byte { get; init; } // Default: Ui8
-        public TypeSymbol Int { get; init; } // Default: I64
-        public TypeSymbol Float { get; init; } // Default: F64
-        public TypeSymbol Num { get; init; } // Default: Float
+        public required TypeSymbol Byte { get; init; } // Default: Ui8
+        public required TypeSymbol Int { get; init; } // Default: I64
+        public required TypeSymbol Float { get; init; } // Default: F64
+        public required TypeSymbol Num { get; init; } // Default: Float
 
-        public TypeSymbol Function { get; init; } // TODO: Turn into FuncTypeSymbol
-#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        public required TypeSymbol Function { get; init; } // TODO: Turn into FuncTypeSymbol
 
         public void Init () {
             Unresolved.Type = NoType;

@@ -18,18 +18,18 @@ namespace Judith.NET.analysis.analyzers;
 public class TypeResolver : SyntaxVisitor {
     public MessageContainer Messages { get; private set; } = new();
 
-    private readonly ProjectCompilation _cmp;
+    private readonly Compilation _cmp;
     private readonly ScopeResolver _scope;
 
     private NodeStateManager _nodeStates = new();
     private bool _resolutionMade = false;
 
     private Binder Binder => _cmp.Binder;
-    private NativeCompilation.TypeCollection NativeTypes => _cmp.Native.Types;
+    private NativeHeader.TypeCollection NativeTypes => _cmp.Native.Types;
 
     public bool IsComplete => _nodeStates.AreAllComplete();
 
-    public TypeResolver (ProjectCompilation cmp) {
+    public TypeResolver (Compilation cmp) {
         _cmp = cmp;
         _scope = new(_cmp);
     }
@@ -324,7 +324,7 @@ public class TypeResolver : SyntaxVisitor {
     public override void Visit (LeftUnaryExpression node) {
         Visit(node.Expression);
 
-        var boundNode = Binder.BindLeftUnaryExpression(node);
+        var boundNode = Binder.BindUnaryExpression(node);
 
         if (TypeSymbol.IsResolved(boundNode.Type)) return;
 
