@@ -396,7 +396,10 @@ public class JudithIRGenerator {
 
         string type = boundExpr.Type.FullyQualifiedName;
 
-        if (boundExpr.Symbol.Kind == SymbolKind.Local) {
+        if (
+            boundExpr.Symbol.Kind == SymbolKind.Local
+            || boundExpr.Symbol.Kind == SymbolKind.Parameter
+        ) {
             return new(
                 boundExpr.Symbol.Name,
                 IRIdentifierKind.Local,
