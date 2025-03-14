@@ -1,5 +1,5 @@
-#include "executable/FuncRef.hpp"
-#include "executable/FunctionCollection.hpp"
+#include "runtime/FuncRef.hpp"
+#include "runtime/FunctionCollection.hpp"
 #include "VM.hpp"
 
 void InternalFuncRef::loadFunction(VM& vm) {

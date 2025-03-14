@@ -1,23 +1,19 @@
-#include "loader/AssemblyLoader.hpp"
-#include "runtime/Assembly.hpp"
+#include "data/AssemblyFile.hpp"
+#include "utils/Buffer.hpp"
 #include "utils.hpp"
-#include <utils/Buffer.hpp>
-#include "data/StringTable.hpp"
-#include "data/ItemRef.hpp"
-#include "runtime/Block.hpp"
-
-using ItemRefVector = std::vector<u_ptr<ItemRef>>;
 
 static bool checkMagicNumber(byte* magicNumber);
 static Version readVersion(Buffer& buffer);
 static u_ptr<StringTable> readStringTable(Buffer& buffer);
-static ItemRefVector readItemRefTable(Buffer& buffer);
-static Block readBlock(Buffer& buffer, size_t& nameIndex);
+static ItemRefTable readItemRefTable(Buffer& buffer);
+static BinaryBlock readBlock(Buffer& buffer);
+static BinaryFunction readFunction(Buffer& buffer);
+static BinaryParameter readParameter(Buffer& buffer);
 
-Assembly readAssembly(VM* vm, const char* filePath) {
+AssemblyFile AssemblyFile::loadFromFile(const char* path) {
     constexpr size_t MAGIC_NUMBER_SIZE = 6;
 
-    auto binary = readBinaryFile(filePath);
+    auto binary = readBinaryFile(path);
     size_t bufferSize = binary.size();
     Buffer buffer((binary));
 
@@ -32,30 +28,33 @@ Assembly readAssembly(VM* vm, const char* filePath) {
     }
 
     buffer.readUInt8(); // discard 'endianness'
-    buffer.readUInt32_LE(); // discard 'judith_version'
-    readVersion(buffer); // discard 'version'
+
+    i64 judithVersion = (i64)buffer.readUInt32_LE();
+    Version version = readVersion(buffer);
 
     u_ptr<StringTable> nameTable = readStringTable(buffer); // name_count and name_table.
 
     buffer.readUInt32_LE(); // discard 'dep_count' (which right now is always 0).
 
-    ItemRefVector typeRefTable = readItemRefTable(buffer); // type_ref_table
-    ItemRefVector funcRefTable = readItemRefTable(buffer); // func_ref_table
+    ItemRefTable typeRefTable = readItemRefTable(buffer); // type_ref_table
+    ItemRefTable funcRefTable = readItemRefTable(buffer); // func_ref_table
 
     size_t blockCount = buffer.readUInt32_LE(); // block_count
+    std::vector<BinaryBlock> blocks;
+    blocks.reserve(blockCount);
 
-    std::vector<Block> blocks;
-    std::vector<std::string> blockNames;
-
-    for (size_t i = 0; i < blockCount; i++) {
-        size_t nameIndex;
-        readBlock(buffer, nameIndex);
-
-        blockNames.push_back(nameTable->getString(nameIndex));
+    for (size_t b = 0; b < blockCount; b++) {
+        blocks.emplace_back(readBlock(buffer));
     }
 
-
-    return Assembly(std::move(nameTable));
+    return AssemblyFile{
+        .judithVersion = judithVersion,
+        .version = version,
+        .nameTable = std::move(*nameTable),
+        .typeRefs = std::move(typeRefTable),
+        .funcRefs = std::move(funcRefTable),
+        .blocks = std::move(blocks),
+    };
 }
 
 static bool checkMagicNumber (byte* magicNumber) {
@@ -78,15 +77,6 @@ static Version readVersion (Buffer& buffer) {
 
 static u_ptr<StringTable> readStringTable (Buffer& buffer) {
     size_t size = (size_t)buffer.readUInt32_LE(); // table_size: Ui32
-
-    // TODO
-    //std::vector<byte> binaryBlock; // contains all the bytes that make up the table.
-    //
-    //for (size_t i = 0; i < size; i++) { // name_table: StringTable
-    //    binaryBlock.push_back(buffer.readUInt8());
-    //}
-    //
-    //return StringTable::fromBinary(binaryBlock);
 
     std::vector<byte> tableBytes; // contains all the bytes that make up the table.
     std::vector<size_t> offsets; // maps each index to its offset in the table. 
@@ -119,7 +109,7 @@ static u_ptr<StringTable> readStringTable (Buffer& buffer) {
     u_ptr<byte[]> rawTable = make_u<byte[]>(tableBytes.size());
     std::copy(tableBytes.begin(), tableBytes.end(), rawTable.get());
 
-    u_ptr<byte*[]> strings = make_u<byte*[]>(count);
+    u_ptr<byte* []> strings = make_u<byte * []>(count);
 
     for (size_t i = 0; i < count; i++) {
         // The offset of string #i in the table.
@@ -135,8 +125,8 @@ static u_ptr<StringTable> readStringTable (Buffer& buffer) {
     );
 }
 
-static ItemRefVector readItemRefTable (Buffer& buffer) {
-    ItemRefVector vector;
+static ItemRefTable readItemRefTable (Buffer& buffer) {
+    ItemRefTable vector;
 
     size_t count = (size_t)buffer.readUInt32_LE();
 
@@ -170,18 +160,64 @@ static ItemRefVector readItemRefTable (Buffer& buffer) {
     return vector;
 }
 
-static Block readBlock(Buffer& buffer, size_t& nameIndex) {
-    nameIndex = buffer.readUInt32_LE(); // block_name
-
+static BinaryBlock readBlock (Buffer& buffer) {
+    size_t nameIndex = (size_t)buffer.readUInt32_LE(); // block_name: Ui32
     u_ptr<StringTable> stringTable = readStringTable(buffer); // string_count and string_table
 
     size_t typeCount = buffer.readUInt32_LE(); // type_count: Ui32 (right now, always 0).
     // TODO: type_table
 
     size_t funcCount = buffer.readUInt32_LE(); // func_count: Ui32
+    std::vector<BinaryFunction> functionTable;
+    functionTable.reserve(funcCount);
 
-    for (size_t f = 0; f < funcCount; f++) {
-
+    for (size_t f = 0; f < funcCount; f++) { // func_table
+        functionTable.emplace_back(readFunction(buffer));
     }
-    throw "E";
+
+    return BinaryBlock{
+        .nameIndex = nameIndex,
+        .stringTable = std::move(*stringTable),
+        .functionTable = std::move(functionTable),
+    };
+}
+
+static BinaryFunction readFunction (Buffer& buffer) {
+    size_t nameIndex = (size_t)buffer.readUInt32_LE(); // name: Ui32
+
+    size_t paramCount = (size_t)buffer.readUInt16_LE(); // param_count: Ui16
+    std::vector<BinaryParameter> parameters;
+    parameters.reserve(paramCount);
+
+    for (size_t p = 0; p < paramCount; p++) { // params
+        parameters.emplace_back(readParameter(buffer));
+    }
+
+    i64 maxLocals = (i64)buffer.readUInt16_LE(); // max_locals
+    i64 maxStack = (i64)buffer.readUInt16_LE(); // max_stack
+
+    size_t chunkSize = (size_t)buffer.readUInt32_LE(); // code_length
+    std::vector<byte> chunk;
+    chunk.reserve(chunkSize);
+
+    for (size_t c = 0; c < chunkSize; c++) { // code
+        chunk.push_back(buffer.readUInt8());
+    }
+
+    return BinaryFunction{
+        .nameIndex = nameIndex,
+        .parameters = std::move(parameters),
+        .maxLocals = maxLocals,
+        .maxStack = maxStack,
+        .chunk = std::move(chunk),
+        .chunkSize = chunkSize,
+    };
+}
+
+static BinaryParameter readParameter (Buffer& buffer) {
+    size_t nameIndex = (size_t)buffer.readUInt32_LE(); // name Ui32;
+
+    return BinaryParameter{
+        .nameIndex = nameIndex,
+    };
 }

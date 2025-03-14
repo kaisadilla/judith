@@ -11,6 +11,9 @@ struct ItemRef {
     /// The kind of reference this is.
     /// </summary>
     size_t refType;
+
+    ItemRef(size_t refType) : refType(refType) {}
+    virtual ~ItemRef() {}
 };
 
 struct InternalRef : public ItemRef {
@@ -22,6 +25,10 @@ struct InternalRef : public ItemRef {
     /// The index of said item inside the table for this kind of item.
     /// </summary>
     size_t index;
+
+    InternalRef (size_t block, size_t index)
+        : ItemRef(ItemRef::TYPE_INTERNAL), block(block), index(index)
+    {}
 };
 
 struct NativeRef : public ItemRef {
@@ -30,6 +37,8 @@ struct NativeRef : public ItemRef {
     /// native assembly.
     /// </summary>
     size_t index;
+
+    NativeRef (size_t index) : ItemRef(ItemRef::TYPE_NATIVE), index(index) {}
 };
 
 struct ExternalRef : public ItemRef {
@@ -42,4 +51,10 @@ struct ExternalRef : public ItemRef {
     /// The index in the name table containing this item's name.
     /// </summary>
     size_t itemNameIndex;
+
+    ExternalRef (size_t blockNameIndex, size_t itemNameIndex)
+        : ItemRef(ItemRef::TYPE_EXTERNAL),
+        blockNameIndex(blockNameIndex),
+        itemNameIndex(itemNameIndex)
+    {}
 };

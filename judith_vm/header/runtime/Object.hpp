@@ -3,7 +3,7 @@
 
 namespace ObjectType {
     enum : byte {
-        STRING, // UTF-8
+        UTF8_STRING, // UTF-8
         FUNCTION,
         INSTANCE,
     };
@@ -20,7 +20,7 @@ struct StringObject {
     u_ptr<char[]> string;
 
     StringObject (size_t length, const std::string& str)
-        : object({ .objectType = ObjectType::STRING }),
+        : object({ .objectType = ObjectType::UTF8_STRING }),
         length(length)
     {
         //string = (u_ptr<char>)(char*)std::malloc(sizeof(char) * length);

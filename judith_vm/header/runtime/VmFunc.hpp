@@ -1,7 +1,7 @@
 #pragma once
 
 #include "root.hpp"
-#include "executable/Chunk.hpp"
+#include "runtime/Chunk.hpp"
 
 struct VmFunc {
     size_t maxLocals;

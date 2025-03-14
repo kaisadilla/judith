@@ -37,8 +37,10 @@ struct StringTable {
     StringTable& operator= (StringTable&&) noexcept = default;
 
     inline std::string getString (int index) const {
-        size_t size = *strings[index];
+        size_t strSize = *strings[index];
 
-        return std::string(reinterpret_cast<char*>(strings[index] + sizeof(size_t)), size);
+        return std::string(reinterpret_cast<char*>(strings[index] + sizeof(size_t)), strSize);
     }
+
+    static u_ptr<StringTable> fromBinary (std::vector<byte> block);
 };

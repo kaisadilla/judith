@@ -12,9 +12,9 @@
 
 /// <summary>
 /// The VM will verify that the pointer to the stack is pointing to an index
-/// at or above 0.
+/// inside the stack.
 /// </summary>
-#define DEBUG_CHECK_STACK_UNDERFLOW
+#define DEBUG_CHECK_OPERAND_STACK_BOUNDARIES
 
 /// <summary>
 /// The VM will check that the IP is pointing to an address inside the chunk

@@ -1,4 +1,4 @@
-#include "executable/Chunk.hpp"
+#include "runtime/Chunk.hpp"
 
 Chunk::Chunk(
     byte** strings,

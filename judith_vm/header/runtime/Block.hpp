@@ -1,7 +1,7 @@
 #pragma once
 
 #include "root.hpp"
-#include "executable/VmFunc.hpp"
+#include "runtime/VmFunc.hpp"
 
 struct Block {
 public:

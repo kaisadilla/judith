@@ -3,5 +3,6 @@
 #include "root.hpp"
 
 class Assembly;
+class VM;
 
-Assembly readAssembly(const char* path);
+Assembly readAssembly(VM* vm, const char* filePath);

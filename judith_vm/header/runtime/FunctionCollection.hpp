@@ -2,7 +2,7 @@
 
 #include <root.hpp>
 #include <functional>
-#include "executable/FuncRef.hpp"
+#include "runtime/FuncRef.hpp"
 
 class VM;
 

@@ -62,6 +62,7 @@ public class JdllBuilder {
     }
 
     public void WriteStringTable (BinaryWriter writer, StringTable table) {
+        writer.Write((uint)table.Size); // table_size
         writer.Write((uint)table.Count); // name_count
         // name_table: string[string_count]
         foreach (var ui8 in table.Bytes) {

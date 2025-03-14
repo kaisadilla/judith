@@ -3,7 +3,7 @@
 
 #include "main.hpp"
 #include "diagnostics/disassembly.hpp"
-#include <executable/Assembly.hpp>
+#include "runtime/Assembly.hpp"
 #include <VM.hpp>
 #include <filesystem>
 #include <fstream>
@@ -43,11 +43,19 @@ int main (int argc, char *argv[]) {
     if (args.size() >= 2) {
         outFilePath = make_u<Path>(args[1]);
     }
+
+    Path directory = path.parent_path();
+    Path fileName = path.filename();
+
+    VM vm(directory);
+    vm.start(fileName);
     
-    Assembly exec = readAssembly(path.string().c_str());
+    //Assembly exec = readAssembly(path.string().c_str());
 
     std::cout << "\n\n===== DISASSEMBLE =====" << std::endl;
-    std::string dump = disassembleAssembly(exec);
+    std::string dump = disassembleAssembly(
+        vm.getAssemblyFile(fileName.stem().string().c_str())
+    );
     std::cout << dump << std::endl;
 
     //Assembly assembly = readAssembly(path.string().c_str());

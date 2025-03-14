@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <sstream>
 
 /*
  * These types guarantee the fastest native type for each data type.
@@ -44,4 +45,10 @@ struct Version {
     i32 minor;
     i32 patch;
     i32 build;
+
+    std::string toString () const {
+        std::ostringstream str;
+        str << major << ", " << minor << ", " << patch << ", " << build;
+        return str.str();
+    }
 };

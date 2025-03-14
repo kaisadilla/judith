@@ -54,8 +54,7 @@ public class JdllDisassembler {
 
     public void DisassembleRefTable (JasmRefTable table) {
         for (int i = 0; i < table.Size; i++) {
-            _buffer.Append($"0x{i,4:X4}:\n");
-            _buffer.Append($" - type: {table[i].RefType}");
+            _buffer.Append($"0x{i,4:X4} ({table[i].RefType}):\n");
 
             switch (table[i]) {
                 case JasmInternalRef internalRef: {
@@ -116,18 +115,18 @@ public class JdllDisassembler {
         var func = block.FunctionTable[funcIndex];
         string funcName = block.StringTable[func.NameIndex];
 
-        _buffer.Append($"Function #0x{funcIndex,4:X4}:\n");
-        _buffer.Append($"Name: {func.NameIndex} ; \"{funcName}\"\n");
-        _buffer.Append($"MaxLocals: {func.MaxLocals}\n");
+        _buffer.Append($"= Function #0x{funcIndex,4:X4} =\n");
+        _buffer.Append($"name: {func.NameIndex} ; \"{funcName}\"\n");
+        _buffer.Append($"max_locals: {func.MaxLocals}\n");
         // TODO: Max stack.
 
-        _buffer.Append($"Parameters ({func.Arity}):\n");
+        _buffer.Append($"parameters ({func.Arity}):\n");
         for (int i = 0; i < func.Parameters.Count; i++) {
             DisassembleParameters(block, func, i);
         }
         _buffer.Append('\n');
 
-        _buffer.Append("Chunk:\n");
+        _buffer.Append("chunk:\n");
         DisassembleChunk(func.Chunk);
         _buffer.Append('\n');
     }

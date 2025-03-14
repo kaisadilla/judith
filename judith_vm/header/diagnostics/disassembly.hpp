@@ -3,7 +3,6 @@
 #include "root.hpp"
 
 struct Block;
-class Assembly;
+struct AssemblyFile;
 
-std::string disassembleAssembly (Assembly& assembly);
-std::string disassembleBlock (Block& block);
+std::string disassembleAssembly (const AssemblyFile& file);

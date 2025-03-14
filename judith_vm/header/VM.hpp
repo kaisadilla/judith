@@ -1,13 +1,18 @@
 #pragma once
 
 #include "root.hpp"
-#include "executable/Assembly.hpp"
-#include "executable/Block.hpp"
-#include "executable/ConstantType.hpp"
+#include "runtime/Assembly.hpp"
+#include "runtime/Block.hpp"
+#include "runtime/ConstantType.hpp"
 #include "Value.hpp"
-#include "Object.hpp"
+#include "runtime/Object.hpp"
 #include <ankerl/unordered_dense.h>
 #include <stack>
+#include "runtime/ExecutionContext.hpp"
+#include <filesystem>
+#include "data/AssemblyFile.hpp"
+
+namespace fs = std::filesystem;
 
 struct VmFunc;
 
@@ -22,6 +27,22 @@ enum class InterpretResult {
 
 class VM {
 private:
+    ExecutionContext execCtx;
+
+    /// <summary>
+    /// Maps every assembly that has been read to its file.
+    /// </summary>
+    ankerl::unordered_dense::map<std::string, AssemblyFile> assemblyFiles;
+    /// <summary>
+    /// Maps every assembly that has been loaded into its assembly object.
+    /// </summary>
+    ankerl::unordered_dense::map<std::string, Assembly> assemblies;
+    /// <summary>
+    /// The assembly that was used to execute this. This assembly should be
+    /// registered in the assemblies map.
+    /// </summary>
+    Assembly* executable = nullptr;
+
     std::stack<Value*> localArrayStack;
 
     /// <summary>
@@ -39,17 +60,41 @@ private:
     Value* locals = nullptr;
 
     /// <summary>
-    /// The string table maps strings to internet string objects.
+    /// The string table maps strings to interned string objects.
     /// </summary>
     ankerl::unordered_dense::map<std::string, u_ptr<StringObject>> stringTable;
 
     const Assembly* assembly = nullptr;
 
 public:
+    VM(fs::path execPath);
     ~VM();
+
+    /// <summary>
+    /// Loads the given file as an executable assembly and starts execution by
+    /// its entry point.
+    /// </summary>
+    /// <param name="entryPoint">A path to the executable, relative to the root
+    /// path of the application.</param>
+    void start(fs::path entryPoint);
 
     void interpret (const Assembly& assembly);
     void execute (const VmFunc& func);
+
+private:
+    void loadFullAssembly(const std::string& name, const AssemblyFile& file);
+    //fs::path locateAssembly(std::string name);
+
+public:
+#pragma region Getters
+    inline const Assembly& getExecutable () const {
+        return *executable;
+    }
+
+    inline const AssemblyFile& getAssemblyFile (const std::string& name) const {
+        return assemblyFiles.at(name);
+    }
+#pragma endregion
 
     inline void resetStack () {
         stackTop = stack;
@@ -60,6 +105,12 @@ public:
     /// </summary>
     /// <param name="value">The value to push.</param>
     inline void pushValue (Value value) {
+#ifdef DEBUG_CHECK_OPERAND_STACK_BOUNDARIES
+        if (stackTop == &stack[STACK_MAX - 1]) {
+            throw std::runtime_error("Operand stack overflow!");
+        }
+#endif
+
         *stackTop = value;
         stackTop++;
     }
@@ -68,9 +119,9 @@ public:
     /// Returns the value at the top of the stack, removing it from the stack.
     /// </summary>
     inline Value& popValue () {
-#ifdef DEBUG_CHECK_STACK_UNDERFLOW
+#ifdef DEBUG_CHECK_OPERAND_STACK_BOUNDARIES
         if (stackTop == stack) {
-            throw std::exception("Trying to access an invalid stack position!");
+            throw std::runtime_error("Trying to access an invalid stack position!");
         }
 #endif
         stackTop--;

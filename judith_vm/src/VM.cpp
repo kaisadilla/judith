@@ -1,6 +1,9 @@
 #include "VM.hpp"
 #include "jasm/opcodes.hpp"
-#include "executable/VmFunc.hpp"
+#include "runtime/VmFunc.hpp"
+#include "loader/AssemblyLoader.hpp"
+
+#pragma region Macros
 
 #define READ_BYTE() (*(ip++))
 #define READ_SBYTE() ((sbyte)*(ip++))
@@ -30,8 +33,25 @@
         pushValue({ .asInt64 = (a op b) }); \
     } while (false)
 
-VM::~VM() {
+#pragma endregion
 
+VM::VM (fs::path execPath) : execCtx(execPath)
+{
+
+}
+
+VM::~VM () {
+
+}
+
+void VM::start (fs::path entryPoint) {
+    fs::path filePath = execCtx.appDirectory / entryPoint;
+    const std::string& assemblyName = entryPoint.stem().string();
+
+    assemblyFiles.emplace(assemblyName, AssemblyFile::loadFromFile(filePath.string().c_str()));
+
+    //assemblies.emplace(assemblyName, readAssembly(this, filePath.string().c_str()));
+    //executable = &assemblies.at(assemblyName);
 }
 
 void VM::interpret (const Assembly& assembly) {
@@ -336,6 +356,10 @@ void VM::execute (const VmFunc& func) {
     }
 
     exitFunction();
+}
+
+void VM::loadFullAssembly(const std::string& name, const AssemblyFile& file) {
+
 }
 
 #undef READ_BYTE

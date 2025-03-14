@@ -1,10 +1,10 @@
 #pragma once
 
 #include "root.hpp"
-#include "executable/Block.hpp"
-#include "executable/VmFunc.hpp"
-#include "executable/FunctionCollection.hpp"
-#include "executable/StringTable.hpp"
+#include "runtime/Block.hpp"
+#include "runtime/VmFunc.hpp"
+#include "runtime/FunctionCollection.hpp"
+#include "data/StringTable.hpp"
 
 class VM;
 

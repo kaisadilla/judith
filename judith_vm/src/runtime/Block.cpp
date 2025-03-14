@@ -1,4 +1,4 @@
-#include "executable/Block.hpp"
+#include "runtime/Block.hpp"
 
 Block::Block(
     u_ptr<byte[]> stringTable,
