@@ -2,20 +2,29 @@
 #include <iomanip>
 #include <format>
 
-#include "debug/disassembly.hpp"
+#include "diagnostics/disassembly.hpp"
 #include "executable/ConstantType.hpp"
 #include "executable/Chunk.hpp"
 #include "executable/Block.hpp"
-#include "jal/opcodes.hpp"
+#include "jasm/opcodes.hpp"
 #include "Value.hpp"
+#include "executable/Assembly.hpp"
+#include "executable/StringTable.hpp"
 
-void disassembleChunk (std::ostringstream& str, Chunk& chunk);
-size_t disassembleInstruction (std::ostringstream& str, Chunk& chunk, size_t index);
+static void disassembleStringTable (std::ostringstream& str, const StringTable& table);
+static void disassembleChunk (std::ostringstream& str, Chunk& chunk);
+static size_t disassembleInstruction (std::ostringstream& str, Chunk& chunk, size_t index);
 
 #pragma region Formatters
+static std::string decIntStr (i64 val) {
+    std::ostringstream str;
+    str << std::setw(4) << std::right << std::setfill('0') << std::dec << val;
+    return str.str();
+}
+
 static std::string hexIntStr (i64 val) {
     std::ostringstream str;
-    str << "0x" << std::setw(4) << std::right << std::setfill('0') << std::hex << (int)val;
+    str << "0x" << std::setw(4) << std::right << std::setfill('0') << std::hex << val;
     return str.str();
 }
 
@@ -246,6 +255,14 @@ static size_t printInstruction (std::ostringstream& str, Chunk& chunk, const cha
 }
 #pragma endregion
 
+std::string disassembleAssembly(Assembly& assembly) {
+    std::ostringstream str;
+    disassembleStringTable(str, assembly.nameTable);
+    str << "\n";
+
+    return str.str();
+}
+
 std::string disassembleBlock(Block& block) {
     std::ostringstream str;
 
@@ -255,6 +272,19 @@ std::string disassembleBlock(Block& block) {
     }
 
     return str.str();
+}
+
+static void disassembleStringTable (
+    std::ostringstream& str, const StringTable& table
+) {
+    str << "size: " << table.size << " bytes\n";
+
+    for (size_t i = 0; i < table.count; i++) {
+        size_t offset = table.strings[i] - table.strings[0];
+
+        str << decIntStr(i) << "   " << hexIntStr(offset) << "    \""
+            << table.getString(i) << "\"\n";
+    }
 }
 
 static void disassembleChunk (std::ostringstream& str, Chunk& chunk) {

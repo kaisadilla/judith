@@ -77,7 +77,7 @@ public:
 
     ~Buffer();
 private:
-    std::vector<unsigned char> buffer;
+    std::vector<unsigned char> binary;
     unsigned long long readOffset = 0;
     unsigned long long writeOffset = 0;
 };

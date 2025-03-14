@@ -38,3 +38,10 @@ typedef uint8_t byte_f;
 typedef uint16_t ui16_f;
 typedef uint32_t ui32_f;
 typedef uint64_t ui64_f;
+
+struct Version {
+    i32 major;
+    i32 minor;
+    i32 patch;
+    i32 build;
+};

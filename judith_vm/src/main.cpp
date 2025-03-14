@@ -2,13 +2,12 @@
 //
 
 #include "main.hpp"
-#include "debug/disassembly.hpp"
+#include "diagnostics/disassembly.hpp"
 #include <executable/Assembly.hpp>
-#include <executable/Function.hpp>
-#include <BlockReader.hpp>
 #include <VM.hpp>
 #include <filesystem>
 #include <fstream>
+#include <loader/AssemblyLoader.hpp>
 
 #if defined(_WIN32) || defined(_WIN64)
 #define NOMINMAX
@@ -44,33 +43,39 @@ int main (int argc, char *argv[]) {
     if (args.size() >= 2) {
         outFilePath = make_u<Path>(args[1]);
     }
-
-    Assembly assembly = readAssembly(path.string().c_str());
+    
+    Assembly exec = readAssembly(path.string().c_str());
 
     std::cout << "\n\n===== DISASSEMBLE =====" << std::endl;
-    std::string dump = disassembleBlock(assembly.blocks[0]);
+    std::string dump = disassembleAssembly(exec);
     std::cout << dump << std::endl;
 
-    std::cout << "\n\n===== EXECUTION =====" << std::endl;
-
-    if (outFilePath != nullptr) {
-        Path dir = outFilePath->parent_path();
-        if (fs::exists(dir) == false) {
-            fs::create_directories(dir);
-        }
-
-        outFileStream = make_u<std::ofstream>(outFilePath->c_str());
-        std::cout.rdbuf(outFileStream->rdbuf());
-    }
-
-    VM vm;
-    vm.interpret(assembly);
-
-    if (outFilePath != nullptr) {
-        std::cout.rdbuf(cmdBuf);
-    }
-
-    std::cout << std::endl;
+    //Assembly assembly = readAssembly(path.string().c_str());
+    //
+    //std::cout << "\n\n===== DISASSEMBLE =====" << std::endl;
+    //std::string dump = disassembleBlock(assembly.blocks[0]);
+    //std::cout << dump << std::endl;
+    //
+    //std::cout << "\n\n===== EXECUTION =====" << std::endl;
+    //
+    //if (outFilePath != nullptr) {
+    //    Path dir = outFilePath->parent_path();
+    //    if (fs::exists(dir) == false) {
+    //        fs::create_directories(dir);
+    //    }
+    //
+    //    outFileStream = make_u<std::ofstream>(outFilePath->c_str());
+    //    std::cout.rdbuf(outFileStream->rdbuf());
+    //}
+    //
+    //VM vm;
+    //vm.interpret(assembly);
+    //
+    //if (outFilePath != nullptr) {
+    //    std::cout.rdbuf(cmdBuf);
+    //}
+    //
+    //std::cout << std::endl;
 
     //getchar();
     return 0;

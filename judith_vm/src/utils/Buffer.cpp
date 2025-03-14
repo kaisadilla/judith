@@ -5,16 +5,16 @@
 
 Buffer::Buffer() noexcept {}
 Buffer::Buffer(const std::vector<unsigned char>& _buffer) noexcept :
-    buffer(_buffer) {}
+    binary(_buffer) {}
 
 void Buffer::setBuffer(std::vector<unsigned char>& _buffer) noexcept {
-    buffer = _buffer;
+    binary = _buffer;
 }
 const std::vector<unsigned char>& Buffer::getBuffer() const noexcept {
-    return buffer;
+    return binary;
 }
 void Buffer::clear() noexcept {
-    buffer.clear();
+    binary.clear();
     readOffset = 0;
     writeOffset = 0;
 }
@@ -24,13 +24,13 @@ std::string Buffer::byteStr(bool LE) const noexcept {
     byteStr << std::hex << std::setfill('0');
 
     if (LE == true) {
-        for (unsigned long long i = 0; i < buffer.size(); ++i)
-            byteStr << std::setw(2) << (unsigned short)buffer[i] << " ";
+        for (unsigned long long i = 0; i < binary.size(); ++i)
+            byteStr << std::setw(2) << (unsigned short)binary[i] << " ";
     }
     else {
-        unsigned long long size = buffer.size();
+        unsigned long long size = binary.size();
         for (unsigned long long i = 0; i < size; ++i)
-            byteStr << std::setw(2) << (unsigned short)buffer[size - i - 1] << " ";
+            byteStr << std::setw(2) << (unsigned short)binary[size - i - 1] << " ";
     }
 
     return byteStr.str();
@@ -41,12 +41,12 @@ template <class T> inline void Buffer::writeBytes(const T& val, bool LE) {
 
     if (LE == true) {
         for (unsigned int i = 0, mask = 0; i < size; ++i, mask += 8)
-            buffer.push_back(val >> mask);
+            binary.push_back(val >> mask);
     }
     else {
         unsigned const char* array = reinterpret_cast<unsigned const char*>(&val);
         for (unsigned int i = 0; i < size; ++i)
-            buffer.push_back(array[size - i - 1]);
+            binary.push_back(array[size - i - 1]);
     }
     writeOffset += size;
 }
@@ -141,11 +141,11 @@ template <class T> inline T Buffer::readBytes(bool LE) {
     unsigned int size = sizeof(T);
 
     // Do not overflow
-    if (readOffset + size > buffer.size())
+    if (readOffset + size > binary.size())
         return result;
 
     char* dst = (char*)&result;
-    char* src = (char*)&buffer[readOffset];
+    char* src = (char*)&binary[readOffset];
 
     if (LE == true) {
         for (unsigned int i = 0; i < size; ++i)
@@ -163,14 +163,14 @@ bool Buffer::readBool() noexcept {
     return readBytes<bool>();
 }
 std::string Buffer::readStr(unsigned long long len) noexcept {
-    if (readOffset + len > buffer.size())
+    if (readOffset + len > binary.size())
         return "Buffer out of range (provided length greater than buffer size)";
-    std::string result(buffer.begin() + readOffset, buffer.begin() + readOffset + len);
+    std::string result(binary.begin() + readOffset, binary.begin() + readOffset + len);
     readOffset += len;
     return result;
 }
 std::string Buffer::readStr() noexcept {
-    return readStr(buffer.size() - readOffset);
+    return readStr(binary.size() - readOffset);
 }
 char Buffer::readInt8() noexcept {
     return readBytes<char>();

@@ -24,7 +24,7 @@ public class JdllBuilder {
 
         WriteMagicNumber(writer); // magic_number: byte[6] = 'JUDITH'
         writer.Write((byte)0); // endianness: byte = 0 -- little-endian
-        writer.Write((byte)_assembly.JudithVersion); // judith_version: byte = 0 - pre-alpha
+        writer.Write((uint)_assembly.JudithVersion); // judith_version: byte = 0 - pre-alpha
         WriteVersion(writer, _assembly.Version); // version: Version
 
         WriteStringTable(writer, _assembly.NameTable); // name_count and name_table

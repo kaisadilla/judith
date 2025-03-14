@@ -3,11 +3,11 @@
 #include "root.hpp"
 #include "executable/Chunk.hpp"
 
-struct Function {
+struct VmFunc {
     size_t maxLocals;
     Chunk chunk;
 
-    Function (size_t maxLocals, Chunk&& chunk)
+    VmFunc (size_t maxLocals, Chunk&& chunk)
         : maxLocals(maxLocals),
         chunk(std::move(chunk))
     {}

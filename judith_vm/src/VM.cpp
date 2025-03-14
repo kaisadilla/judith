@@ -1,6 +1,6 @@
 #include "VM.hpp"
-#include "jal/opcodes.hpp"
-#include "executable/Function.hpp"
+#include "jasm/opcodes.hpp"
+#include "executable/VmFunc.hpp"
 
 #define READ_BYTE() (*(ip++))
 #define READ_SBYTE() ((sbyte)*(ip++))
@@ -36,10 +36,10 @@ VM::~VM() {
 
 void VM::interpret (const Assembly& assembly) {
     this->assembly = &assembly;
-    execute(assembly.blocks[0].functions[0]);
+    //execute(assembly.blocks[0].functions[0]); // TODO PRT: Reenable
 }
 
-void VM::execute (const Function& func) {
+void VM::execute (const VmFunc& func) {
 #ifdef DEBUG_PRINT_CALL_STACK
     std::cout << "\n===== ENTERING FUNC " << &func << " ===== \n";
 #endif
@@ -319,7 +319,7 @@ void VM::execute (const Function& func) {
 
         case OpCode::CALL: {
             ui32 index = READ_U32();
-            execute(*(assembly->assemblyFunctions[index]));
+            // execute(*(assembly->assemblyFunctions[index])); // TODO PRT: Reenable
             break;
         }
 

@@ -72,6 +72,10 @@ public class E2ETests {
         proc.BeginOutputReadLine();
         proc.WaitForExit();
 
+        if (proc.ExitCode != 0) {
+            throw new Exception("JuVM crashed.");
+        }
+
         return File.ReadAllText(outPath).Replace("\r\n", "\n");
     }
 

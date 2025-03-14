@@ -2,27 +2,26 @@
 
 #include "root.hpp"
 #include "executable/Block.hpp"
-#include "executable/Function.hpp"
+#include "executable/VmFunc.hpp"
+#include "executable/FunctionCollection.hpp"
+#include "executable/StringTable.hpp"
+
+class VM;
 
 class Assembly {
 public:
-    OWNED Function** assemblyFunctions;
-    size_t functionCount;
-
-    std::vector<Block> blocks;
+    StringTable nameTable;
+    //std::vector<Block> blocks;
+    //FunctionCollection funcRefs;
 
 public:
     Assembly(
-        Function** assemblyFunctions,
-        size_t functionCount,
-        std::vector<Block>&& blocks
+        u_ptr<StringTable> nameTable
+        //std::vector<Block>&& blocks,
+        //FunctionCollection&& funcRefs
     ) :
-        assemblyFunctions(assemblyFunctions),
-        functionCount(functionCount),
-        blocks(std::move(blocks)) {}
-
-    ~Assembly() {
-        delete[] assemblyFunctions;
-    }
-
+        nameTable(std::move(*nameTable))
+        //blocks(std::move(blocks)),
+        //funcRefs(funcRefs)
+    {}
 };

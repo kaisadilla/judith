@@ -9,7 +9,7 @@
 #include <ankerl/unordered_dense.h>
 #include <stack>
 
-struct Function;
+struct VmFunc;
 
 #define STACK_MAX 1024
 #define LOCALS_MAX 256 
@@ -49,7 +49,7 @@ public:
     ~VM();
 
     void interpret (const Assembly& assembly);
-    void execute (const Function& func);
+    void execute (const VmFunc& func);
 
     inline void resetStack () {
         stackTop = stack;

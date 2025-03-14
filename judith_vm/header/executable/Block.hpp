@@ -1,7 +1,7 @@
 #pragma once
 
 #include "root.hpp"
-#include "executable/Function.hpp"
+#include "executable/VmFunc.hpp"
 
 struct Block {
 public:
@@ -21,7 +21,7 @@ public:
     /// <summary>
     /// An array with the functions that exist in this block.
     /// </summary>
-    OWNED Function* functions; // TODO: Make into a unique ptr
+    OWNED VmFunc* functions; // TODO: Make into a unique ptr
     /// <summary>
     /// The amount of functions in the functions array.
     /// </summary>
@@ -32,7 +32,7 @@ public:
         u_ptr<byte[]> stringTable,
         size_t stringCount,
         u_ptr<byte*[]> strings,
-        Function* functions,
+        VmFunc* functions,
         size_t functionCount
     );
 

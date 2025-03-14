@@ -4,7 +4,7 @@ Block::Block(
     u_ptr<byte[]> stringTable,
     size_t stringCount,
     u_ptr<byte*[]> strings,
-    Function* functions,
+    VmFunc* functions,
     size_t functionCount
 ) :
     stringTable(std::move(stringTable)),
