@@ -154,6 +154,7 @@ public class JdllDisassembler {
     private int DisassembleInstruction (int index) {
         OpCode opCode = (OpCode)_chunk.Code[index];
         _buffer.Append($"Line {-10,-5} | {HexByteStr(index)} ");
+        Func<int, int> a;
 
         switch (opCode) {
             case OpCode.NOOP:

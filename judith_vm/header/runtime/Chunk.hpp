@@ -1,25 +1,19 @@
 #pragma once
 
 #include "root.hpp"
+#include "runtime/object/StringObject.hpp"
 
-struct Chunk {
+class Block;
+
+class Chunk {
+public:
     /// <summary>
-    /// A pointer to the constant pointer array of the Block that contains this
-    /// Chunk.
+    /// A reference to the string table in the block this chunk is in.
     /// </summary>
-    byte** strings;
+    const std::vector<StringObject*>* stringTable;
 
     size_t size;
     u_ptr<byte[]> code;
 
-    bool containsLines;
-    u_ptr<i32[]> lines;
-
-    Chunk(
-        byte** strings,
-        size_t size,
-        u_ptr<byte[]> code,
-        bool containsLines,
-        u_ptr<i32[]> lines
-    );
+    static u_ptr<Chunk> build (const Block& block, const std::vector<byte>& binaryChunk);
 };

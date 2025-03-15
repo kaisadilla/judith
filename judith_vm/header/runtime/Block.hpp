@@ -1,45 +1,33 @@
 #pragma once
 
 #include "root.hpp"
-#include "runtime/VmFunc.hpp"
+#include "runtime/JasmFunction.hpp"
+#include "runtime/object/StringObject.hpp"
+#include "data/AssemblyFile.hpp"
 
-struct Block {
+class VM;
+class Assembly;
+
+class Block {
 public:
     /// <summary>
-    /// A pointer to the start of the raw string table.
+    /// Points to the assembly that contains this block.
     /// </summary>
-    u_ptr<byte[]> stringTable;
+    Assembly* assembly;
     /// <summary>
-    /// The size (amount of bytes) in the string table.
+    /// Points to the string object that contains this block's name.
     /// </summary>
-    size_t stringCount;
+    StringObject* name;
+
     /// <summary>
-    /// An array where each element is a pointer to the constant at that index
-    /// in the table.
+    /// Every string in a block's string table is interned when the block is
+    /// loaded. This table maps each index to the interned StringObject that
+    /// contains the string in the table.
     /// </summary>
-    u_ptr<byte*[]> strings; // pointers here are owned by stringTable.
-    /// <summary>
-    /// An array with the functions that exist in this block.
-    /// </summary>
-    OWNED VmFunc* functions; // TODO: Make into a unique ptr
-    /// <summary>
-    /// The amount of functions in the functions array.
-    /// </summary>
-    size_t functionCount;
+    std::vector<StringObject*> stringTable;
+
+    std::vector<u_ptr<JasmFunction>> functions;
 
 public:
-    Block(
-        u_ptr<byte[]> stringTable,
-        size_t stringCount,
-        u_ptr<byte*[]> strings,
-        VmFunc* functions,
-        size_t functionCount
-    );
-
-    Block(const Block&) = delete;
-    Block& operator=(const Block&) = delete;
-    Block(Block&&) noexcept = default;
-    Block& operator=(Block&&) noexcept = default;
-
-    ~Block();
+    static u_ptr<Block> buildCompletely (VM& vm, Assembly* assembly, const BinaryBlock& binaryBlock);
 };

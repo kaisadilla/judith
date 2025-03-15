@@ -7,7 +7,6 @@
 #include <VM.hpp>
 #include <filesystem>
 #include <fstream>
-#include <loader/AssemblyLoader.hpp>
 
 #if defined(_WIN32) || defined(_WIN64)
 #define NOMINMAX
@@ -52,11 +51,15 @@ int main (int argc, char *argv[]) {
     
     //Assembly exec = readAssembly(path.string().c_str());
 
-    std::cout << "\n\n===== DISASSEMBLE =====" << std::endl;
-    std::string dump = disassembleAssembly(
-        vm.getAssemblyFile(fileName.stem().string().c_str())
-    );
-    std::cout << dump << std::endl;
+    //std::cout << "\n\n===== DISASSEMBLE =====" << std::endl;
+    //std::string dump = disassembleAssembly(
+    //    vm.getAssemblyFile(fileName.stem().string().c_str())
+    //);
+    //std::cout << dump << std::endl;
+
+
+
+
 
     //Assembly assembly = readAssembly(path.string().c_str());
     //

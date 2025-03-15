@@ -12,5 +12,5 @@
 #define make_u std::make_unique
 template<typename T> using u_ptr = std::unique_ptr<T>;
 
-// to be used as scaffolding before being replaced with unique ptrs.
+// This raw pointer is owned by this object.
 #define OWNED

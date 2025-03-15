@@ -3,8 +3,8 @@
 #include "root.hpp"
 
 class VM;
-struct VmFunc;
-class FunctionCollection;
+struct JasmFunction;
+class Assembly;
 
 class FuncRef {
 public:
@@ -14,22 +14,30 @@ public:
 
 class InternalFuncRef : public FuncRef {
 private:
-    FunctionCollection* funcCollection;
+    Assembly& assembly;
     size_t index;
 
-    VmFunc* vmFunc;
+    JasmFunction* func;
 
 public:
+    InternalFuncRef(
+        Assembly& assembly, size_t index, JasmFunction* func
+    )
+        : assembly(assembly),
+        index(index),
+        func(func)
+    {}
+
     void loadFunction (VM& vm) override;
     void callFunction (VM& vm) override;
 };
 
 class NativeFuncRef : public FuncRef {
 private:
-    FunctionCollection* funcCollection;
+    Assembly& assembly;
     size_t index;
 
-    VmFunc* vmFunc;
+    JasmFunction* vmFunc;
 
 public:
     void loadFunction (VM& vm) override;

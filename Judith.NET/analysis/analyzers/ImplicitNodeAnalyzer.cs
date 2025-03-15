@@ -94,7 +94,7 @@ internal class ImplicitNodeAnalyzer : SyntaxVisitor<RetInfo?> {
             autoReturn.SetSpan(SourceSpan.None);
             autoReturn.SetLine(-100);
 
-            node.Children.Add(autoReturn);
+            node.AppendNode(autoReturn);
 
             hasReturn = true;
         }

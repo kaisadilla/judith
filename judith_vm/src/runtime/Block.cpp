@@ -1,19 +1,32 @@
 #include "runtime/Block.hpp"
+#include "runtime/Assembly.hpp"
+#include "runtime/JasmFunction.hpp"
+#include "VM.hpp"
 
-Block::Block(
-    u_ptr<byte[]> stringTable,
-    size_t stringCount,
-    u_ptr<byte*[]> strings,
-    VmFunc* functions,
-    size_t functionCount
-) :
-    stringTable(std::move(stringTable)),
-    stringCount(stringCount),
-    strings(std::move(strings)),
-    functions(functions),
-    functionCount(functionCount)
-{}
+u_ptr<Block> Block::buildCompletely(
+    VM& vm, Assembly* assembly, const BinaryBlock& binaryBlock
+) {
+    u_ptr<Block> block = make_u<Block>(Block {
+        .assembly = assembly,
+    });
 
-Block::~Block() {
-    std::free(functions);
+    block->name = assembly->nameTable.at(binaryBlock.nameIndex);
+
+    for (size_t i = 0; i < binaryBlock.stringTable.count; i++) {
+        block->stringTable.push_back(
+            vm.getInternedStringTable().getStringObject(
+                binaryBlock.stringTable.strings[i]
+            )
+        );
+    }
+
+    for (size_t f = 0; f < binaryBlock.functionTable.size(); f++) {
+        block->functions.emplace_back(
+            JasmFunction::build(
+                vm, *assembly, *block, binaryBlock.functionTable.at(f)
+            )
+        );
+    }
+
+    return std::move(block);
 }

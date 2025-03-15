@@ -1,7 +1,6 @@
 #include "VM.hpp"
 #include "jasm/opcodes.hpp"
-#include "runtime/VmFunc.hpp"
-#include "loader/AssemblyLoader.hpp"
+#include "runtime/JasmFunction.hpp"
 
 #pragma region Macros
 
@@ -41,7 +40,9 @@ VM::VM (fs::path execPath) : execCtx(execPath)
 }
 
 VM::~VM () {
-
+    //for (auto assemblyPtr : loadedAssemblies) {
+    //    delete assemblyPtr;
+    //}
 }
 
 void VM::start (fs::path entryPoint) {
@@ -49,17 +50,18 @@ void VM::start (fs::path entryPoint) {
     const std::string& assemblyName = entryPoint.stem().string();
 
     assemblyFiles.emplace(assemblyName, AssemblyFile::loadFromFile(filePath.string().c_str()));
+    auto& assembly = *loadedAssemblies.emplace_back(
+        Assembly::buildCompletely(*this, assemblyFiles.at(assemblyName))
+    );
+    
+    assemblies.emplace(assemblyName, assembly);
+    executable = &assembly;
+    //executable->bindReferences();
 
-    //assemblies.emplace(assemblyName, readAssembly(this, filePath.string().c_str()));
-    //executable = &assemblies.at(assemblyName);
+    execute(*executable->blocks.at(0)->functions.at(0));
 }
 
-void VM::interpret (const Assembly& assembly) {
-    this->assembly = &assembly;
-    //execute(assembly.blocks[0].functions[0]); // TODO PRT: Reenable
-}
-
-void VM::execute (const VmFunc& func) {
+void VM::execute (const JasmFunction& func) {
 #ifdef DEBUG_PRINT_CALL_STACK
     std::cout << "\n===== ENTERING FUNC " << &func << " ===== \n";
 #endif
@@ -131,22 +133,13 @@ void VM::execute (const VmFunc& func) {
 
             break;
 
-        case OpCode::STR_CONST: {
-            #define STRLEN (*(ui64*)strval)
-            #define STRHEAD ((char*)(strval + sizeof(ui64)))
-
-            byte* strval = (byte*)chunk.strings[READ_BYTE()];
-            std::string str(STRHEAD, STRLEN);
-            pushValue({ .asStringPtr = internString(str) });
-            break;
-
-            #undef STRLEN
-            #undef STRHEAD
-        }
+        case OpCode::STR_CONST: 
+            pushValue({ .asStringPtr = chunk.stringTable->at(READ_BYTE()) });
+        
             break;
 
         case OpCode::STR_CONST_L:
-            pushValue({ .asInt64 = *(i64*)chunk.strings[READ_I32()] });
+            pushValue({ .asStringPtr = chunk.stringTable->at(READ_I32()) });
 
             break;
 
@@ -339,7 +332,7 @@ void VM::execute (const VmFunc& func) {
 
         case OpCode::CALL: {
             ui32 index = READ_U32();
-            // execute(*(assembly->assemblyFunctions[index])); // TODO PRT: Reenable
+            func.funcRefs->callFunction(index, *this);
             break;
         }
 

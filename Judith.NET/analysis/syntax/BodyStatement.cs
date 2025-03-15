@@ -23,6 +23,11 @@ public class BlockStatement : BodyStatement {
         Children.AddRange(Nodes);
     }
 
+    public void AppendNode (SyntaxNode node) {
+        Nodes.Add(node);
+        Children.Add(node);
+    }
+
     public override void Accept (SyntaxVisitor visitor) {
         visitor.Visit(this);
     }

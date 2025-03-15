@@ -5,16 +5,18 @@
 #include "runtime/Block.hpp"
 #include "runtime/ConstantType.hpp"
 #include "Value.hpp"
-#include "runtime/Object.hpp"
+#include "runtime/object/Object.hpp"
+#include "runtime/object/StringObject.hpp"
 #include <ankerl/unordered_dense.h>
 #include <stack>
 #include "runtime/ExecutionContext.hpp"
 #include <filesystem>
 #include "data/AssemblyFile.hpp"
+#include "runtime/InternedStringTable.hpp"
 
 namespace fs = std::filesystem;
 
-struct VmFunc;
+struct JasmFunction;
 
 #define STACK_MAX 1024
 #define LOCALS_MAX 256 
@@ -36,12 +38,20 @@ private:
     /// <summary>
     /// Maps every assembly that has been loaded into its assembly object.
     /// </summary>
-    ankerl::unordered_dense::map<std::string, Assembly> assemblies;
+    ankerl::unordered_dense::map<std::string, Assembly&> assemblies;
+    /// <summary>
+    /// Contains all assemblies loaded (fully or partially) by this VM. The
+    /// Assembly objects in the 'assemblies' map are just references to
+    /// assemblies in this array.
+    /// </summary>
+    std::vector<u_ptr<Assembly>> loadedAssemblies;
     /// <summary>
     /// The assembly that was used to execute this. This assembly should be
     /// registered in the assemblies map.
     /// </summary>
     Assembly* executable = nullptr;
+
+    InternedStringTable internedStrings;
 
     std::stack<Value*> localArrayStack;
 
@@ -59,13 +69,6 @@ private:
     /// </summary>
     Value* locals = nullptr;
 
-    /// <summary>
-    /// The string table maps strings to interned string objects.
-    /// </summary>
-    ankerl::unordered_dense::map<std::string, u_ptr<StringObject>> stringTable;
-
-    const Assembly* assembly = nullptr;
-
 public:
     VM(fs::path execPath);
     ~VM();
@@ -78,8 +81,7 @@ public:
     /// path of the application.</param>
     void start(fs::path entryPoint);
 
-    void interpret (const Assembly& assembly);
-    void execute (const VmFunc& func);
+    void execute (const JasmFunction& func);
 
 private:
     void loadFullAssembly(const std::string& name, const AssemblyFile& file);
@@ -93,6 +95,10 @@ public:
 
     inline const AssemblyFile& getAssemblyFile (const std::string& name) const {
         return assemblyFiles.at(name);
+    }
+
+    inline InternedStringTable& getInternedStringTable () {
+        return internedStrings;
     }
 #pragma endregion
 
@@ -167,14 +173,6 @@ public:
         locals = localArrayStack.top();
         localArrayStack.pop();
     }
-
-    inline StringObject* internString (std::string str) {
-        auto [it, inserted] = stringTable.try_emplace(
-            str, make_u<StringObject>(str.length(), str)
-        );
-
-        return it->second.get();
-    }
     
     inline void printValue (byte type, const Value& value) {
         switch (type) {
@@ -188,7 +186,7 @@ public:
             std::cout << value.asUint64;
             break;
         case ConstantType::STRING_ASCII:
-            std::cout.write(value.asStringPtr->string.get(), value.asStringPtr->length);
+            std::cout << value.asStringPtr->string; //.write(value.asStringPtr->string.get(), value.asStringPtr->length);
             break;
         case ConstantType::BOOL:
             std::cout << value.asFloat64;

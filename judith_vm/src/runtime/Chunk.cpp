@@ -1,15 +1,15 @@
 #include "runtime/Chunk.hpp"
+#include "runtime/Block.hpp"
 
-Chunk::Chunk(
-    byte** strings,
-    size_t size,
-    u_ptr<byte[]> code,
-    bool containsLines,
-    u_ptr<i32[]> lines
-) :
-    strings(strings),
-    size(size),
-    code(std::move(code)),
-    containsLines(containsLines),
-    lines(std::move(lines))
-{}
+u_ptr<Chunk> Chunk::build(
+    const Block& block, const std::vector<byte>& binaryChunk
+) {
+    u_ptr<Chunk> chunk = make_u<Chunk>(Chunk{ .stringTable = &block.stringTable });
+
+    chunk->size = binaryChunk.size();
+
+    chunk->code = make_u<byte[]>(chunk->size);
+    memcpy(chunk->code.get(), binaryChunk.data(), chunk->size);
+
+    return std::move(chunk);
+}
