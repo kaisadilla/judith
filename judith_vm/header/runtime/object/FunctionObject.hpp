@@ -1,6 +1,6 @@
 #pragma once
 
-#include "root.h"
+#include "root.hpp"
 #include "runtime/object/Object.hpp"
 
 class JasmFunction;

@@ -124,6 +124,12 @@ public class JasmFunctionCompiler {
 
     public void CompileExpressionStatement (IRExpressionStatement stmt) {
         CompileExpression(stmt.Expression);
+
+        // When the expression returns a value, the value will not be used, so
+        // we immediately pop it off the stack.
+        if (stmt.Expression.Type != _generator.Program.NativeHeader.TypeRefs.Void.Name) {
+            Chunk.WriteInstruction(OpCode.POP);
+        }
     }
 
     public void CompileExpression (IRExpression expr) {

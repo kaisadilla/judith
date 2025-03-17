@@ -64,6 +64,8 @@ namespace OpCode {
         LOAD,
         LOAD_L,
 
+        POP,
+
         JMP,
         JMP_L,
         JTRUE,

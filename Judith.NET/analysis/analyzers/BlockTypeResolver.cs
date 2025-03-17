@@ -86,12 +86,12 @@ public class BlockTypeResolver : SyntaxVisitor<RetInfo?> {
 
         // Calculate return type.
         if (foundRetTypes.Count == 0) {
-            boundNode.Type = _cmp.PseudoTypes.Void;
+            boundNode.Type = _cmp.Program.NativeHeader.TypeRefs.Void;
         }
         else {
             HashSet<TypeSymbol> types = [.. foundRetTypes];
 
-            if (types.Contains(_cmp.PseudoTypes.Void) && types.Count > 1) {
+            if (types.Contains(_cmp.Program.NativeHeader.TypeRefs.Void) && types.Count > 1) {
                 Messages.Add(CompilerMessage.Analyzers.InconsistentReturnBehavior(node.Line));
                 boundNode.Type = _cmp.PseudoTypes.Error;
             }
@@ -116,7 +116,7 @@ public class BlockTypeResolver : SyntaxVisitor<RetInfo?> {
 
     public override RetInfo? Visit (ReturnStatement node) {
         if (node.Expression == null) {
-            return (SyntaxKind.ReturnStatement, _cmp.PseudoTypes.Void);
+            return (SyntaxKind.ReturnStatement, _cmp.Program.NativeHeader.TypeRefs.Void);
         }
 
         var boundExpr = _cmp.Binder.GetBoundNodeOrThrow<BoundExpression>(node.Expression);

@@ -14,8 +14,3 @@ struct Object {
     byte objectType;
     // gcHandle
 };
-
-struct InstanceObject {
-    Object object;
-    void* fieldTable;
-};

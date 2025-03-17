@@ -9,6 +9,8 @@ namespace Judith.NET.ir;
 
 public class IRNativeHeader : IRAssemblyHeader {
     public required TypeCollection TypeRefs { get; init; }
+    public required FunctionCollection FuncRefs { get; init; }
+    
 
     /// <summary>
     /// Maps the name of each type to its index in the JuVM.
@@ -19,9 +21,12 @@ public class IRNativeHeader : IRAssemblyHeader {
     private IRNativeHeader () {}
 
     public static IRNativeHeader Ver1 () {
-        Dictionary<string, IRType> types = new();
+        Dictionary<string, IRType> types = [];
+        Dictionary<string, IRFunction> functions = [];
 
         TypeCollection typeRefs = new() {
+            Void = AddType(new IRPseudoType("Void")),
+
             F64 = AddType(new IRPrimitiveType("F64")),
             I64 = AddType(new IRPrimitiveType("I64")),
 
@@ -29,10 +34,42 @@ public class IRNativeHeader : IRAssemblyHeader {
             String = AddType(new IRStringType("String")),
         };
 
+        FunctionCollection funcRefs = new() {
+            Print = AddFunction(new IRFunction(
+                "print",
+                [
+                    new IRParameter("value", typeRefs.String.Name, IRMutability.Constant),
+                ],
+                typeRefs.Void.Name,
+                [],
+                IRFunctionKind.Function,
+                false
+            )),
+            Println = AddFunction(new IRFunction(
+                "println",
+                [
+                    new IRParameter("value", typeRefs.String.Name, IRMutability.Constant),
+                ],
+                typeRefs.Void.Name,
+                [],
+                IRFunctionKind.Function,
+                false
+            )),
+            Readln = AddFunction(new IRFunction(
+                "readln",
+                [],
+                typeRefs.String.Name,
+                [],
+                IRFunctionKind.Function,
+                false
+            )),
+        };
+
         IRNativeHeader header = new() {
             Types = types,
-            Functions = [],
+            Functions = functions,
             TypeRefs = typeRefs,
+            FuncRefs = funcRefs,
             TypeIndices = new() {
                 [typeRefs.F64.Name] = 1,
                 [typeRefs.I64.Name] = 2,
@@ -40,7 +77,9 @@ public class IRNativeHeader : IRAssemblyHeader {
                 [typeRefs.String.Name] = 4,
             },
             FunctionIndices = new() {
-
+                [funcRefs.Print.Name] = 1,
+                [funcRefs.Println.Name] = 2,
+                [funcRefs.Readln.Name] = 3,
             },
         };
 
@@ -49,6 +88,11 @@ public class IRNativeHeader : IRAssemblyHeader {
         T AddType<T> (T irType) where T : IRType {
             types[irType.Name] = irType;
             return irType;
+        }
+
+        T AddFunction<T> (T irFunc) where T : IRFunction {
+            functions[irFunc.Name] = irFunc;
+            return irFunc;
         }
     }
 
@@ -73,10 +117,18 @@ public class IRNativeHeader : IRAssemblyHeader {
     }
 
     public class TypeCollection {
+        public required IRType Void;
+
         public required IRPrimitiveType F64;
         public required IRPrimitiveType I64;
 
         public required IRPrimitiveType Bool;
         public required IRStringType String;
+    }
+
+    public class FunctionCollection {
+        public required IRFunction Print;
+        public required IRFunction Println;
+        public required IRFunction Readln;
     }
 }

@@ -21,12 +21,14 @@ int main (int argc, char *argv[]) {
     auto args = std::vector<std::string>(argv + 1, argv + argc);
 
 #if defined(_WIN32) || defined(_WIN64)
+    SetConsoleCP(CP_UTF8); // input
     SetConsoleOutputCP(CP_UTF8);
 #endif
 
     std::streambuf* cmdBuf = std::cout.rdbuf();
 
-    Path path = "res/test.jdll";
+    //Path path = "res/test.jdll";
+    Path path = "res/fibonacci1.jdll";
     u_ptr<Path> outFilePath(nullptr);
     u_ptr<std::ofstream> outFileStream(nullptr);
 
@@ -46,48 +48,22 @@ int main (int argc, char *argv[]) {
     Path directory = path.parent_path();
     Path fileName = path.filename();
 
+    if (outFilePath != nullptr) {
+        Path dir = outFilePath->parent_path();
+        if (fs::exists(dir) == false) {
+            fs::create_directories(dir);
+        }
+
+        outFileStream = make_u<std::ofstream>(outFilePath->c_str());
+        std::cout.rdbuf(outFileStream->rdbuf());
+    }
+
     VM vm(directory);
     vm.start(fileName);
-    
-    //Assembly exec = readAssembly(path.string().c_str());
 
-    //std::cout << "\n\n===== DISASSEMBLE =====" << std::endl;
-    //std::string dump = disassembleAssembly(
-    //    vm.getAssemblyFile(fileName.stem().string().c_str())
-    //);
-    //std::cout << dump << std::endl;
+    if (outFilePath != nullptr) {
+        std::cout.rdbuf(cmdBuf);
+    }
 
-
-
-
-
-    //Assembly assembly = readAssembly(path.string().c_str());
-    //
-    //std::cout << "\n\n===== DISASSEMBLE =====" << std::endl;
-    //std::string dump = disassembleBlock(assembly.blocks[0]);
-    //std::cout << dump << std::endl;
-    //
-    //std::cout << "\n\n===== EXECUTION =====" << std::endl;
-    //
-    //if (outFilePath != nullptr) {
-    //    Path dir = outFilePath->parent_path();
-    //    if (fs::exists(dir) == false) {
-    //        fs::create_directories(dir);
-    //    }
-    //
-    //    outFileStream = make_u<std::ofstream>(outFilePath->c_str());
-    //    std::cout.rdbuf(outFileStream->rdbuf());
-    //}
-    //
-    //VM vm;
-    //vm.interpret(assembly);
-    //
-    //if (outFilePath != nullptr) {
-    //    std::cout.rdbuf(cmdBuf);
-    //}
-    //
-    //std::cout << std::endl;
-
-    //getchar();
     return 0;
 }

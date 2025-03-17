@@ -28,10 +28,10 @@ void NativeFuncRef::loadFunction(VM& vm) {
 
 void NativeFuncRef::callFunction(VM& vm) {
 #ifdef DEBUG_CHECK_FUNC_REF_LOADED
-    if (vmFunc == nullptr) {
+    if (nativeFunc == nullptr) {
         throw "Trying to call a function reference that hasn't been loaded.";
     }
 #endif
 
-    vm.execute(*vmFunc);
+    nativeFunc(vm);
 }

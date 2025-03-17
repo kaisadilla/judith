@@ -266,6 +266,9 @@ public class JdllDisassembler {
             case OpCode.LOAD_L:
                 return U16Instruction(nameof(OpCode.LOAD_L), index);
 
+            case OpCode.POP:
+                return SimpleInstruction(nameof(OpCode.POP), index);
+
             case OpCode.JMP:
                 return JumpInstruction(nameof(OpCode.JMP), index);
             case OpCode.JMP_L:

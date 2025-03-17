@@ -33,19 +33,17 @@ public class JudithCompilation {
 
             Error = TypeSymbol.FreeSymbol(SymbolKind.ErrorPseudoType, "<error-type>"),
 
-            Void = TypeSymbol.FreeSymbol(SymbolKind.PseudoType, "Void"),
             Anonymous = TypeSymbol.FreeSymbol(SymbolKind.PseudoType, "<anonymous-type>"),
             Function = TypeSymbol.FreeSymbol(SymbolKind.FunctionType, "Function"),
         };
 
         PseudoTypes.Unresolved.Type = noType;
         PseudoTypes.Error.Type = noType;
-        PseudoTypes.Void.Type = noType;
         PseudoTypes.Function.Type = noType;
 
         Program = new() {
             Units = units,
-            NativeHeader = new(IRNativeHeader.Ver1(), noType),
+            NativeHeader = new(IRNativeHeader.Ver1(), this),
             Dependencies = [],
         };
 
@@ -133,7 +131,6 @@ public class JudithCompilation {
 
         public required TypeSymbol Error { get; init; }
 
-        public required TypeSymbol Void { get; init; }
         public required TypeSymbol Anonymous { get; init; }
         public required TypeSymbol Function { get; init; }
     }

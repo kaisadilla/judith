@@ -10,7 +10,7 @@ class InternedStringTable {
 public:
     inline StringObject* getStringObject (const std::string& str) {
         auto [it, inserted] = stringTable.try_emplace(
-            str, make_u<StringObject>(str.length(), str)
+            str, make_u<StringObject>(str)
         );
 
         return it->second.get();

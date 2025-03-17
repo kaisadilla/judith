@@ -2,11 +2,18 @@ const i1 = 1
 const i2 = 1
 const cycles = 20
 
+add(3, 2)
+add(6, 4)
+
 fib_recur(i1, i2, cycles)
-print_str("")
-print_str("Fiboňácĉi for you!")
+echo_str("")
+echo_str("Fiboňácĉi for you!")
+const user_input = readln()
+println(user_input)
 
 const e = add(5, 12)
+print("5 + 12 = ")
+echo_num(e)
 
 func _old_fib (var a, b, const cycles: F64)
     var i = 0
@@ -16,7 +23,7 @@ func _old_fib (var a, b, const cycles: F64)
         a = b
         b = next
 
-        print(next)
+        echo_num(next)
 
         i = i + 1
     end
@@ -25,15 +32,15 @@ end
 func fib_recur (a, b, cycles: F64)
     if cycles <= 0 then return end
 
-    print(a)
+    echo_num(a)
     fib_recur(b, a + b, cycles - 1)
 end
 
-func print (n: F64)
+func echo_num (n: F64)
     __p_print n
 end
 
-func print_str (str: String)
+func echo_str (str: String)
     __p_print str
 end
 

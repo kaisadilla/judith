@@ -41,7 +41,18 @@ u_ptr<Assembly> Assembly::buildCompletely (VM& vm, AssemblyFile& file) {
             break;
         }
         case ItemRef::TYPE_NATIVE: {
-            throw "Not implemented yet!";
+            const NativeRef& nref = *static_cast<NativeRef*>(
+                file.funcRefs.at(fr).get()
+            );
+
+            const auto& func = vm.getNativeAssembly().getFunc(nref.index);
+
+            assembly->functionRefs.references[fr] = new NativeFuncRef(
+                *assembly, fr, func
+            );
+
+            assembly->functionRefs.functions[fr] = &FuncRef::callFunction;
+
             break;
         }
         case ItemRef::TYPE_EXTERNAL: {

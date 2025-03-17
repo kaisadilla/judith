@@ -1,4 +1,5 @@
 ﻿using Judith.NET.compilation;
+using Judith.NET.message;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -38,11 +39,20 @@ public class E2ETests {
     [Theory]
     [InlineData("basic", "fibonacci1")]
     [InlineData("basic", "comparisons1")]
-    public void Scripts (string folderPath, string fileName) {
-        var output = ScriptRun(folderPath, fileName);
-        var expected = ScriptExpected(folderPath, fileName);
-        Stdout.WriteLine("Output: " + output);
-        Assert.True(output == expected);
+    public void ValidScripts (string folderPath, string fileName) {
+        try {
+            var output = ScriptRun(folderPath, fileName);
+            var expected = ScriptExpected(folderPath, fileName);
+            Stdout.WriteLine("Output: " + output);
+            Assert.True(output == expected);
+        }
+        catch (CompilationException ex) {
+            Console.WriteLine("Invalid program: ");
+            foreach (var err in ex.Compiler.Messages.Errors) {
+                Console.WriteLine(err.Message);
+            }
+            Assert.True(false);
+        }
     }
 
     #region Helper functions
@@ -55,6 +65,10 @@ public class E2ETests {
 
         var compiler = new JasmScriptCompiler("test", src);
         compiler.Compile(binPath);
+
+        if (compiler.Messages.HasErrors) {
+            throw new CompilationException(compiler);
+        }
 
         var proc = new Process {
             StartInfo = new ProcessStartInfo {
@@ -87,4 +101,12 @@ public class E2ETests {
         return File.ReadAllText(path).Replace("\r\n", "\n");
     }
     #endregion
+}
+
+file class CompilationException : Exception {
+    public JasmScriptCompiler Compiler { get; private init; }
+
+    public CompilationException (JasmScriptCompiler compiler) {
+        Compiler = compiler;
+    }
 }

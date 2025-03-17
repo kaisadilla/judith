@@ -146,6 +146,8 @@ public enum OpCode : byte {
     LOAD,
     LOAD_L,
 
+    POP,
+
     /// <summary>
     /// JMP | JUMP | Jump to $a.
     /// </summary>

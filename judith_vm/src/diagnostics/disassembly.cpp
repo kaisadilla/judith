@@ -5,7 +5,7 @@
 #include "diagnostics/disassembly.hpp"
 #include "runtime/ConstantType.hpp"
 #include "jasm/opcodes.hpp"
-#include "Value.hpp"
+#include "runtime/Value.hpp"
 #include "data/AssemblyFile.hpp"
 #include "data/StringTable.hpp"
 
@@ -78,8 +78,8 @@ static std::string constTypeStr (byte type) {
             return "FLOAT_64";
         case ConstantType::UNSIGNED_INT_64:
             return "UNSIGNED_INT_64";
-        case ConstantType::STRING_ASCII:
-            return "STRING_ASCII";
+        case ConstantType::STRING_UTF8:
+            return "STRING_UTF8";
         case ConstantType::BOOL:
             return "BOOL";
         default:
@@ -538,6 +538,9 @@ static size_t disassembleInstruction (
         return simpleInstruction(str, "LOAD_4", index);
     case OpCode::LOAD:
         return byteInstruction(str, chunk, "LOAD", index);
+
+    case OpCode::POP:
+        return simpleInstruction(str, "POP", index);
 
     case OpCode::LOAD_L:
         return u16Instruction(str, chunk, "LOAD_L", index);

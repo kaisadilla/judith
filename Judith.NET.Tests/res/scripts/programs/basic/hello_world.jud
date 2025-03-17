@@ -1,1 +1,1 @@
-﻿__p_print "Hello world!"
+﻿println("Hello world!")

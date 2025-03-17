@@ -34,9 +34,10 @@
 
 #pragma endregion
 
-VM::VM (fs::path execPath) : execCtx(execPath)
+VM::VM (fs::path execPath)
+    : execCtx(execPath)
 {
-
+    nativeAssembly = make_u<NativeAssembly>(*this);
 }
 
 VM::~VM () {
@@ -283,6 +284,10 @@ void VM::execute (const JasmFunction& func) {
         case OpCode::LOAD_L:
             throw "Extended local variable array not implemented.";
             //loadLocal(READ_U16());
+            break;
+
+        case OpCode::POP:
+            popValue();
             break;
 
         case OpCode::JMP: {

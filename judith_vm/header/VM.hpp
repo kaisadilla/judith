@@ -4,7 +4,7 @@
 #include "runtime/Assembly.hpp"
 #include "runtime/Block.hpp"
 #include "runtime/ConstantType.hpp"
-#include "Value.hpp"
+#include "runtime/Value.hpp"
 #include "runtime/object/Object.hpp"
 #include "runtime/object/StringObject.hpp"
 #include <ankerl/unordered_dense.h>
@@ -13,10 +13,11 @@
 #include <filesystem>
 #include "data/AssemblyFile.hpp"
 #include "runtime/InternedStringTable.hpp"
+#include "runtime/NativeAssembly.hpp"
 
 namespace fs = std::filesystem;
 
-struct JasmFunction;
+class JasmFunction;
 
 #define STACK_MAX 1024
 #define LOCALS_MAX 256 
@@ -29,29 +30,36 @@ enum class InterpretResult {
 
 class VM {
 private:
+    InternedStringTable internedStrings;
     ExecutionContext execCtx;
 
     /// <summary>
     /// Maps every assembly that has been read to its file.
     /// </summary>
     ankerl::unordered_dense::map<std::string, AssemblyFile> assemblyFiles;
+
     /// <summary>
     /// Maps every assembly that has been loaded into its assembly object.
     /// </summary>
     ankerl::unordered_dense::map<std::string, Assembly&> assemblies;
+
     /// <summary>
     /// Contains all assemblies loaded (fully or partially) by this VM. The
     /// Assembly objects in the 'assemblies' map are just references to
     /// assemblies in this array.
     /// </summary>
     std::vector<u_ptr<Assembly>> loadedAssemblies;
+
     /// <summary>
     /// The assembly that was used to execute this. This assembly should be
     /// registered in the assemblies map.
     /// </summary>
     Assembly* executable = nullptr;
 
-    InternedStringTable internedStrings;
+    /// <summary>
+    /// Contains all the native types and functions.
+    /// </summary>
+    u_ptr<NativeAssembly> nativeAssembly;
 
     std::stack<Value*> localArrayStack;
 
@@ -95,6 +103,10 @@ public:
 
     inline const AssemblyFile& getAssemblyFile (const std::string& name) const {
         return assemblyFiles.at(name);
+    }
+
+    inline const NativeAssembly& getNativeAssembly () const {
+        return *nativeAssembly;
     }
 
     inline InternedStringTable& getInternedStringTable () {
@@ -185,7 +197,7 @@ public:
         case ConstantType::UNSIGNED_INT_64:
             std::cout << value.asUint64;
             break;
-        case ConstantType::STRING_ASCII:
+        case ConstantType::STRING_UTF8:
             std::cout << value.asStringPtr->string; //.write(value.asStringPtr->string.get(), value.asStringPtr->length);
             break;
         case ConstantType::BOOL:

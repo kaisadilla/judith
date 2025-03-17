@@ -76,7 +76,7 @@ public class TypeResolver : SyntaxVisitor {
             }
             // Else, it's implicitly "Void".
             else {
-                boundNode.Symbol.ReturnType = _cmp.PseudoTypes.Void;
+                boundNode.Symbol.ReturnType = _cmp.Program.NativeHeader.TypeRefs.Void;
             }
 
             isResolved = TypeSymbol.IsResolved(boundNode.Symbol.ReturnType);
@@ -159,7 +159,7 @@ public class TypeResolver : SyntaxVisitor {
         if (TypeSymbol.IsResolved(boundNode.Type)) return;
 
         if (node.Expression == null) {
-            boundNode.Type = _cmp.PseudoTypes.Void;
+            boundNode.Type = _cmp.Program.NativeHeader.TypeRefs.Void;
         }
         else {
             Visit(node.Expression);

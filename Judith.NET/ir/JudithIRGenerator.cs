@@ -210,7 +210,7 @@ public class JudithIRGenerator {
         var boundExpr = Bound<BoundIfExpression>(node);
         //if (boundExpr.Type == null) ThrowIncompleteNode(node);
 
-        string type = "TODO";// TODO: boundExpr.Type.FullyQualifiedName;
+        string type = _native.TypeRefs.Void.Name;// TODO: boundExpr.Type.FullyQualifiedName;
         IRExpression test = CompileExpression(node.Test);
 
         List<IRStatement> consequent;
@@ -258,7 +258,7 @@ public class JudithIRGenerator {
         var boundExpr = Bound<BoundWhileExpression>(node);
         //if (boundExpr.Type == null) ThrowIncompleteNode(node);
 
-        string type = "TODO";// TODO: boundExpr.Type.FullyQualifiedName;
+        string type = _native.TypeRefs.Void.Name;// TODO: boundExpr.Type.FullyQualifiedName;
         IRExpression test = CompileExpression(node.Test);
 
         if (node.Body is BlockStatement blockStmt) {

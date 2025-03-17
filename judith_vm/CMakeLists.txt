@@ -35,8 +35,8 @@ add_executable(
 	${HEADER_FILES}
 	"header/root.hpp" "header/types.hpp"
 	"header/VM.hpp" "header/runtime/Chunk.hpp"
-	"src/VM.cpp" "src/runtime/Chunk.cpp" "src/Value.cpp"
-  "src/utils.cpp" "src/utils/Buffer.cpp" "src/diagnostics/disassembly.cpp" "header/_flags.h" "src/runtime/Assembly.cpp"  "src/runtime/FuncRef.cpp" "src/data/StringTable.cpp" "src/data/AssemblyFile.cpp" "src/runtime/JasmFunction.cpp")
+	"src/VM.cpp" "src/runtime/Chunk.cpp" "src/runtime/Value.cpp"
+  "src/utils.cpp" "src/utils/Buffer.cpp" "src/diagnostics/disassembly.cpp" "header/_flags.h" "src/runtime/Assembly.cpp"  "src/runtime/FuncRef.cpp" "src/data/StringTable.cpp" "src/data/AssemblyFile.cpp" "src/runtime/JasmFunction.cpp" "src/runtime/NativeAssembly.cpp" "src/runtime/NativeAssembly.Functions.cpp")
 
 target_link_libraries(${APP_NAME} PRIVATE unordered_dense)
 

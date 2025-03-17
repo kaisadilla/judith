@@ -4,7 +4,7 @@ namespace ConstantType {
         INT_64,
         FLOAT_64,
         UNSIGNED_INT_64,
-        STRING_ASCII,
+        STRING_UTF8,
         BOOL,
     };
 }

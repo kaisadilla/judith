@@ -8,9 +8,9 @@ struct StringObject {
     size_t length;
     char* string;
 
-    StringObject (size_t length, const std::string& str)
+    StringObject (const std::string& str)
         : object({ .objectType = ObjectType::UTF8_STRING }),
-        length(length)
+        length(str.length())
     {
         string = new char[length + 1];
         memcpy(string, str.c_str(), length);

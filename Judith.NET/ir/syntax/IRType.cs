@@ -13,3 +13,7 @@ public abstract class IRType : IRNode {
         Name = name;
     }
 }
+
+public class IRPseudoType : IRType {
+    public IRPseudoType (string name) : base(name) {}
+}

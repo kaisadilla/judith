@@ -2,7 +2,7 @@ const a = 3
 const b = 5
 
 if a > b then
-    __p_print "A is bigger"
+    println("A is bigger")
 else
-    __p_print "B is bigger"
+    println("B is bigger")
 end
