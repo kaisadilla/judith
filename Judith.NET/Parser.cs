@@ -213,7 +213,7 @@ public class Parser {
             throw Error(CompilerMessage.Parser.LeftParenExpected(Peek().Line));
         }
 
-        TryConsumeTypeAnnotation(out TypeAnnotation? returnType);
+        TryConsumeTypeAnnotation(TokenKind.MinusArrow, out TypeAnnotation? returnType);
 
         if (TryConsumeBlockStatement(null, out BlockStatement? body) == false) {
             throw Error(CompilerMessage.Parser.BodyExpected(Peek().Line));
@@ -1050,7 +1050,7 @@ public class Parser {
             throw Error(CompilerMessage.Parser.IdentifierExpected(Peek().Line));
         }
 
-        TryConsumeTypeAnnotation(out TypeAnnotation? type);
+        TryConsumeTypeAnnotation(TokenKind.Colon, out TypeAnnotation ? type);
 
         declarator = SF.LocalDeclarator(mutToken, identifier, impliedLocalKind, type);
         return true;
@@ -1073,9 +1073,10 @@ public class Parser {
     }
 
     private bool TryConsumeTypeAnnotation (
+        TokenKind delimiter,
         [NotNullWhen(true)] out TypeAnnotation? typeAnnotation
     ) {
-        if (TryConsume(TokenKind.Colon, out Token? colonToken) == false) {
+        if (TryConsume(delimiter, out Token? delimiterToken) == false) {
             typeAnnotation = null;
             return false;
         }
@@ -1084,7 +1085,7 @@ public class Parser {
             throw Error(CompilerMessage.Parser.IdentifierExpected(Peek().Line));
         }
 
-        typeAnnotation = SF.TypeAnnotation(colonToken, identifier);
+        typeAnnotation = SF.TypeAnnotation(delimiterToken, identifier);
         return true;
     }
 
@@ -1303,7 +1304,7 @@ public class Parser {
             return false;
         }
 
-        if (TryConsumeTypeAnnotation(out TypeAnnotation? typeAnnotation) == false) {
+        if (TryConsumeTypeAnnotation(TokenKind.Colon, out TypeAnnotation ? typeAnnotation) == false) {
             throw Error(CompilerMessage.Parser.TypeAnnotationExpected(Peek().Line));
         }
 

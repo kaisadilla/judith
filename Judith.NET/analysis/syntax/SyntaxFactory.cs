@@ -392,7 +392,7 @@ public static class SyntaxFactory {
         Token colonToken, Identifier identifier
     ) {
         var typeAnnotation = new TypeAnnotation(identifier) {
-            ColonToken = colonToken
+            Delimiter = colonToken
         };
         typeAnnotation.SetSpan(new(colonToken.Start, identifier.Span.End));
         typeAnnotation.SetLine(colonToken.Line);

@@ -78,6 +78,7 @@ public class Token {
             TokenKind.Greater => "Greater sign",
             TokenKind.GreaterEqual => "Greater or equal sign",
             TokenKind.EqualArrow => "Equal arrow",
+            TokenKind.MinusArrow => "Minus arrow",
             TokenKind.DoubleColon => "Double colon",
 
             // Three-character tokens.

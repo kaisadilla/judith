@@ -131,6 +131,10 @@ public class Lexer {
                 if (Match('-')) {
                     return ScanSingleLineComment();
                 }
+                // Token '->' for unwrap operator and return type.
+                else if (Match('>')) {
+                    return MakeToken(TokenKind.MinusArrow);
+                }
                 // Negative number ('-' followed by number leading char).
                 else if (IsNumberLeadingChar(Peek())) {
                     return ScanNumber(Advance());

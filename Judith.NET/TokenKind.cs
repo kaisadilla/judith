@@ -39,6 +39,7 @@ public enum TokenKind {
     Greater,
     GreaterEqual,
     EqualArrow,
+    MinusArrow,
     DoubleColon,
 
     // Three-character tokens.

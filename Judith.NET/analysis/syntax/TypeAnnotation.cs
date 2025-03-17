@@ -9,7 +9,7 @@ namespace Judith.NET.analysis.syntax;
 public class TypeAnnotation : SyntaxNode {
     public Identifier Identifier { get; private init; }
 
-    public Token? ColonToken { get; init; }
+    public Token? Delimiter { get; init; }
 
     public TypeAnnotation (Identifier identifier) : base(SyntaxKind.TypeAnnotation) {
         Identifier = identifier;
