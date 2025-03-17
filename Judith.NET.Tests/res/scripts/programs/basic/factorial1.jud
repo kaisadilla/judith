@@ -1,4 +1,4 @@
-﻿print("Factorial of 5: ")
+print("Factorial of 5: ")
 __p_print factorial(5)
 
 print("Factorial of 2: ")

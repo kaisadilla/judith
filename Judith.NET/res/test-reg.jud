@@ -1,0 +1,49 @@
+const i1 = 1
+const i2 = 1
+const cycles = 20
+
+add(3, 2)
+add(6, 4)
+
+fib_recur(i1, i2, cycles)
+echo_str("")
+echo_str("Fiboňácĉi for you!")
+const user_input = readln()
+println(user_input)
+
+const e = add(5, 12)
+print("5 + 12 = ")
+echo_num(e)
+
+func _old_fib (var a, b, const cycles: F64)
+    var i = 0
+
+    while i < cycles do
+        const next = a + b
+        a = b
+        b = next
+
+        echo_num(next)
+
+        i = i + 1
+    end
+end
+
+func fib_recur (a, b, cycles: F64)
+    if cycles <= 0 then return end
+
+    echo_num(a)
+    fib_recur(b, a + b, cycles - 1)
+end
+
+func echo_num (n: F64)
+    __p_print n
+end
+
+func echo_str (str: String)
+    __p_print str
+end
+
+func add (a, b: F64) : F64
+    return a + b
+end

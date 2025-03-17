@@ -28,7 +28,7 @@ int main (int argc, char *argv[]) {
     std::streambuf* cmdBuf = std::cout.rdbuf();
 
     //Path path = "res/test.jdll";
-    Path path = "res/fibonacci1.jdll";
+    Path path = "res/test.jdll";
     u_ptr<Path> outFilePath(nullptr);
     u_ptr<std::ofstream> outFileStream(nullptr);
 

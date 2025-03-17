@@ -240,6 +240,7 @@ public class JasmFunctionCompiler {
 
         CompileExpression(expr.Right);
         Chunk.WriteStore(addr);
+        Chunk.WriteLoad(addr);
     }
 
     public void CompileMathBinaryExpression (IRMathBinaryExpression expr) {

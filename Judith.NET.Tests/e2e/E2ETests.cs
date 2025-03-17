@@ -37,8 +37,10 @@ public class E2ETests {
     }
 
     [Theory]
-    [InlineData("basic", "fibonacci1")]
+    [InlineData("basic", "while1")]
     [InlineData("basic", "comparisons1")]
+    [InlineData("basic", "fibonacci1")]
+    [InlineData("basic", "factorial1")]
     public void ValidScripts (string folderPath, string fileName) {
         try {
             var output = ScriptRun(folderPath, fileName);
