@@ -72,7 +72,8 @@ public enum SyntaxKind
     IdentifierExpression,
     LiteralExpression,
 
-    Identifier,
+    QualifiedIdentifier,
+    SimpleIdentifier,
     Literal,
     Operator,
 
@@ -91,6 +92,7 @@ public enum SyntaxKind
     MemberField,
 
     // Type nodes
+    GroupType, // (type)
     IdentifierType, // type
     FunctionType, // (type, type) -> type
     TupleArrayType, // [type, type, type...]

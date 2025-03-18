@@ -10,7 +10,7 @@ public static class SyntaxFactory {
     public static FunctionDefinition FunctionDefinition (
         Token? hidToken,
         Token funcToken,
-        Identifier name,
+        SimpleIdentifier name,
         ParameterList parameters,
         TypeAnnotation? returnType,
         BlockStatement body
@@ -31,7 +31,7 @@ public static class SyntaxFactory {
         Token? hidToken,
         Token typedefToken,
         Token structToken,
-        Identifier identifier,
+        SimpleIdentifier identifier,
         List<MemberField> memberFields,
         Token endToken
     ) {
@@ -266,7 +266,7 @@ public static class SyntaxFactory {
     }
 
     public static AccessExpression AccessExpression (
-        Expression? receiver, Operator op, Identifier member
+        Expression? receiver, Operator op, SimpleIdentifier member
     ) {
         var accessExpr = new AccessExpression(receiver, op, member);
         accessExpr.SetSpan(new(receiver?.Span.Start ?? op.Span.Start, member.Span.End));
@@ -299,7 +299,7 @@ public static class SyntaxFactory {
     }
 
     public static FieldInitialization FieldInitialization (
-        Identifier fieldName, EqualsValueClause initializer
+        SimpleIdentifier fieldName, EqualsValueClause initializer
     ) {
         var fieldInit = new FieldInitialization(fieldName, initializer);
         fieldInit.SetSpan(new(fieldName.Span.Start, initializer.Span.End));
@@ -324,8 +324,18 @@ public static class SyntaxFactory {
         return litExpr;
     }
 
-    public static Identifier Identifier (Token rawToken) {
-        var id = new Identifier(rawToken);
+    public static QualifiedIdentifier QualifiedIdentifier (
+        Identifier qualifier, Operator op, SimpleIdentifier identifier
+    ) {
+        var qualifiedId = new QualifiedIdentifier(qualifier, op, identifier, false);
+        qualifiedId.SetSpan(new(qualifier.Span.Start, identifier.Span.End));
+        qualifiedId.SetLine(qualifier.Line);
+
+        return qualifiedId;
+    }
+
+    public static SimpleIdentifier SimpleIdentifier (Token rawToken) {
+        var id = new SimpleIdentifier(rawToken);
         id.SetSpan(new(rawToken.Start, rawToken.End));
         id.SetLine(rawToken.Line);
 
@@ -361,7 +371,7 @@ public static class SyntaxFactory {
 
     public static LocalDeclarator LocalDeclarator (
         Token? fieldKindToken,
-        Identifier identifier,
+        SimpleIdentifier identifier,
         LocalKind localKind,
         TypeAnnotation? type
     ) {
@@ -389,13 +399,11 @@ public static class SyntaxFactory {
         return clause;
     }
 
-    public static TypeAnnotation TypeAnnotation (
-        Token colonToken, Identifier identifier
-    ) {
-        var typeAnnotation = new TypeAnnotation(identifier) {
+    public static TypeAnnotation TypeAnnotation (Token colonToken, TypeNode type) {
+        var typeAnnotation = new TypeAnnotation(type) {
             Delimiter = colonToken
         };
-        typeAnnotation.SetSpan(new(colonToken.Start, identifier.Span.End));
+        typeAnnotation.SetSpan(new(colonToken.Start, type.Span.End));
         typeAnnotation.SetLine(colonToken.Line);
 
         return typeAnnotation;
@@ -497,7 +505,7 @@ public static class SyntaxFactory {
         Token? staticToken,
         Token? mutableToken,
         Token? constToken,
-        Identifier identifier,
+        SimpleIdentifier identifier,
         TypeAnnotation typeAnnotation,
         EqualsValueClause? initializer
     ) {
@@ -540,6 +548,103 @@ public static class SyntaxFactory {
         memberField.SetLine(line);
 
         return memberField;
+    }
+
+    public static UnionType UnionType (List<TypeNode> memberTypes) {
+        var unionType = new UnionType(false, false, memberTypes);
+        unionType.SetSpan(new(memberTypes[0].Span.Start, memberTypes[^1].Span.End));
+        unionType.SetLine(memberTypes[0].Line);
+
+        return unionType;
+    }
+
+    public static RawArrayType RawArrayType (
+        TypeNode memberType,
+        Token leftSqBracketToken,
+        Expression length,
+        Token rightSqBracketToken
+    ) {
+        var rawArrayType = new RawArrayType(false, false, memberType, length) {
+            LeftSquareBracketToken = leftSqBracketToken,
+            RightSquareBracketToken = rightSqBracketToken,
+        };
+        rawArrayType.SetSpan(new(memberType.Span.Start, rightSqBracketToken.End));
+        rawArrayType.SetLine(memberType.Line);
+
+        return rawArrayType;
+    }
+
+    public static GroupType GroupType (
+        Token leftParenToken, TypeNode type, Token rightParenToken
+    ) {
+        var groupType = new GroupType(false, false, type) {
+            LeftParenthesisToken = leftParenToken,
+            RightParenthesisToken = rightParenToken,
+        };
+        groupType.SetSpan(new(leftParenToken.Start, rightParenToken.End));
+        groupType.SetLine(leftParenToken.Line);
+
+        return groupType;
+    }
+
+    public static FunctionType FunctionType (
+        Token leftParenToken,
+        List<TypeNode> paramTypes,
+        Token rightParenToken,
+        TypeNode returnType
+    ) {
+        var funcType = new FunctionType(false, false, paramTypes, returnType) {
+            LeftParenthesisToken = leftParenToken,
+            RightParenthesisToken = rightParenToken,
+        };
+        funcType.SetSpan(new(leftParenToken.Start, returnType.Span.End));
+        funcType.SetLine(leftParenToken.Line);
+
+        return funcType;
+    }
+
+    public static TupleArrayType TupleArrayType (
+        Token leftSqBracket, List<TypeNode> memberTypes, Token rightSqBracket
+    ) {
+        var arrType = new TupleArrayType(false, false, memberTypes) {
+            LeftSquareBracketToken = leftSqBracket,
+            RightSquareBracketToken = rightSqBracket,
+        };
+        arrType.SetSpan(new(leftSqBracket.Start, rightSqBracket.End));
+        arrType.SetLine(leftSqBracket.Line);
+
+        return arrType;
+    }
+
+    public static LiteralType LiteralType (Literal literal) {
+        var literalType = new LiteralType(false, false, literal);
+        literalType.SetSpan(literal.Span);
+        literalType.SetLine(literal.Line);
+
+        return literalType;
+    }
+
+    public static IdentifierType IdentifierType (Identifier id) {
+        var idType = new IdentifierType(false, false, id);
+        idType.SetSpan(id.Span);
+        idType.SetLine(id.Line);
+
+        return idType;
+    }
+
+    public static TypeNode SetTypeConstness (TypeNode type, Token? constToken) {
+        type.SetConstant(constToken != null);
+        type.SetSpan(new(constToken?.Start ?? type.Span.Start, type.Span.End));
+        type.SetLine(constToken?.Line ?? type.Line);
+        
+        return type;
+    }
+
+    public static TypeNode SetNullability (TypeNode type, Token? questionToken) {
+        type.SetNullable(questionToken != null);
+        type.SetSpan(new(type.Span.Start, questionToken?.End ?? type.Span.End));
+
+        return type;
     }
 
     #region Debug statements

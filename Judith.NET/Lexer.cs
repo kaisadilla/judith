@@ -128,67 +128,77 @@ public class Lexer {
             case '+':
                 return MakeToken(TokenKind.Plus);
             case '-':
-                // Token '--' for comment.
+                // Tokens '--' and '--!' for comments.
                 if (Match('-')) {
-                    return ScanSingleLineComment();
+                    if (Match('!')) {
+                        // TODO: Scan multiline comment // --!
+                    }
+                    return ScanSingleLineComment(); // --
                 }
                 // Token '->' for unwrap operator and return type.
                 else if (Match('>')) {
-                    return MakeToken(TokenKind.MinusArrow);
+                    return MakeToken(TokenKind.MinusArrow); // ->
                 }
                 // Negative number ('-' followed by number leading char).
                 else if (IsNumberLeadingChar(Peek())) {
                     return ScanNumber(Advance());
                 }
 
-                return MakeToken(TokenKind.Minus);
+                return MakeToken(TokenKind.Minus); // -
             case '*':
-                return MakeToken(TokenKind.Asterisk);
+                return MakeToken(TokenKind.Asterisk); // *
             case '/':
-                return MakeToken(TokenKind.Slash);
+                return MakeToken(TokenKind.Slash); // /
             case '=':
                 if (Match('=')) {
                     if (Match('=')) {
-                        return MakeToken(TokenKind.EqualEqualEqual);
+                        return MakeToken(TokenKind.EqualEqualEqual); // ===
                     }
 
-                    return MakeToken(TokenKind.EqualEqual);
+                    return MakeToken(TokenKind.EqualEqual); // ==
                 }
                 if (Match('>')) {
-                    return MakeToken(TokenKind.EqualArrow);
+                    return MakeToken(TokenKind.EqualArrow); // =>
                 }
 
-                return MakeToken(TokenKind.Equal);
+                return MakeToken(TokenKind.Equal); // =
             case '!':
                 if (Match('=')) {
                     if (Match('=')) {
-                        return MakeToken(TokenKind.BangEqualEqual);
+                        return MakeToken(TokenKind.BangEqualEqual); // !==
                     }
-
-                    return MakeToken(TokenKind.BangEqual);
+                    return MakeToken(TokenKind.BangEqual); // !=
                 }
 
-                return MakeToken(TokenKind.Bang);
+                return MakeToken(TokenKind.Bang); // !
+            case '?':
+                if (Match('?')) {
+                    return MakeToken(TokenKind.DoubleQuestionMark); // ??
+                }
+
+                return MakeToken(TokenKind.QuestionMark); // ?
             case '~':
                 if (Match('=')) {
-                    return MakeToken(TokenKind.TildeEqual);
+                    return MakeToken(TokenKind.TildeEqual); // ~=
                 }
 
-                return MakeToken(TokenKind.Tilde);
+                return MakeToken(TokenKind.Tilde); // ~
             case '.':
-                return MakeToken(TokenKind.Dot);
+                return MakeToken(TokenKind.Dot); // .
             case '<':
                 if (Match('=')) {
-                    return MakeToken(TokenKind.LessEqual);
+                    return MakeToken(TokenKind.LessEqual); // <=
                 }
 
-                return MakeToken(TokenKind.Less);
+                return MakeToken(TokenKind.Less); // <
             case '>':
                 if (Match('=')) {
-                    return MakeToken(TokenKind.GreaterEqual);
+                    return MakeToken(TokenKind.GreaterEqual); // >=
                 }
 
-                return MakeToken(TokenKind.Greater);
+                return MakeToken(TokenKind.Greater); // >
+            case '|':
+                return MakeToken(TokenKind.Pipe); // |
             case '"':
                 return ScanString('"', _column - 1);
             case '`':

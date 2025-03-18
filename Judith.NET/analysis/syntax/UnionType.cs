@@ -9,8 +9,12 @@ namespace Judith.NET.analysis.syntax;
 public class UnionType : TypeNode {
     public List<TypeNode> MemberTypes { get; private init; }
 
-    public UnionType (List<TypeNode> memberTypes) : base(SyntaxKind.UnionType) {
+    public UnionType (bool isConstant, bool isNullable, List<TypeNode> memberTypes)
+        : base(SyntaxKind.UnionType, isConstant, isNullable)
+    {
         MemberTypes = memberTypes;
+
+        Children.AddRange(MemberTypes);
     }
 
     public override void Accept (SyntaxVisitor visitor) {

@@ -7,7 +7,9 @@ using System.Threading.Tasks;
 namespace Judith.NET.analysis.syntax;
 
 public class ObjectType : TypeNode {
-    public ObjectType () : base(SyntaxKind.ObjectType) {
+    public ObjectType (bool isConstant, bool isNullable)
+        : base(SyntaxKind.ObjectType, isConstant, isNullable)
+    {
         throw new NotImplementedException();
     }
 

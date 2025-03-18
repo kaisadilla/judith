@@ -8,7 +8,7 @@ using Judith.NET.analysis.lexical;
 namespace Judith.NET.analysis.syntax;
 
 public class LocalDeclarator : SyntaxNode {
-    public Identifier Identifier { get; init; }
+    public SimpleIdentifier Identifier { get; init; }
     public LocalKind LocalKind { get; init; }
     public TypeAnnotation? TypeAnnotation { get; private set; }
     /// <summary>
@@ -23,7 +23,7 @@ public class LocalDeclarator : SyntaxNode {
     public Token? FieldKindToken { get; init; }
 
     public LocalDeclarator (
-        Identifier identifier, LocalKind localKind, TypeAnnotation? typeAnnotation
+        SimpleIdentifier identifier, LocalKind localKind, TypeAnnotation? typeAnnotation
     )
         : base(SyntaxKind.LocalDeclarator) {
         Identifier = identifier;

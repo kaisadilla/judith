@@ -13,7 +13,7 @@ public class FunctionDefinition : Item {
     /// </summary>
     public bool IsImplicit { get; private init; }
     public bool IsHidden { get; private init; }
-    public Identifier Identifier { get; private init; }
+    public SimpleIdentifier Identifier { get; private init; }
     public ParameterList Parameters { get; private init; }
     public TypeAnnotation? ReturnTypeAnnotation { get; private init; }
     public BlockStatement Body { get; private init; }
@@ -25,7 +25,7 @@ public class FunctionDefinition : Item {
     public FunctionDefinition (
         bool isImplicit,
         bool isHidden,
-        Identifier name,
+        SimpleIdentifier name,
         ParameterList parameters,
         TypeAnnotation? returnType,
         BlockStatement body

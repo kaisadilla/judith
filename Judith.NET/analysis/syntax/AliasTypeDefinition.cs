@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Judith.NET.analysis.lexical;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -7,12 +8,14 @@ using System.Threading.Tasks;
 namespace Judith.NET.analysis.syntax;
 
 public class AliasTypeDefinition : TypeDefinition {
-    public Identifier Name { get; private init; }
-    public Identifier AliasedType { get; private init; }
+    public SimpleIdentifier Name { get; private init; }
+    public TypeNode AliasedType { get; private init; }
     public bool IsExplicit { get; private init; }
 
+    public Token? EqualsToken { get; set; }
+
     public AliasTypeDefinition (
-        bool isHidden, Identifier name, Identifier aliasedType, bool isExplicit
+        bool isHidden, SimpleIdentifier name, TypeNode aliasedType, bool isExplicit
     )
         : base(SyntaxKind.AliasTypeDefinition, isHidden)
     {

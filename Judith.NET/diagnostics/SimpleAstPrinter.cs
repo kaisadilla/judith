@@ -324,14 +324,20 @@ public class SimpleAstPrinter : SyntaxVisitor<List<string>> {
     }
 
     public override List<string> Visit (IdentifierExpression node) {
-        return Visit(node.Identifier);
+        return Visit(node.Name);
     }
 
     public override List<string> Visit (LiteralExpression node) {
         return Visit(node.Literal);
     }
 
-    public override List<string> Visit (Identifier node) {
+    public override List<string> Visit (QualifiedIdentifier node) {
+        List<string> txt = [node.FullyQualifiedName()];
+
+        return txt;
+    }
+
+    public override List<string> Visit (SimpleIdentifier node) {
         List<string> txt = [node.Name];
         if (node.IsMetaName) {
             txt[^1] += " (metaname)";
@@ -383,7 +389,7 @@ public class SimpleAstPrinter : SyntaxVisitor<List<string>> {
     public override List<string> Visit (TypeAnnotation node) {
         List<string> txt = [": "];
 
-        AddInline(txt, Visit(node.Identifier), 1);
+        AddInline(txt, Visit(node.Type), 1);
 
         return txt;
     }
@@ -487,6 +493,23 @@ public class SimpleAstPrinter : SyntaxVisitor<List<string>> {
         else {
             txt[^1] += ")";
         }
+
+        return txt;
+    }
+
+    public override List<string>? Visit (GroupType node) {
+        List<string> txt = ["("];
+
+        AddInline(txt, Visit(node.Type), 1);
+        txt[^1] += ")";
+
+        return txt;
+    }
+
+    public override List<string>? Visit (IdentifierType node) {
+        List<string> txt = [""];
+
+        AddInline(txt, Visit(node.Name), 1);
 
         return txt;
     }

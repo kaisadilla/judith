@@ -18,6 +18,7 @@ public enum MessageCode {
     UnexpectedToken = 2_000,
     IdentifierExpected,
     TypeAnnotationExpected,
+    TypeExpected,
     LeftParenExpected,
     RightParenExpected,
     RightCurlyBracketExpected,
@@ -61,7 +62,7 @@ public enum MessageCode {
 
     // TypeResolver
     TypeDoesntExist,
-    TypeExpected,
+    TypeExpectedTR,
     InvalidTypeForObjectInitialization,
     MemberAccessOnlyOnInstances,
     ScopeAccessNotOnInstances,

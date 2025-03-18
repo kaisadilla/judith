@@ -78,7 +78,8 @@ public abstract class SyntaxVisitor {
     public virtual void Visit (IdentifierExpression node) => VisitChildren(node);
     public virtual void Visit (LiteralExpression node) => VisitChildren(node);
 
-    public virtual void Visit (Identifier node) => VisitChildren(node);
+    public virtual void Visit (QualifiedIdentifier node) => VisitChildren(node);
+    public virtual void Visit (SimpleIdentifier node) => VisitChildren(node);
     public virtual void Visit (Literal node) => VisitChildren(node);
     public virtual void Visit (LocalDeclaratorList node) => VisitChildren(node);
     public virtual void Visit (LocalDeclarator node) => VisitChildren(node);
@@ -95,6 +96,7 @@ public abstract class SyntaxVisitor {
     public virtual void Visit (FieldInitialization node) => VisitChildren(node);
     public virtual void Visit (MemberField node) => VisitChildren(node);
 
+    public virtual void Visit (GroupType node) => VisitChildren(node);
     public virtual void Visit (IdentifierType node) => VisitChildren(node);
     public virtual void Visit (FunctionType node) => VisitChildren(node);
     public virtual void Visit (TupleArrayType node) => VisitChildren(node);

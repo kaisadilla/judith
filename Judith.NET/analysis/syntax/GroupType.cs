@@ -7,16 +7,15 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.analysis.syntax;
 
-public class TupleArrayType : TypeNode {
-    public List<TypeNode> MemberTypes { get; private init; }
+public class GroupType : TypeNode {
+    public TypeNode Type { get; init; }
+    public Token? LeftParenthesisToken { get; init; }
+    public Token? RightParenthesisToken { get; init; }
 
-    public Token? LeftSquareBracketToken { get; set; }
-    public Token? RightSquareBracketToken { get; set; }
-
-    public TupleArrayType (bool isConstant, bool isNullable, List<TypeNode> memberTypes)
-        : base(SyntaxKind.TupleArrayType, isConstant, isNullable)
+    public GroupType (bool isConstant, bool isNullable, TypeNode type)
+        : base(SyntaxKind.GroupType, isConstant, isNullable)
     {
-        MemberTypes = memberTypes;
+        Type = type;
     }
 
     public override void Accept (SyntaxVisitor visitor) {

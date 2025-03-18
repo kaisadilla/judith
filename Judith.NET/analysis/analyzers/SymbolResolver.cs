@@ -112,7 +112,13 @@ public class SymbolResolver : SyntaxVisitor {
     public override void Visit (IdentifierExpression node) {
         if (_nodeStates.IsComplete(node)) return;
 
-        string name = node.Identifier.Name;
+        if (node.Name.Kind == SyntaxKind.QualifiedIdentifier) {
+            throw new NotImplementedException("Qualified identifiers not yet supported.");
+        }
+
+        var simpleName = (SimpleIdentifier)node.Name;
+
+        string name = simpleName.Name;
 
         var symbol = FindSymbolOrErrorMsg(node, name);
         if (symbol == null) return;
@@ -131,7 +137,14 @@ public class SymbolResolver : SyntaxVisitor {
     public override void Visit (TypeAnnotation node) {
         if (_nodeStates.IsComplete(node)) return;
 
-        string name = node.Identifier.Name;
+        if (node.Type is not IdentifierType idType) {
+            throw new NotImplementedException("Non-literal types not yet supported.");
+        }
+        if (idType.Name is not SimpleIdentifier simpleId) {
+            throw new NotImplementedException("Qualified identifiers not yet supported.");
+        }
+
+        string name = simpleId.Name;
 
         var symbol = FindSymbolOrErrorMsg(node, name);
         if (symbol == null) return;
@@ -140,7 +153,7 @@ public class SymbolResolver : SyntaxVisitor {
             _cmp.Binder.BindTypeAnnotation(node, typeSymbol);
         }
         else {
-            Messages.Add(CompilerMessage.Analyzers.TypeExpected(node));
+            Messages.Add(CompilerMessage.Analyzers.TypeExpectedTR(node));
             _cmp.Binder.BindTypeAnnotation(node, _cmp.PseudoTypes.Error);
         }
 

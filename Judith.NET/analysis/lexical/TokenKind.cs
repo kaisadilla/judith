@@ -29,6 +29,8 @@ public enum TokenKind {
     Bang,
     Tilde,
     Dot,
+    QuestionMark,
+    Pipe,
 
     // Two-character tokens.
     EqualEqual,
@@ -41,6 +43,7 @@ public enum TokenKind {
     EqualArrow,
     MinusArrow,
     DoubleColon,
+    DoubleQuestionMark,
 
     // Three-character tokens.
     EqualEqualEqual,

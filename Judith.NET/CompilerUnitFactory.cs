@@ -46,7 +46,7 @@ public static class CompilerUnitFactory {
         FunctionDefinition implicitFunc = new(
             true,
             true,
-            new Identifier(CompilerUnit.IMPLICIT_FUNCTION_NAME, true),
+            new SimpleIdentifier(CompilerUnit.IMPLICIT_FUNCTION_NAME, true),
             parameters,
             null,
             body

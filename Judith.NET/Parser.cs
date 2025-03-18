@@ -206,7 +206,7 @@ public class Parser {
             return false;
         }
 
-        if (TryConsumeIdentifier(out Identifier? identifier) == false) {
+        if (TryConsumeIdentifier(out SimpleIdentifier? identifier) == false) {
             throw Error(CompilerMessage.Parser.IdentifierExpected(Peek()));
         }
 
@@ -254,7 +254,7 @@ public class Parser {
             return false;
         }
 
-        if (TryConsumeIdentifier(out Identifier? id) == false) {
+        if (TryConsumeIdentifier(out SimpleIdentifier? id) == false) {
             throw Error(CompilerMessage.Parser.IdentifierExpected(Peek()));
         }
 
@@ -831,13 +831,13 @@ public class Parser {
     }
 
     private bool TryConsumeAccessExpression ([NotNullWhen(true)] out Expression? expr) {
-        // Because member access can be implicit (e.g. ".name" or "::count"), we
+        // Because member access can be implicit (e.g. ".name"), we
         // can't discard a member access just because we didn't find what it's
         // accessing.
         TryConsumePrimary(out Expression? receiver);
 
         // Now, if we don't find a member access token:
-        if (Peek().Kind != TokenKind.Dot && Peek().Kind != TokenKind.DoubleColon) {
+        if (Peek().Kind != TokenKind.Dot) {
             // IF we didn't find a provider, then we aren't parsing an expression
             // that stems from this one:
             if (receiver == null) {
@@ -851,10 +851,8 @@ public class Parser {
             }
         }
 
-        while (TryConsumeOperator(
-            out Operator? op, TokenKind.Dot, TokenKind.DoubleColon
-        )) {
-            if (TryConsumeIdentifier(out Identifier? member) == false) {
+        while (TryConsumeOperator(out Operator? op, TokenKind.Dot)) {
+            if (TryConsumeIdentifier(out SimpleIdentifier? member) == false) {
                 throw Error(CompilerMessage.Parser.IdentifierExpected(Peek()));
             }
 
@@ -898,7 +896,7 @@ public class Parser {
     private bool TryConsumeIdentifierExpression (
         [NotNullWhen(true)] out Expression? expr
     ) {
-        if (TryConsumeIdentifier(out Identifier? id) == false) {
+        if (TryConsumeIdentifier(out SimpleIdentifier? id) == false) {
             expr = null;
             return false;
         }
@@ -917,13 +915,34 @@ public class Parser {
         return true;
     }
 
-    private bool TryConsumeIdentifier ([NotNullWhen(true)] out Identifier? identifier) {
+    private bool TryConsumeQualifiedIdentifier (
+        [NotNullWhen(true)] out Identifier? identifier
+    ) {
+        if (TryConsumeIdentifier(out SimpleIdentifier? qualifier) == false) {
+            identifier = null;
+            return false;
+        }
+
+        identifier = qualifier;
+
+        while (TryConsumeOperator(out Operator? op, TokenKind.DoubleColon)) {
+            if (TryConsumeIdentifier(out SimpleIdentifier? name) == false) {
+                throw Error(CompilerMessage.Parser.IdentifierExpected(Peek()));
+            }
+
+            identifier = SF.QualifiedIdentifier(identifier, op, name);
+        }
+
+        return true;
+    }
+
+    private bool TryConsumeIdentifier ([NotNullWhen(true)] out SimpleIdentifier? identifier) {
         if (TryConsume(TokenKind.Identifier, out Token? idToken) == false) {
             identifier = null;
             return false;
         }
 
-        identifier = SF.Identifier(idToken);
+        identifier = SF.SimpleIdentifier(idToken);
         return true;
     }
 
@@ -1045,7 +1064,7 @@ public class Parser {
         }
 
         // should this return false and null?
-        if (TryConsumeIdentifier(out Identifier? identifier) == false) {
+        if (TryConsumeIdentifier(out SimpleIdentifier? identifier) == false) {
             throw Error(CompilerMessage.Parser.IdentifierExpected(Peek()));
         }
 
@@ -1080,11 +1099,11 @@ public class Parser {
             return false;
         }
 
-        if (TryConsumeIdentifier(out Identifier? identifier) == false) {
-            throw Error(CompilerMessage.Parser.IdentifierExpected(Peek()));
+        if (TryConsumeType(out TypeNode? type) == false) {
+            throw Error(CompilerMessage.Parser.TypeExpected(Peek()));
         }
 
-        typeAnnotation = SF.TypeAnnotation(delimiterToken, identifier);
+        typeAnnotation = SF.TypeAnnotation(delimiterToken, type);
         return true;
     }
 
@@ -1279,7 +1298,7 @@ public class Parser {
     private bool TryConsumeFieldInitialization (
         [NotNullWhen(true)] out FieldInitialization? init
     ) {
-        if (TryConsumeIdentifier(out Identifier? id) == false) {
+        if (TryConsumeIdentifier(out SimpleIdentifier? id) == false) {
             init = null;
             return false;
         }
@@ -1298,7 +1317,7 @@ public class Parser {
         TryConsume(TokenKind.KwMut, out Token? mutToken);
         TryConsume(TokenKind.KwConst, out Token? constToken);
 
-        if (TryConsumeIdentifier(out Identifier? id) == false) {
+        if (TryConsumeIdentifier(out SimpleIdentifier? id) == false) {
             field = null;
             return false;
         }
@@ -1312,6 +1331,180 @@ public class Parser {
         field = SF.MemberField(
             accessToken, staticToken, mutToken, constToken, id, typeAnnotation, evc
         );
+        return true;
+    }
+
+    private bool TryConsumeType ([NotNullWhen(true)] out TypeNode? type) {
+        return TryConsumeUnionType(out type);
+    }
+
+    private bool TryConsumeUnionType ([NotNullWhen(true)] out TypeNode? type) {
+        if (TryConsumeRawArrayType(out type) == false) {
+            return false;
+        }
+
+        if (Peek().Kind != TokenKind.Pipe) {
+            return true;
+        }
+
+        List<TypeNode> memberTypes = [type];
+        while (Match(TokenKind.Pipe)) {
+            if (TryConsumeRawArrayType(out type) == false) {
+                throw Error(CompilerMessage.Parser.TypeExpected(Peek()));
+            }
+
+            memberTypes.Add(type);
+        }
+
+        type = SF.UnionType(memberTypes);
+        return true;
+    }
+
+    private bool TryConsumeRawArrayType ([NotNullWhen(true)] out TypeNode? type) {
+        TryConsume(TokenKind.KwConst, out Token? constToken);
+
+        if (TryConsumePrimaryType(out type) == false) {
+            if (constToken == null) return false;
+            else throw Error(CompilerMessage.Parser.TypeExpected(Peek()));
+        }
+
+        if (Peek().Kind != TokenKind.LeftSquareBracket) {
+            type = SF.SetTypeConstness(type, constToken);
+            return true;
+        }
+
+        while (TryConsume(TokenKind.LeftSquareBracket, out Token? leftToken)) {
+            if (TryConsumeExpression(out Expression? length) == false) {
+                throw Error(CompilerMessage.Parser.ExpressionExpected(Peek()));
+            }
+            if (TryConsume(TokenKind.RightSquareBracket, out Token? rightToken) == false) {
+                throw Error(CompilerMessage.Parser.RightSquareBracketExpected(Peek()));
+            }
+
+            type = SF.RawArrayType(type, leftToken, length, rightToken);
+
+            if (TryConsume(TokenKind.QuestionMark, out Token? questionToken)) {
+                type = SF.SetNullability(type, questionToken);
+            }
+        }
+
+        if (constToken != null) {
+            type = SF.SetTypeConstness(type, constToken);
+        }
+
+        return true;
+    }
+
+    private bool TryConsumePrimaryType ([NotNullWhen(true)] out TypeNode? type) {
+        bool typeFound = TryConsumeFunctionType(out type)
+            || TryConsumeTupleArrayType(out type)
+            //|| TryConsumeObjectType(out type) // TODO
+            || TryConsumeLiteralType(out type)
+            || TryConsumeIdentifierType(out type);
+
+        if (typeFound == false || type == null) return false;
+
+        if (TryConsume(TokenKind.QuestionMark, out Token? questionToken)) {
+            type = SF.SetNullability(type, questionToken);
+        }
+
+        return true;
+    }
+
+    private bool TryConsumeFunctionType ([NotNullWhen(true)] out TypeNode? type) {
+        if (TryConsume(TokenKind.LeftParen, out Token? leftParen) == false) {
+            type = null;
+            return false;
+        }
+
+        List<TypeNode> paramTypes = [];
+
+        // If the parenthesis is not immediately closed.
+        if (Check(TokenKind.RightParen)) {
+            do {
+                if (TryConsumeType(out TypeNode? paramType) == false) {
+                    throw Error(CompilerMessage.Parser.TypeExpected(Peek()));
+                }
+
+                paramTypes.Add(paramType);
+            }
+            while (Match(TokenKind.Comma) && Peek().Kind != TokenKind.RightParen);
+        }
+
+        if (TryConsume(TokenKind.RightParen, out Token? rightParen) == false) {
+            throw Error(CompilerMessage.Parser.RightParenExpected(Peek()));
+        }
+
+        // If we don't find '->', then it's a group type.
+        if (TryConsume(TokenKind.MinusArrow, out Token? arrow) == false) {
+            // A single type between parenthesis becomes a group type.
+            if (paramTypes.Count == 1) {
+                type = SF.GroupType(leftParen, paramTypes[0], rightParen);
+                return true;
+            }
+            // This is an error because a type was expected inside the parenthesis.
+            else if (paramTypes.Count == 0) {
+                throw Error(CompilerMessage.Parser.TypeExpected(rightParen));
+            }
+            // This is an error because a ')' was expected after the first type.
+            else {
+                throw Error(CompilerMessage.Parser.RightParenExpected(paramTypes[1]));
+            }
+        }
+
+        if (TryConsumeType(out TypeNode? returnType) == false) {
+            throw Error(CompilerMessage.Parser.TypeExpected(Peek()));
+        }
+
+        type = SF.FunctionType(leftParen, paramTypes, rightParen, returnType);
+        return true;
+    }
+
+    private bool TryConsumeTupleArrayType ([NotNullWhen(true)] out TypeNode? type) {
+        if (TryConsume(TokenKind.LeftSquareBracket, out Token? leftSqBracket) == false) {
+            type = null;
+            return false;
+        }
+
+        if (Check(TokenKind.RightSquareBracket)) {
+            throw Error(CompilerMessage.Parser.TypeExpected(Peek()));
+        }
+
+        List<TypeNode> memberTypes = [];
+        do {
+            if (TryConsumeType(out TypeNode? paramType) == false) {
+                throw Error(CompilerMessage.Parser.TypeExpected(Peek()));
+            }
+
+            memberTypes.Add(paramType);
+        }
+        while (Match(TokenKind.Comma) && Peek().Kind != TokenKind.RightParen);
+
+        if (TryConsume(TokenKind.RightSquareBracket, out Token? rightSqBracket) == false) {
+            throw Error(CompilerMessage.Parser.RightSquareBracketExpected(Peek()));
+        }
+
+        type = SF.TupleArrayType(leftSqBracket, memberTypes, rightSqBracket);
+        return true;
+    }
+
+    private bool TryConsumeLiteralType ([NotNullWhen(true)] out TypeNode? type) {
+        if (TryConsumeLiteral(out Literal? lit) == false) {
+            type = null;
+            return false;
+        }
+
+        type = SF.LiteralType(lit);
+        return true;
+    }
+
+    private bool TryConsumeIdentifierType ([NotNullWhen(true)] out TypeNode? type) {
+        if (TryConsumeQualifiedIdentifier(out Identifier? qid) == false) {
+            type = null;
+            return false;
+        }
+
+        type = SF.IdentifierType(qid);
         return true;
     }
 

@@ -8,14 +8,14 @@ using Judith.NET.analysis.lexical;
 namespace Judith.NET.analysis.syntax;
 
 public class StructTypeDefinition : TypeDefinition {
-    public Identifier Identifier { get; private init; }
+    public SimpleIdentifier Identifier { get; private init; }
     public List<MemberField> MemberFields { get; private init; }
 
     public Token? StructToken { get; set; }
     public Token? EndToken { get; set; }
 
     public StructTypeDefinition (
-        bool isHidden, Identifier identifier, List<MemberField> memberFields
+        bool isHidden, SimpleIdentifier identifier, List<MemberField> memberFields
     )
         : base(SyntaxKind.StructTypeDefinition, isHidden)
     {

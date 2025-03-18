@@ -9,8 +9,12 @@ namespace Judith.NET.analysis.syntax;
 public class IdentifierType : TypeNode {
     public Identifier Name { get; private init; }
 
-    public IdentifierType (Identifier name) : base(SyntaxKind.IdentifierType) {
+    public IdentifierType (bool isConstant, bool isNullable, Identifier name)
+        : base(SyntaxKind.IdentifierType, isConstant, isNullable)
+    {
         Name = name;
+
+        Children.Add(Name);
     }
 
     public override void Accept (SyntaxVisitor visitor) {

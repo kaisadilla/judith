@@ -1470,7 +1470,63 @@ Option types cannot be used as a `String`, but can be upcasted into one:
 const country_name: String = country:String
 ```
 
-Options are designed to be efficient: they compile into `Bool` when they contain two values or `Int` otherwise. The only costly operation associated to them is turning them into `String`.
+Each option can include additional data as an array or object type:
+
+```judith
+typedef option IpAddress
+    'V4'[Byte, Byte, Byte, Byte]
+    'V6'[String]
+end
+
+const home: IpAddress = 'V4' -- ERROR: Missing additional data.
+const home: IpAddress = 'V4'[127, 0, 0, 1] -- correct
+const loopback: IpAddress = 'V6'["::1"] -- correct
+```
+
+You can combine variants with different kinds of types:
+
+```judith
+typedef Message
+    'Quit'
+    'Move'{ x: Num, y: Num }
+    'Write'[String]
+    'ChangeColor'[Num, Num, Num]
+end
+```
+
+This option has four variants with different types:
+* `'Quit'` contains no data.
+* `'Move'` contains an object type with fields `x` and `y` of type `Num`.
+* `'Write'` contains an array with a single `String`.
+* `'ChangeColor'` contains an array of three `Num`.
+
+You can use `match` to pattern match an option type:
+
+```judith
+match message do
+    'Quit' then -- Basic variant with no additional data.
+        Console::log("Connection ended.")
+    end
+    'Move'(pos) then -- 'Move' object gets assigned to 'pos'.
+        move_obj(pos.x, pos.y)
+    end
+    'Write'(txt) then -- 'Write'[0] gets assigned to 'txt'.
+        Console::log(txt)
+    end
+    'ChangeColor'(r, g, b) then -- 'ChangeColor'[0] gets assigned to r,
+                                -- [1] to g, [2] to 'b'.
+        paint_obj(r, g, b, 1)
+    end
+end
+```
+
+Options are designed to be efficient, compiling to as little as it can. An option set without additional data becomes a single `int`, while ones with data become an `int` and a pointer.
+
+Usually the type of an option's variant can be inferred from usage. However, for cases where this isn't true, the variant can be qualified:
+
+```judith
+const country = Country::'Germany' -- 'country' is inferred to be of type 'Country'.
+```
 
 ### Struct
 Structs define an object that contains a number of member fields. They are used to define POD (plain old data) types.

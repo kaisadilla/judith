@@ -245,7 +245,7 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
         return new {
             Class = nameof(IdentifierExpression),
             node.Kind,
-            Identifier = Visit(node.Identifier),
+            Identifier = Visit(node.Name),
             Semantics = GetBoundOrNull(node),
         };
     }
@@ -259,9 +259,20 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
         };
     }
 
-    public override object Visit (Identifier node) {
+    public override object? Visit (QualifiedIdentifier node) {
         return new {
-            Class = nameof(Identifier),
+            Class = nameof(QualifiedIdentifier),
+            node.Kind,
+            Qualifier = Visit(node.Qualifier),
+            Operator = Visit(node.Operator),
+            Name = Visit(node.Name),
+            Semantics = GetBoundOrNull(node),
+        };
+    }
+
+    public override object Visit (SimpleIdentifier node) {
+        return new {
+            Class = nameof(SimpleIdentifier),
             node.Kind,
             IdentifierName = node.Name,
             node.IsEscaped,
@@ -316,7 +327,7 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
         return new {
             Class = nameof(TypeAnnotation),
             node.Kind,
-            Identifier = Visit(node.Identifier),
+            Identifier = Visit(node.Type),
             Semantics = GetBoundOrNull(node),
         };
     }
@@ -406,6 +417,89 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
             Identifier = Visit(node.Identifier),
             TypeAnnotation = Visit(node.TypeAnnotation),
             Initializer = VisitIfNotNull(node.Initializer),
+            Semantics = GetBoundOrNull(node),
+        };
+    }
+
+    public override object? Visit (GroupType node) {
+        return new {
+            Class = nameof(GroupType),
+            node.Kind,
+            node.IsConstant,
+            node.IsNullable,
+            Type = Visit(node.Type),
+            Semantics = GetBoundOrNull(node),
+        };
+    }
+
+    public override object? Visit (IdentifierType node) {
+        return new {
+            Class = nameof(IdentifierType),
+            node.Kind,
+            node.IsConstant,
+            node.IsNullable,
+            Name = Visit(node.Name),
+            Semantics = GetBoundOrNull(node),
+        };
+    }
+
+    public override object? Visit (FunctionType node) {
+        return new {
+            Class = nameof(FunctionType),
+            node.Kind,
+            node.IsConstant,
+            node.IsNullable,
+            ParameterTypes = node.ParameterTypes.Select(p => Visit(p)),
+            ReturnType = Visit(node.ReturnType),
+            Semantics = GetBoundOrNull(node),
+        };
+    }
+
+    public override object? Visit (TupleArrayType node) {
+        return new {
+            Class = nameof(TupleArrayType),
+            node.Kind,
+            node.IsConstant,
+            node.IsNullable,
+            MemberTypes = node.MemberTypes.Select(p => Visit(p)),
+            Semantics = GetBoundOrNull(node),
+        };
+    }
+
+    public override object? Visit (RawArrayType node) {
+        return new {
+            Class = nameof(RawArrayType),
+            node.Kind,
+            node.IsConstant,
+            node.IsNullable,
+            MemberType = Visit(node.MemberType),
+            Length = Visit(node.Length),
+            Semantics = GetBoundOrNull(node),
+        };
+    }
+
+    public override object? Visit (ObjectType node) {
+        throw new NotImplementedException("Object type not yet supported.");
+    }
+
+    public override object? Visit (LiteralType node) {
+        return new {
+            Class = nameof(LiteralType),
+            node.Kind,
+            node.IsConstant,
+            node.IsNullable,
+            Literal = Visit(node.Literal),
+            Semantics = GetBoundOrNull(node),
+        };
+    }
+
+    public override object? Visit (UnionType node) {
+        return new {
+            Class = nameof(UnionType),
+            node.Kind,
+            node.IsConstant,
+            node.IsNullable,
+            MemberTypes = node.MemberTypes.Select(p => Visit(p)),
             Semantics = GetBoundOrNull(node),
         };
     }

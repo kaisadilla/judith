@@ -343,7 +343,7 @@ public class TypeResolver : SyntaxVisitor {
         var boundProvider = Binder.GetBoundNodeOrThrow<BoundExpression>(node.Provider);
 
         if (boundProvider is not IBoundIdentifyingExpression boundProvAsId) {
-            Messages.Add(CompilerMessage.Analyzers.TypeExpected(node.Provider));
+            Messages.Add(CompilerMessage.Analyzers.TypeExpectedTR(node.Provider));
             boundNode.Type = _cmp.PseudoTypes.Error;
 
             _nodeStates.Mark(node, true, _scope.Current);

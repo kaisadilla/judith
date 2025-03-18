@@ -76,6 +76,8 @@ public class Token {
             TokenKind.Bang => "Exclamation mark",
             TokenKind.Tilde => "Tilde",
             TokenKind.Dot => "Dot",
+            TokenKind.QuestionMark => "Question mark",
+            TokenKind.Pipe => "Pipe",
 
             // Two-character tokens.
             TokenKind.EqualEqual => "Equal equal sign",
@@ -88,6 +90,7 @@ public class Token {
             TokenKind.EqualArrow => "Equal arrow",
             TokenKind.MinusArrow => "Minus arrow",
             TokenKind.DoubleColon => "Double colon",
+            TokenKind.DoubleQuestionMark => "Double question mark",
 
             // Three-character tokens.
             TokenKind.EqualEqualEqual => "Triple equal sign",

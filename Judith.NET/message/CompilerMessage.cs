@@ -93,6 +93,16 @@ public class CompilerMessage {
             );
         }
 
+        public static CompilerMessage TypeExpected (Token token) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.Parser,
+                (int)MessageCode.TypeExpected,
+                $"Expected type, found '{token.Kind}'.",
+                new(token)
+            );
+        }
+
         public static CompilerMessage TypeAnnotationExpected (Token token) {
             return new(
                 MessageKind.Error,
@@ -130,6 +140,16 @@ public class CompilerMessage {
                 (int)MessageCode.RightParenExpected,
                 $"Expected ')', found '{token.Kind}'.",
                 new(token)
+            );
+        }
+
+        public static CompilerMessage RightParenExpected (SyntaxNode node) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.Parser,
+                (int)MessageCode.RightParenExpected,
+                $"Expected ')', found '{node.Kind}'.",
+                new(node)
             );
         }
 
@@ -469,11 +489,11 @@ public class CompilerMessage {
             );
         }
 
-        public static CompilerMessage TypeExpected (SyntaxNode node) {
+        public static CompilerMessage TypeExpectedTR (SyntaxNode node) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.TypeResolver,
-                (int)MessageCode.TypeExpected,
+                (int)MessageCode.TypeExpectedTR,
                 $"Type identifier expected.",
                 new(node)
             );

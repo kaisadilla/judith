@@ -7,10 +7,10 @@ using System.Threading.Tasks;
 namespace Judith.NET.analysis.syntax;
 
 public class FieldInitialization : SyntaxNode {
-    public Identifier FieldName { get; init; }
+    public SimpleIdentifier FieldName { get; init; }
     public EqualsValueClause Initializer { get; init; }
 
-    public FieldInitialization (Identifier fieldName, EqualsValueClause initializer)
+    public FieldInitialization (SimpleIdentifier fieldName, EqualsValueClause initializer)
         : base(SyntaxKind.FieldInitialization)    
     {
         FieldName = fieldName;

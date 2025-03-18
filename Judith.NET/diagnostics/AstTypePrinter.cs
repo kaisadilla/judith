@@ -108,7 +108,7 @@ public class AstTypePrinter : SyntaxVisitor {
     public override void Visit (IdentifierExpression node) {
         var boundNode = _cmp.Binder.GetBoundNodeOrThrow<BoundIdentifierExpression>(node);
 
-        TypedNodes.Add($"IdentifierExpr: {node.Identifier.Name} - Type: {FQN(boundNode.Type)}");
+        TypedNodes.Add($"IdentifierExpr: {node.Name.FullyQualifiedName()} - Type: {FQN(boundNode.Type)}");
     }
 
     public override void Visit (LiteralExpression node) {

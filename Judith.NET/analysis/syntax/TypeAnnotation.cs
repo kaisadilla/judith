@@ -8,12 +8,12 @@ using Judith.NET.analysis.lexical;
 namespace Judith.NET.analysis.syntax;
 
 public class TypeAnnotation : SyntaxNode {
-    public Identifier Identifier { get; private init; }
+    public TypeNode Type { get; private init; }
 
     public Token? Delimiter { get; init; }
 
-    public TypeAnnotation (Identifier identifier) : base(SyntaxKind.TypeAnnotation) {
-        Identifier = identifier;
+    public TypeAnnotation (TypeNode type) : base(SyntaxKind.TypeAnnotation) {
+        Type = type;
     }
 
     public override void Accept (SyntaxVisitor visitor) {

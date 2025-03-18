@@ -8,13 +8,14 @@ using System.Xml.Linq;
 namespace Judith.NET.analysis.syntax;
 
 public class IdentifierExpression : Expression {
-    public Identifier Identifier { get; init; }
+    public Identifier Name { get; init; }
 
-    public IdentifierExpression (Identifier identifier)
-        : base(SyntaxKind.IdentifierExpression) {
-        Identifier = identifier;
+    public IdentifierExpression (Identifier qualifiedName)
+        : base(SyntaxKind.IdentifierExpression)
+    {
+        Name = qualifiedName;
 
-        Children.Add(Identifier);
+        Children.Add(Name);
     }
 
     public override void Accept (SyntaxVisitor visitor) {
@@ -25,6 +26,7 @@ public class IdentifierExpression : Expression {
         return visitor.Visit(this);
     }
     public override string ToString () {
-        return $"{Kind} ({Identifier.Name}) [Line: {Line}, Span: {Span.Start} - {Span.End}]";
+        return $"{Kind} ({Name.FullyQualifiedName()}) [Line: {Line}, " +
+            $"Span: {Span.Start} - {Span.End}]";
     }
 }

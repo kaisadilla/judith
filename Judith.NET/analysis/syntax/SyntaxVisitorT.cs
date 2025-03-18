@@ -78,7 +78,8 @@ public abstract class SyntaxVisitor<TResult> {
     public virtual TResult? Visit (IdentifierExpression node) => VisitChildren(node);
     public virtual TResult? Visit (LiteralExpression node) => VisitChildren(node);
 
-    public virtual TResult? Visit (Identifier node) => VisitChildren(node);
+    public virtual TResult? Visit (QualifiedIdentifier node) => VisitChildren(node);
+    public virtual TResult? Visit (SimpleIdentifier node) => VisitChildren(node);
     public virtual TResult? Visit (Literal node) => VisitChildren(node);
     public virtual TResult? Visit (LocalDeclaratorList node) => VisitChildren(node);
     public virtual TResult? Visit (LocalDeclarator node) => VisitChildren(node);
@@ -95,6 +96,7 @@ public abstract class SyntaxVisitor<TResult> {
     public virtual TResult? Visit (FieldInitialization node) => VisitChildren(node);
     public virtual TResult? Visit (MemberField node) => VisitChildren(node);
 
+    public virtual TResult? Visit (GroupType node) => VisitChildren(node);
     public virtual TResult? Visit (IdentifierType node) => VisitChildren(node);
     public virtual TResult? Visit (FunctionType node) => VisitChildren(node);
     public virtual TResult? Visit (TupleArrayType node) => VisitChildren(node);

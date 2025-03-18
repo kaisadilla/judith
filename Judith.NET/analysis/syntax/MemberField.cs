@@ -30,7 +30,7 @@ public class MemberField : SyntaxNode {
     public bool IsStatic { get; private set; }
     public bool IsMutable { get; private set; }
     public bool IsConst { get; private set; }
-    public Identifier Identifier { get; private set; }
+    public SimpleIdentifier Identifier { get; private set; }
     public TypeAnnotation TypeAnnotation { get; private set; }
     public EqualsValueClause? Initializer { get; private set; }
 
@@ -44,7 +44,7 @@ public class MemberField : SyntaxNode {
         bool isStatic,
         bool isMutable,
         bool isConst,
-        Identifier identifier,
+        SimpleIdentifier identifier,
         TypeAnnotation annotation,
         EqualsValueClause? initializer
     )
