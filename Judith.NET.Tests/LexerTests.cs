@@ -1,4 +1,5 @@
-﻿using Judith.NET.analysis.syntax;
+﻿using Judith.NET.analysis.lexical;
+using Judith.NET.analysis.syntax;
 using Judith.NET.message;
 using System;
 using System.Collections.Generic;

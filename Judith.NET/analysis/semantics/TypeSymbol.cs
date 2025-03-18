@@ -11,6 +11,17 @@ namespace Judith.NET.analysis.semantics;
 public class TypeSymbol : Symbol {
     public List<MemberSymbol> MemberFields { get; private set; } = [];
 
+    /// <summary>
+    /// A list of types this type belongs to. For example, 'String | Num' is
+    /// a supertype of 'String'.
+    /// </summary>
+    public List<TypeSymbol> Supertypes { get; private set; } = [];
+    /// <summary>
+    /// A list of types that belong to this type. For example, 'String' is a
+    /// subtype of 'String | Num'.
+    /// </summary>
+    public List<TypeSymbol> Subtypes { get; private set; } = [];
+
     public TypeSymbol (
         SymbolKind kind, string name, string fullyQualifiedName, string assembly
     )

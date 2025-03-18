@@ -6,7 +6,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
-namespace Judith.NET;
+namespace Judith.NET.analysis.lexical;
 
 [JsonConverter(typeof(StringEnumConverter))]
 public enum TokenKind {

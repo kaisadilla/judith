@@ -1,4 +1,5 @@
-﻿using Judith.NET.analysis.syntax;
+﻿using Judith.NET.analysis.lexical;
+using Judith.NET.analysis.syntax;
 using Judith.NET.message;
 using Newtonsoft.Json.Linq;
 using System;
@@ -206,17 +207,17 @@ public class Parser {
         }
 
         if (TryConsumeIdentifier(out Identifier? identifier) == false) {
-            throw Error(CompilerMessage.Parser.IdentifierExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.IdentifierExpected(Peek()));
         }
 
         if (TryConsumeParameterList(out ParameterList? parameters) == false) {
-            throw Error(CompilerMessage.Parser.LeftParenExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.LeftParenExpected(Peek()));
         }
 
         TryConsumeTypeAnnotation(TokenKind.MinusArrow, out TypeAnnotation? returnType);
 
         if (TryConsumeBlockStatement(null, out BlockStatement? body) == false) {
-            throw Error(CompilerMessage.Parser.BodyExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.BodyExpected(Peek()));
         }
 
         funcDef = SF.FunctionDefinition(
@@ -240,7 +241,7 @@ public class Parser {
             return true;
         }
 
-        throw Error(CompilerMessage.Parser.UnexpectedToken(Peek().Line, Peek()));
+        throw Error(CompilerMessage.Parser.UnexpectedToken(Peek()));
     }
 
     private bool TryConsumeStructTypedef (
@@ -254,7 +255,7 @@ public class Parser {
         }
 
         if (TryConsumeIdentifier(out Identifier? id) == false) {
-            throw Error(CompilerMessage.Parser.IdentifierExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.IdentifierExpected(Peek()));
         }
 
         List<MemberField> memberFields = new();
@@ -264,7 +265,7 @@ public class Parser {
         }
 
         if (TryConsume(TokenKind.KwEnd, out Token? endToken) == false) {
-            throw Error(CompilerMessage.Parser.EndExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.EndExpected(Peek()));
         }
 
         structTypedef = SF.StructTypeDefinition(
@@ -297,7 +298,7 @@ public class Parser {
             return true;
         }
 
-        throw Error(CompilerMessage.Parser.UnexpectedToken(Peek().Line, Advance()));
+        throw Error(CompilerMessage.Parser.UnexpectedToken(Peek()));
     }
 
     private bool TryConsumeReturnStatement (
@@ -323,7 +324,7 @@ public class Parser {
         }
 
         if (TryConsumeExpression(out Expression? expr) == false) {
-            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek()));
         }
 
         statement = SF.YieldStatement(yieldToken, expr);
@@ -347,7 +348,7 @@ public class Parser {
         if (TryConsumeLocalDeclaratorList(
             true, localKind, out LocalDeclaratorList? list
         ) == false) {
-            throw Error(CompilerMessage.Parser.LocalDeclaratorListExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.LocalDeclaratorListExpected(Peek()));
         }
 
         TryConsumeEqualsValueClause(out EqualsValueClause? evc);
@@ -392,9 +393,7 @@ public class Parser {
                 statements.Add(node);
             }
             else {
-                throw Error(CompilerMessage.Parser.UnexpectedToken(
-                    Peek().Line, Peek()
-                ));
+                throw Error(CompilerMessage.Parser.UnexpectedToken(Peek()));
             }
         }
         Token closingToken = PeekPrevious();
@@ -411,7 +410,7 @@ public class Parser {
             return false;
         }
         if (TryConsumeStatement(out Statement? stmt) == false) {
-            throw Error(CompilerMessage.Parser.StatementExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.StatementExpected(Peek()));
         }
 
         arrowStatement = SF.ArrowStatement(arrowToken, stmt);
@@ -471,12 +470,12 @@ public class Parser {
             return false;
         }
         if (TryConsumeExpression(out Expression? test) == false) {
-            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek()));
         }
         if (TryConsumeBodyStatement(
             TokenKind.KwThen, out BodyStatement? consequent
         ) == false) {
-            throw Error(CompilerMessage.Parser.BodyExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.BodyExpected(Peek()));
         }
 
         if (consequent.Kind == SyntaxKind.BlockStatement) {
@@ -518,7 +517,7 @@ public class Parser {
             var elsifToken = PeekPrevious();
 
             if (TryConsumeIfExpression(true, out IfExpression? alternate) == false) {
-                throw Error(CompilerMessage.Parser.ElsifBodyExpected(Peek().Line));
+                throw Error(CompilerMessage.Parser.ElsifBodyExpected(Peek()));
             }
 
             var alternateStmt = SF.ExpressionStatement(alternate);
@@ -530,7 +529,7 @@ public class Parser {
             var elseToken = PeekPrevious();
 
             if (TryConsumeBodyStatement(null, out BodyStatement? alternate) == false) {
-                throw Error(CompilerMessage.Parser.BodyExpected(Peek().Line));
+                throw Error(CompilerMessage.Parser.BodyExpected(Peek()));
             }
 
             return SF.IfExpression(elseToken, test, consequent, elseToken, alternate);
@@ -552,10 +551,10 @@ public class Parser {
             return false;
         }
         if (TryConsumeExpression(out Expression? discriminant) == false) {
-            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek()));
         }
         if (TryConsume(TokenKind.KwDo ,out Token? doToken) == false) {
-            throw Error(CompilerMessage.Parser.DoExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.DoExpected(Peek()));
         }
 
         List<MatchCase> cases = new();
@@ -564,7 +563,7 @@ public class Parser {
         }
 
         if (TryConsume(TokenKind.KwEnd, out Token? endToken) == false) {
-            throw Error(CompilerMessage.Parser.EndExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.EndExpected(Peek()));
         }
 
         matchExpression = SF.MatchExpression(matchToken, discriminant, doToken, cases, endToken);
@@ -579,7 +578,7 @@ public class Parser {
             return false;
         }
         if (TryConsumeBodyStatement(null, out BodyStatement? body) == false) {
-            throw Error(CompilerMessage.Parser.BodyExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.BodyExpected(Peek()));
         }
 
         loopExpression = SF.LoopExpression(loopToken, body);
@@ -594,10 +593,10 @@ public class Parser {
             return false;
         }
         if (TryConsumeExpression(out Expression? test) == false) {
-            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek()));
         }
         if (TryConsumeBodyStatement(TokenKind.KwDo, out BodyStatement? body) == false) {
-            throw Error(CompilerMessage.Parser.BodyExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.BodyExpected(Peek()));
         }
 
         whileExpression = SF.WhileExpression(whileToken, test, body);
@@ -618,7 +617,7 @@ public class Parser {
             if (TryConsumeLocalDeclarator(
                 false, implicitKind, out LocalDeclarator? declarator
             ) == false) {
-                throw Error(CompilerMessage.Parser.LocalDeclaratorExpected(Peek().Line));
+                throw Error(CompilerMessage.Parser.LocalDeclaratorExpected(Peek()));
             }
 
             declarators.Add(declarator);
@@ -626,13 +625,13 @@ public class Parser {
         } while (Match(TokenKind.Comma));
 
         if (TryConsume(TokenKind.KwIn, out Token? inToken) == false) {
-            throw Error(CompilerMessage.Parser.InExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.InExpected(Peek()));
         }
         if (TryConsumeExpression(out Expression? enumerable) == false) {
-            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek()));
         }
         if (TryConsumeBodyStatement(TokenKind.KwDo, out BodyStatement? body) == false) {
-            throw Error(CompilerMessage.Parser.BodyExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.BodyExpected(Peek()));
         }
 
         foreachExpression = SF.ForeachExpression(
@@ -663,7 +662,7 @@ public class Parser {
         }
 
         if (TryConsumeAssignmentExpression(out Expression? rightExpr) == false) {
-            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek()));
         }
 
         expr = SF.AssignmentExpression(leftExpr, op, rightExpr);
@@ -679,7 +678,7 @@ public class Parser {
 
         while (TryConsumeOperator(out Operator? op, TokenKind.KwAnd)) {
             if (TryConsumeLogicalOrExpression(out Expression? rightExpr) == false) {
-                throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+                throw Error(CompilerMessage.Parser.ExpressionExpected(Peek()));
             }
 
             leftExpr = SF.BinaryExpression(leftExpr, op, rightExpr);
@@ -698,7 +697,7 @@ public class Parser {
 
         while (TryConsumeOperator(out Operator? op, TokenKind.KwOr)) {
             if (TryConsumeBooleanExpression(out Expression? rightExpr) == false) {
-                throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+                throw Error(CompilerMessage.Parser.ExpressionExpected(Peek()));
             }
 
             leftExpr = SF.BinaryExpression(leftExpr, op, rightExpr);
@@ -728,7 +727,7 @@ public class Parser {
             TokenKind.GreaterEqual
         )) {
             if (TryConsumeAdditionExpression(out Expression? rightExpr) == false) {
-                throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+                throw Error(CompilerMessage.Parser.ExpressionExpected(Peek()));
             }
 
             leftExpr = SF.BinaryExpression(leftExpr, op, rightExpr);
@@ -749,7 +748,7 @@ public class Parser {
             out Operator? op, TokenKind.Plus, TokenKind.Minus
         )) {
             if (TryConsumeMultiplicationExpression(out Expression? rightExpr) == false) {
-                throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+                throw Error(CompilerMessage.Parser.ExpressionExpected(Peek()));
             }
 
             leftExpr = SF.BinaryExpression(leftExpr, op, rightExpr);
@@ -770,7 +769,7 @@ public class Parser {
             out Operator? op, TokenKind.Asterisk, TokenKind.Slash
         )) {
             if (TryConsumeLeftUnaryExpression(out Expression? rightExpr) == false) {
-                throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+                throw Error(CompilerMessage.Parser.ExpressionExpected(Peek()));
             }
 
             leftExpr = SF.BinaryExpression(leftExpr, op, rightExpr);
@@ -786,7 +785,7 @@ public class Parser {
             out Operator? op, TokenKind.KwNot, TokenKind.Minus, TokenKind.Tilde
         )) {
             if (TryConsumeLeftUnaryExpression(out expr) == false) {
-                throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+                throw Error(CompilerMessage.Parser.ExpressionExpected(Peek()));
             }
 
             expr = SF.LeftUnaryExpression(op, expr);
@@ -856,7 +855,7 @@ public class Parser {
             out Operator? op, TokenKind.Dot, TokenKind.DoubleColon
         )) {
             if (TryConsumeIdentifier(out Identifier? member) == false) {
-                throw Error(CompilerMessage.Parser.IdentifierExpected(Peek().Line));
+                throw Error(CompilerMessage.Parser.IdentifierExpected(Peek()));
             }
 
             receiver = SF.AccessExpression(receiver, op, member);
@@ -885,11 +884,11 @@ public class Parser {
         }
 
         if (TryConsumeExpression(out expr) == false) {
-            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek()));
         }
 
         if (TryConsume(TokenKind.RightParen, out Token? rightParenToken) == false) {
-            throw Error(CompilerMessage.Parser.RightParenExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.RightParenExpected(Peek()));
         }
 
         expr = SF.GroupExpression(leftParenToken, expr, rightParenToken);
@@ -986,7 +985,7 @@ public class Parser {
             ) == false) {
                 // TODO: This will never happen because TryConsumeLocalDeclarator
                 // always fails if it's not parsing a local declarator.
-                throw Error(CompilerMessage.Parser.IdentifierExpected(Peek().Line));
+                throw Error(CompilerMessage.Parser.IdentifierExpected(Peek()));
             }
 
             declarators.Add(declarator);
@@ -995,12 +994,12 @@ public class Parser {
         Token? closeBracket = null;
         if (declaratorKind == LocalDeclaratorKind.ArrayPattern) {
             if (TryConsume(TokenKind.RightSquareBracket, out closeBracket) == false) {
-                throw Error(CompilerMessage.Parser.RightSquareBracketExpected(Peek().Line));
+                throw Error(CompilerMessage.Parser.RightSquareBracketExpected(Peek()));
             }
         }
         else if (declaratorKind == LocalDeclaratorKind.ObjectPattern) {
             if (TryConsume(TokenKind.RightCurlyBracket, out closeBracket) == false) {
-                throw Error(CompilerMessage.Parser.RightCurlyBracketExpected(Peek().Line));
+                throw Error(CompilerMessage.Parser.RightCurlyBracketExpected(Peek()));
             }
         }
 
@@ -1035,7 +1034,7 @@ public class Parser {
     ) {
         if (TryConsume(out Token? mutToken, TokenKind.KwConst, TokenKind.KwVar)) {
             if (isImplicit) {
-                throw Error(CompilerMessage.Parser.IdentifierExpected(mutToken.Line));
+                throw Error(CompilerMessage.Parser.IdentifierExpected(mutToken));
             }
 
             impliedLocalKind = mutToken.Kind switch {
@@ -1047,7 +1046,7 @@ public class Parser {
 
         // should this return false and null?
         if (TryConsumeIdentifier(out Identifier? identifier) == false) {
-            throw Error(CompilerMessage.Parser.IdentifierExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.IdentifierExpected(Peek()));
         }
 
         TryConsumeTypeAnnotation(TokenKind.Colon, out TypeAnnotation ? type);
@@ -1065,7 +1064,7 @@ public class Parser {
         }
 
         if (TryConsumeExpression(out Expression? expr) == false) {
-            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek()));
         }
 
         clause = SF.EqualsValueClause(equalToken, expr);
@@ -1082,7 +1081,7 @@ public class Parser {
         }
 
         if (TryConsumeIdentifier(out Identifier? identifier) == false) {
-            throw Error(CompilerMessage.Parser.IdentifierExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.IdentifierExpected(Peek()));
         }
 
         typeAnnotation = SF.TypeAnnotation(delimiterToken, identifier);
@@ -1140,7 +1139,7 @@ public class Parser {
                 if (TryConsumeLocalDeclarator(
                     false, impliedKind, out LocalDeclarator? declarator
                 ) == false) {
-                    throw Error(CompilerMessage.Parser.LocalDeclaratorExpected(Peek().Line));
+                    throw Error(CompilerMessage.Parser.LocalDeclaratorExpected(Peek()));
                 }
 
                 TryConsumeEqualsValueClause(out EqualsValueClause? defaultValue);
@@ -1151,7 +1150,7 @@ public class Parser {
         }
 
         if (TryConsume(TokenKind.RightParen, out Token? rightParenToken) == false) {
-            throw Error(CompilerMessage.Parser.RightParenExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.RightParenExpected(Peek()));
         }
 
         // If the function has parameters.
@@ -1159,7 +1158,7 @@ public class Parser {
             // The last parameter must have a type annotation. Types are not
             // inferred in parameters, even if they have default values.
             if (parameters[^1].Declarator.TypeAnnotation == null) {
-                throw Error(CompilerMessage.Parser.ParameterTypeMustBeSpecified(Peek().Line));
+                throw Error(CompilerMessage.Parser.ParameterTypeMustBeSpecified(Peek()));
             }
 
             // Each parameter, from right to left, inherits the type annotation
@@ -1190,7 +1189,7 @@ public class Parser {
         if (Check(TokenKind.RightParen) == false) {
             do {
                 if (TryConsumeArgument(out Argument? argument) == false) {
-                    throw Error(CompilerMessage.Parser.ArgumentExpected(Peek().Line));
+                    throw Error(CompilerMessage.Parser.ArgumentExpected(Peek()));
                 }
 
                 arguments.Add(argument);
@@ -1199,7 +1198,7 @@ public class Parser {
         }
 
         if (TryConsume(TokenKind.RightParen, out Token? rightParenToken) == false) {
-            throw Error(CompilerMessage.Parser.RightParenExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.RightParenExpected(Peek()));
         }
 
         argList = SF.ArgumentList(leftParenToken, arguments, rightParenToken);
@@ -1241,7 +1240,7 @@ public class Parser {
 
         TokenKind? then = elseToken == null ? TokenKind.KwThen : null;
         if (TryConsumeBodyStatement(then, out BodyStatement? consequent) == false) {
-            throw Error(CompilerMessage.Parser.BodyExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.BodyExpected(Peek()));
         }
 
         matchCase = SF.MatchCase(elseToken, tests, consequent);
@@ -1261,16 +1260,16 @@ public class Parser {
         do {
             if (TryConsumeFieldInitialization(
                 out FieldInitialization? fieldInit
-            ) == false) throw Error(CompilerMessage.Parser.AssignmentExpressionExpected(
-                Peek().Line
-            ));
+            ) == false) throw Error(
+                CompilerMessage.Parser.AssignmentExpressionExpected(Peek())
+            );
 
             fieldInits.Add(fieldInit);
         }
         while (Match(TokenKind.Comma) && Peek().Kind != TokenKind.RightCurlyBracket);
 
         if (TryConsume(TokenKind.RightCurlyBracket, out Token? rightBracket) == false) {
-            throw Error(CompilerMessage.Parser.RightCurlyBracketExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.RightCurlyBracketExpected(Peek()));
         }
 
         objInit = SF.ObjectInitializer(leftBracket, fieldInits, rightBracket);
@@ -1286,7 +1285,7 @@ public class Parser {
         }
 
         if (TryConsumeEqualsValueClause(out EqualsValueClause? clause) == false) {
-            throw Error(CompilerMessage.Parser.FieldMustBeInitialized(Peek().Line));
+            throw Error(CompilerMessage.Parser.FieldMustBeInitialized(Peek()));
         }
 
         init = SF.FieldInitialization(id, clause);
@@ -1305,7 +1304,7 @@ public class Parser {
         }
 
         if (TryConsumeTypeAnnotation(TokenKind.Colon, out TypeAnnotation ? typeAnnotation) == false) {
-            throw Error(CompilerMessage.Parser.TypeAnnotationExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.TypeAnnotationExpected(Peek()));
         }
 
         TryConsumeEqualsValueClause(out EqualsValueClause? evc);
@@ -1327,7 +1326,7 @@ public class Parser {
             return false;
         }
         if (TryConsumeExpression(out Expression? expr) == false) {
-            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek().Line));
+            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek()));
         }
 
         statement = SF.PrivPrintStmt(p_printToken, expr);

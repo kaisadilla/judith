@@ -1,4 +1,6 @@
-﻿namespace Judith.NET.analysis.syntax;
+﻿using Judith.NET.analysis.lexical;
+
+namespace Judith.NET.analysis.syntax;
 
 public class ObjectInitializer : SyntaxNode {
     public List<FieldInitialization> FieldInitializations { get; private init; }

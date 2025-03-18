@@ -45,8 +45,8 @@ public class TypeAnalyzer : SyntaxVisitor {
 
         if (boundLeft.Type != boundRight.Type) {
             Messages.Add(CompilerMessage.Analyzers.CannotAssignType(
-                boundLeft.Type, boundRight.Type, node.Line)
-            );
+                node, boundLeft.Type, boundRight.Type
+            ));
         }
     }
 }

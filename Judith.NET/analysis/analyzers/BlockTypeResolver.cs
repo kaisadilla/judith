@@ -92,7 +92,7 @@ public class BlockTypeResolver : SyntaxVisitor<RetInfo?> {
             HashSet<TypeSymbol> types = [.. foundRetTypes];
 
             if (types.Contains(_cmp.Program.NativeHeader.TypeRefs.Void) && types.Count > 1) {
-                Messages.Add(CompilerMessage.Analyzers.InconsistentReturnBehavior(node.Line));
+                Messages.Add(CompilerMessage.Analyzers.InconsistentReturnBehavior(node));
                 boundNode.Type = _cmp.PseudoTypes.Error;
             }
             // If we have more than one type, that would form a union, but

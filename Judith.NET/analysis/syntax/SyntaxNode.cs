@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace Judith.NET.analysis.syntax;
+
 public abstract class SyntaxNode {
     [JsonProperty(Order = -1_000_000)]
     public SyntaxKind Kind { get; private set; }

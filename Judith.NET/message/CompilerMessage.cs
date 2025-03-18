@@ -1,12 +1,15 @@
-﻿using Judith.NET.analysis.semantics;
+﻿using Judith.NET.analysis.lexical;
+using Judith.NET.analysis.semantics;
 using Judith.NET.analysis.syntax;
 using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace Judith.NET.message;
 
@@ -35,25 +38,24 @@ public class CompilerMessage {
     public MessageOrigin Origin { get; init; }
     public int Code { get; init; }
     public string Message { get; init; }
-    public int Line { get; init; }
-    //public SourceSpan ErrorSpan { get; init; }
+    public MessageSource Source { get; init; }
 
     private CompilerMessage (
         MessageKind kind,
         MessageOrigin origin,
         int code,
         string message,
-        int line
+        MessageSource source
     ) {
         Kind = kind;
         Origin = origin;
         Code = code;
         Message = message;
-        Line = line;
+        Source = source;
     }
 
     public override string ToString () {
-        return $"[{Origin}/{Kind}] {Code,4} - {Message} (Line {Line})";
+        return $"[{Origin}/{Kind}] {Code,4} - {Message} (Line {Source.GetLine()})";
     }
 
     public static class Lexer {
@@ -65,7 +67,7 @@ public class CompilerMessage {
                 MessageOrigin.Lexer,
                 (int)MessageCode.UnexpectedCharacter,
                 $"Unexpected character: '{unexpectedChar}'.",
-                line
+                new(line)
             );
         }
 
@@ -75,495 +77,495 @@ public class CompilerMessage {
                 MessageOrigin.Lexer,
                 (int)MessageCode.UnterminatedString,
                 $"Unterminated string.",
-                line
+                new(line)
             );
         }
     }
 
     public static class Parser {
-        public static CompilerMessage IdentifierExpected (int line) {
+        public static CompilerMessage IdentifierExpected (Token token) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
                 (int)MessageCode.IdentifierExpected,
-                $"Identifier expected.",
-                line
+                $"Expected identifier, found '{token.Kind}'",
+                new(token)
             );
         }
 
-        public static CompilerMessage TypeAnnotationExpected (int line) {
+        public static CompilerMessage TypeAnnotationExpected (Token token) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
                 (int)MessageCode.TypeAnnotationExpected,
-                $"Type annotation expected.",
-                line
+                $"Expected type annotation, found '{token.Kind}'.",
+                new(token)
             );
         }
 
-        public static CompilerMessage UnexpectedToken (int line, Token token) {
+        public static CompilerMessage UnexpectedToken (Token token) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
                 (int)MessageCode.UnexpectedToken,
                 $"Unexpected Token: '{token.Kind}'.",
-                line
+                new(token)
             );
         }
 
-        public static CompilerMessage LeftParenExpected (int line) {
+        public static CompilerMessage LeftParenExpected (Token token) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
                 (int)MessageCode.LeftParenExpected,
-                $"'(' expected.",
-                line
+                $"Expected '(', found '{token.Kind}'.",
+                new(token)
             );
         }
 
-        public static CompilerMessage RightParenExpected (int line) {
+        public static CompilerMessage RightParenExpected (Token token) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
                 (int)MessageCode.RightParenExpected,
-                $"')' expected.",
-                line
+                $"Expected ')', found '{token.Kind}'.",
+                new(token)
             );
         }
 
-        public static CompilerMessage RightCurlyBracketExpected (int line) {
+        public static CompilerMessage RightCurlyBracketExpected (Token token) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
                 (int)MessageCode.RightCurlyBracketExpected,
-                "'}' expected.",
-                line
+                $"Expected '}}', found '{token.Kind}'.",
+                new(token)
             );
         }
 
-        public static CompilerMessage RightSquareBracketExpected (int line) {
+        public static CompilerMessage RightSquareBracketExpected (Token token) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
                 (int)MessageCode.RightSquareBracketExpected,
-                $"']' expected.",
-                line
+                $"Expected ']', found '{token.Kind}'.",
+                new(token)
             );
         }
 
-        public static CompilerMessage ExpressionExpected (int line) {
+        public static CompilerMessage ExpressionExpected (Token token) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
                 (int)MessageCode.ExpressionExpected,
-                $"Expression expected.",
-                line
+                $"Expected expression, found '{token.Kind}'.",
+                new(token)
             );
         }
 
-        public static CompilerMessage StatementExpected (int line) {
+        public static CompilerMessage StatementExpected (Token token) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
                 (int)MessageCode.StatementExpected,
-                $"Statement expected.",
-                line
+                $"Expected statement, found '{token.Kind}'.",
+                new(token)
             );
         }
 
         public static CompilerMessage BlockOpeningKeywordExpected (
-            int line, string keyword, Token found
+            Token token, string keyword
         ) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
                 (int)MessageCode.BlockOpeningKeywordExpected,
-                $"'{keyword}' expected, but '{found.Lexeme}' found instead.",
-                line
+                $"Expected '{keyword}', found '{token.Kind}'.",
+                new(token)
             );
         }
 
-        public static CompilerMessage BodyExpected (
-            int line
-        ) {
+        public static CompilerMessage BodyExpected (Token token) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
                 (int)MessageCode.BodyExpected,
-                $"Body expected.",
-                line
+                $"Expected body, found '{token.Kind}'.",
+                new(token)
             );
         }
 
-        public static CompilerMessage ArrowExpected (int line, Token found) {
+        public static CompilerMessage ArrowExpected (Token token) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
                 (int)MessageCode.ArrowExpected,
-                $"'Arrow' expected, but '{found.Lexeme}' found instead.",
-                line
+                $"Expected '=>', found '{token.Kind}'.",
+                new(token)
             );
         }
 
-        public static CompilerMessage ElsifBodyExpected (int line) {
+        public static CompilerMessage ElsifBodyExpected (Token token) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
                 (int)MessageCode.ElsifBodyExpected,
-                $"Elsif body expected.",
-                line
+                $"Expected elsif body, found '{token.Kind}'.",
+                new(token)
             );
         }
 
-        public static CompilerMessage InExpected (int line) {
+        public static CompilerMessage InExpected (Token token) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
                 (int)MessageCode.InExpected,
-                $"'In' expected.",
-                line
+                $"Expected 'in', found '{token.Kind}'.",
+                new(token)
             );
         }
 
-        public static CompilerMessage DoExpected (int line) {
+        public static CompilerMessage DoExpected (Token token) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
                 (int)MessageCode.DoExpected,
-                $"'Do' expected.",
-                line
+                $"Expected 'do', found '{token.Kind}'.",
+                new(token)
             );
         }
 
-        public static CompilerMessage EndExpected (int line) {
+        public static CompilerMessage EndExpected (Token token) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
                 (int)MessageCode.EndExpected,
-                $"'End' expected.",
-                line
+                $"Expected 'end', found '{token.Kind}'.",
+                new(token)
             );
         }
 
-        public static CompilerMessage ParameterExpected (int line) {
+        public static CompilerMessage ParameterExpected (Token token) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
                 (int)MessageCode.ParameterExpected,
-                $"Parameter expected.",
-                line
+                $"Expected parameter, found '{token.Kind}'.",
+                new(token)
             );
         }
 
-        public static CompilerMessage ArgumentExpected (int line) {
+        public static CompilerMessage ArgumentExpected (Token token) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
                 (int)MessageCode.ArgumentExpected,
-                $"Argument expected.",
-                line
+                $"Expected argument, found '{token.Kind}'.",
+                new(token)
             );
         }
 
-        public static CompilerMessage HidableItemExpected (int line) {
+        public static CompilerMessage HidableItemExpected (Token token) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
                 (int)MessageCode.HidableItemExpected,
-                $"Function, generator, typedef, symbol or enumerate expected.",
-                line
+                $"Expected top-level item, found '{token.Kind}'.",
+                new(token)
             );
         }
 
-        public static CompilerMessage LocalDeclaratorExpected (int line) {
+        public static CompilerMessage LocalDeclaratorExpected (Token token) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
                 (int)MessageCode.LocalDeclaratorExpected,
-                $"Local declarator expected.",
-                line
+                $"Expected local declarator, found '{token.Kind}'.",
+                new(token)
             );
         }
 
-        public static CompilerMessage LocalDeclaratorListExpected (int line) {
+        public static CompilerMessage LocalDeclaratorListExpected (Token token) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
                 (int)MessageCode.LocalDeclaratorListExpected,
-                $"Local declarator list expected.",
-                line
+                $"Expected local declarator list, found '{token.Kind}'.",
+                new(token)
             );
         }
 
-        public static CompilerMessage AssignmentExpressionExpected (int line) {
+        public static CompilerMessage AssignmentExpressionExpected (Token token) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
                 (int)MessageCode.AssignmentExpressionExpected,
-                $"Assignment expression expected.",
-                line
+                $"Expected assignment, found '{token.Kind}'.",
+                new(token)
             );
         }
 
-        public static CompilerMessage InvalidTopLevelStatement (int line) {
+        public static CompilerMessage InvalidTopLevelStatement (Token token) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
                 (int)MessageCode.InvalidTopLevelStatement,
                 $"Invalid top-level statement.",
-                line
+                new(token)
             );
         }
 
-        public static CompilerMessage InvalidIntegerLiteral (int line) {
+        public static CompilerMessage InvalidIntegerLiteral (Token token) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
                 (int)MessageCode.InvalidIntegerLiteral,
                 $"Invalid integer literal.",
-                line
+                new(token)
             );
         }
 
-        public static CompilerMessage InvalidFloatLiteral (int line) {
+        public static CompilerMessage InvalidFloatLiteral (Token token) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
                 (int)MessageCode.InvalidFloatLiteral,
                 $"Invalid float literal.",
-                line
+                new(token)
             );
         }
 
-        public static CompilerMessage ParameterTypeMustBeSpecified (int line) {
+        public static CompilerMessage ParameterTypeMustBeSpecified (Token token) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
                 (int)MessageCode.ParameterTypeMustBeSpecified,
                 $"Parameters must specify their type.",
-                line
+                new(token)
             );
         }
 
-        public static CompilerMessage FieldMustBeInitialized (int line) {
+        public static CompilerMessage FieldMustBeInitialized (Token token) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
                 (int)MessageCode.FieldMustBeInitialized,
                 $"Field must be initialized with a value.",
-                line
+                new(token)
             );
         }
     }
 
     public static class Analyzers {
-        public static CompilerMessage DefinitionAlreadyExist (string name, int line) {
+        public static CompilerMessage DefinitionAlreadyExist (
+            SyntaxNode node, string name
+        ) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.SymbolTableBuilder,
                 (int)MessageCode.DefinitionAlreadyExist,
                 $"The name '{name}' already exists in the current context.",
-                line
+                new(node)
             );
         }
 
-        public static CompilerMessage NameDoesNotExist (string name, int line) {
+        public static CompilerMessage NameDoesNotExist (SyntaxNode node, string name) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.SymbolResolver,
                 (int)MessageCode.NameDoesNotExist,
                 $"The name '{name}' does not exist in the current context.",
-                line
+                new(node)
             );
         }
 
-        public static CompilerMessage NameIsAmbiguous (string name, int line) {
+        public static CompilerMessage NameIsAmbiguous (SyntaxNode node, string name) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.SymbolResolver,
                 (int)MessageCode.NameDoesNotExist,
                 $"The name '{name}' is ambiguous.",
-                line
+                new(node)
             );
         }
 
         public static CompilerMessage NumberSuffixCannotBeUsedForDecimal (
-            string suffix, int line
+            SyntaxNode node, string suffix
         ) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Binder,
                 (int)MessageCode.NumberSuffixCannotBeUsedForDecimal,
                 $"Suffix '{suffix}' cannot be used for decimal number literal.",
-                line
+                new(node)
             );
         }
 
         public static CompilerMessage FloatLiteralOverflow (
-            string literalStr, string type, int line
+            SyntaxNode node, string literalStr, string type
         ) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Binder,
                 (int)MessageCode.FloatLiteralOverflow,
                 $"Floating-point literal '{literalStr}' is outside the range of type '{type}'.",
-                line
+                new(node)
             );
         }
 
         public static CompilerMessage IntegerLiteralOverflow (
-            string literalStr, string type, int line
+            SyntaxNode node, string literalStr, string type
         ) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Binder,
                 (int)MessageCode.IntegerLiteralOverflow,
                 $"Signed integer literal '{literalStr}' is outside the range of type '{type}'.",
-                line
+                new(node)
             );
         }
 
         public static CompilerMessage UnsignedIntegerLiteralOverflow (
-            string literalStr, string type, int line
+            SyntaxNode node, string literalStr, string type
         ) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Binder,
                 (int)MessageCode.UnsignedIntegerLiteralOverflow,
                 $"Unsigned integer literal '{literalStr}' is outside the range of type '{type}'.",
-                line
+                new(node)
             );
         }
 
-        public static CompilerMessage IntegerLiteralIsTooLarge (int line) {
+        public static CompilerMessage IntegerLiteralIsTooLarge (SyntaxNode node) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Binder,
                 (int)MessageCode.IntegerLiteralIsTooLarge,
                 $"Integer literal is too large.",
-                line
+                new(node)
             );
         }
 
-        public static CompilerMessage IntegerLiteralIsTooLarge (
-            string type1, string type2, string op, int line
+        public static CompilerMessage UndefinedBinaryOperation (
+            SyntaxNode node, string type1, string type2, string op
         ) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Binder,
                 (int)MessageCode.UndefinedBinaryOperation,
                 $"Operator '{op}' cannot be applied to types '{type1}' and '{type2}'.",
-                line
+                new(node)
             );
         }
 
-        public static CompilerMessage TypeDoesntExist (string type, int line) {
+        public static CompilerMessage TypeDoesntExist (SyntaxNode node, string type) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.TypeResolver,
                 (int)MessageCode.TypeDoesntExist,
                 $"The type '{type}' does not exist in the current context.",
-                line
+                new(node)
             );
         }
 
-        public static CompilerMessage TypeExpected (int line) {
+        public static CompilerMessage TypeExpected (SyntaxNode node) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.TypeResolver,
                 (int)MessageCode.TypeExpected,
                 $"Type identifier expected.",
-                line
+                new(node)
             );
         }
 
         public static CompilerMessage InvalidTypeForObjectInitialization (
-            string fqn, int line
+            SyntaxNode node, string fqn
         ) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.TypeResolver,
                 (int)MessageCode.InvalidTypeForObjectInitialization,
                 $"Cannot initialize an object with type '{fqn}'.",
-                line
+                new(node)
             );
         }
 
-        public static CompilerMessage MemberAccessOnlyOnInstances (int line) {
+        public static CompilerMessage MemberAccessOnlyOnInstances (SyntaxNode node) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.TypeResolver,
                 (int)MessageCode.MemberAccessOnlyOnInstances,
                 $"Only instances of a type can be accessed with '.' operator.",
-                line
+                new(node)
             );
         }
 
-        public static CompilerMessage ScopeAccessNotOnInstances (int line) {
+        public static CompilerMessage ScopeAccessNotOnInstances (SyntaxNode node) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.TypeResolver,
                 (int)MessageCode.MemberAccessOnlyOnInstances,
                 $"Scope resolution operator ('::') cannot be used on instances of a type.",
-                line
+                new(node)
             );
         }
 
         public static CompilerMessage FieldDoesNotExist (
-            string type, string member, int line
+            SyntaxNode node, string type, string member
         ) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.TypeResolver,
                 (int)MessageCode.FieldDoesNotExist,
                 $"Type '{type}' does not contain an instance member named '{member}'.",
-                line
+                new(node)
             );
         }
 
-        public static CompilerMessage InconsistentReturnBehavior (int line) {
+        public static CompilerMessage InconsistentReturnBehavior (SyntaxNode node) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.BlockTypeResolver,
                 (int)MessageCode.InconsistentReturnBehavior,
                 "Inconsistent return behavior. Some paths return values while " +
                 "others return Void. This is not allowed.",
-                line
+                new(node)
             );
         }
 
-        public static CompilerMessage ReturnNotAllowed (int line) {
+        public static CompilerMessage ReturnNotAllowed (SyntaxNode node) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.ImplicitNodeAnalyzer,
                 (int)MessageCode.ReturnNotAllowed,
                 "Return statements are not allowed in this context.",
-                line
+                new(node)
             );
         }
 
-        public static CompilerMessage YieldNotAllowed (int line) {
+        public static CompilerMessage YieldNotAllowed (SyntaxNode node) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.ImplicitNodeAnalyzer,
                 (int)MessageCode.YieldNotAllowed,
                 "Yield statements are not allowed in this context.",
-                line
+                new(node)
             );
         }
 
-        public static CompilerMessage NotAllPathsYieldValue (int line) {
+        public static CompilerMessage NotAllPathsYieldValue (SyntaxNode node) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.ImplicitNodeAnalyzer,
                 (int)MessageCode.NotAllPathsYieldValue,
                 "Not all paths yield a value.",
-                line
+                new(node)
             );
         }
 
         public static CompilerMessage CannotAssignType (
-            TypeSymbol target, TypeSymbol value, int line
+            SyntaxNode node, TypeSymbol target, TypeSymbol value
         ) {
             return new(
                 MessageKind.Error,
@@ -571,7 +573,7 @@ public class CompilerMessage {
                 (int)MessageCode.CannotAssignType,
                 $"Cannot assign type '{value.FullyQualifiedName}' to target of " +
                 $"type '{target.FullyQualifiedName}'.",
-                line
+                new(node)
             );
         }
     }

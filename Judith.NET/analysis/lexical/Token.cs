@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using System.Xml.Linq;
 
-namespace Judith.NET;
+namespace Judith.NET.analysis.lexical;
 
 public class Token {
     /// <summary>
@@ -34,6 +34,14 @@ public class Token {
     /// number indicates the line the first character is at.
     /// </summary>
     public int Line { get; init; }
+    /// <summary>
+    /// The pieces of trivia that appear before this token.
+    /// </summary>
+    public List<Trivia> LeadingTrivia { get; init; } = [];
+    /// <summary>
+    /// The pieces of trivia that appear after this token.
+    /// </summary>
+    public List<Trivia> TrailingTrivia { get; init; } = [];
 
     public Token (TokenKind kind, string lexeme, int start, int end, int line) {
         Kind = kind;
@@ -171,8 +179,7 @@ public class StringToken : Token {
         int delimiterCount,
         int columnIndex
     )
-        : base(TokenKind.String, lexeme, start, end, line)
-    {
+        : base(TokenKind.String, lexeme, start, end, line) {
         StringKind = stringKind;
         Delimiter = delimiter;
         DelimiterCount = delimiterCount;

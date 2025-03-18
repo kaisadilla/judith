@@ -101,7 +101,7 @@ internal class ImplicitNodeAnalyzer : SyntaxVisitor<RetInfo?> {
 
         // If yield is required but not found, emit an error.
         if (YieldRequired && hasYield == false) {
-            Messages.Add(CompilerMessage.Analyzers.NotAllPathsYieldValue(node.Line));
+            Messages.Add(CompilerMessage.Analyzers.NotAllPathsYieldValue(node));
         }
 
         return (hasReturn, hasYield);
@@ -138,7 +138,7 @@ internal class ImplicitNodeAnalyzer : SyntaxVisitor<RetInfo?> {
 
         // If one block yields a value and the other doesn't, that's an error.
         if (consequentRetInfo.hasYield != alternateRetInfo.Value.hasYield) {
-            Messages.Add(CompilerMessage.Analyzers.NotAllPathsYieldValue(node.Line));
+            Messages.Add(CompilerMessage.Analyzers.NotAllPathsYieldValue(node));
         }
 
         // an if has returns if both of its paths have returns. Same for yields.

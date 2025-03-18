@@ -90,6 +90,15 @@ public enum SyntaxKind
     FieldInitialization,
     MemberField,
 
+    // Type nodes
+    IdentifierType, // type
+    FunctionType, // (type, type) -> type
+    TupleArrayType, // [type, type, type...]
+    RawArrayType, // type[]
+    ObjectType, // { name: type, name: type }
+    LiteralType, // literal
+    UnionType, // type | type
+
     P_PrintStatement,
 }
 

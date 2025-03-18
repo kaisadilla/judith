@@ -43,9 +43,7 @@ public class SymbolTableBuilder : SyntaxVisitor {
         string name = node.Identifier.Name;
 
         if (_finder.IsSymbolDefinedInScope(name, _scope.Current)) {
-            Messages.Add(CompilerMessage.Analyzers.DefinitionAlreadyExist(
-                name, node.Line
-            ));
+            Messages.Add(CompilerMessage.Analyzers.DefinitionAlreadyExist(node, name));
             return;
         }
 
@@ -70,9 +68,7 @@ public class SymbolTableBuilder : SyntaxVisitor {
         string name = node.Identifier.Name;
 
         if (_finder.IsSymbolDefinedInScope(name, _scope.Current)) {
-            Messages.Add(CompilerMessage.Analyzers.DefinitionAlreadyExist(
-                name, node.Line
-            ));
+            Messages.Add(CompilerMessage.Analyzers.DefinitionAlreadyExist(node, name));
             return;
         }
 

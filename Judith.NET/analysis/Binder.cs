@@ -1,4 +1,5 @@
 ﻿using Judith.NET.analysis.binder;
+using Judith.NET.analysis.lexical;
 using Judith.NET.analysis.semantics;
 using Judith.NET.analysis.syntax;
 using Judith.NET.ir;
@@ -396,7 +397,7 @@ public class Binder {
                 }
                 catch (OverflowException) {
                     Messages.Add(CompilerMessage.Analyzers.FloatLiteralOverflow(
-                        str, "F64", expr.Literal.Line
+                        expr, str, "F64"
                     ));
                     value = 0;
                 }
@@ -409,7 +410,7 @@ public class Binder {
                 }
                 catch (OverflowException) {
                     Messages.Add(CompilerMessage.Analyzers.FloatLiteralOverflow(
-                        str, "F32", expr.Literal.Line
+                        expr, str, "F32"
                     ));
                     value = 0;
                 }
@@ -418,7 +419,7 @@ public class Binder {
             }
             else {
                 Messages.Add(CompilerMessage.Analyzers.NumberSuffixCannotBeUsedForDecimal(
-                    suffix, expr.Literal.Line
+                    expr, suffix
                 ));
                 bound = new(expr, _cmp.Program.NativeHeader.TypeRefs.F64, new(0d));
             }
@@ -439,9 +440,7 @@ public class Binder {
                     };
                 }
                 catch (OverflowException) {
-                    Messages.Add(CompilerMessage.Analyzers.IntegerLiteralIsTooLarge(
-                        expr.Literal.Line
-                    ));
+                    Messages.Add(CompilerMessage.Analyzers.IntegerLiteralIsTooLarge(expr));
                     value = 0;
                 }
 
@@ -478,9 +477,7 @@ public class Binder {
                     };
                 }
                 catch (OverflowException) {
-                    Messages.Add(CompilerMessage.Analyzers.IntegerLiteralIsTooLarge(
-                        expr.Literal.Line
-                    ));
+                    Messages.Add(CompilerMessage.Analyzers.IntegerLiteralIsTooLarge(expr));
                     value = 0;
                 }
 
@@ -512,7 +509,7 @@ public class Binder {
         void CheckIntegerSize (long value, long max, string type) {
             if (value > max) {
                 Messages.Add(CompilerMessage.Analyzers.IntegerLiteralOverflow(
-                    str, type, expr.Literal.Line
+                    expr, str, type
                 ));
             }
         }
@@ -520,7 +517,7 @@ public class Binder {
         void CheckUnsignedIntegerSize (ulong value, ulong max, string type) {
             if (value > max) {
                 Messages.Add(CompilerMessage.Analyzers.IntegerLiteralOverflow(
-                    str, type, expr.Literal.Line
+                    expr, str, type
                 ));
             }
         }

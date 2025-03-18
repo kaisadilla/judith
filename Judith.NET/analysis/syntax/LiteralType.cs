@@ -3,19 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Judith.NET.analysis.lexical;
 
 namespace Judith.NET.analysis.syntax;
 
-public class YieldStatement : Statement {
-    public Expression Expression { get; init; }
+public class LiteralType : TypeNode {
+    public Literal Literal { get; private init; }
 
-    public Token? YieldToken { get; init; }
-
-    public YieldStatement (Expression expression) : base(SyntaxKind.YieldStatement) {
-        Expression = expression;
-
-        Children.Add(Expression);
+    public LiteralType (Literal literal) : base(SyntaxKind.LiteralType) {
+        Literal = literal;
     }
 
     public override void Accept (SyntaxVisitor visitor) {

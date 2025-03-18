@@ -3,24 +3,22 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Judith.NET.analysis.lexical;
 
 namespace Judith.NET.analysis.syntax;
 
 public class StructTypeDefinition : TypeDefinition {
-    public bool IsHidden { get; private init; }
     public Identifier Identifier { get; private init; }
     public List<MemberField> MemberFields { get; private init; }
 
-    public Token? HidToken { get; init; }
     public Token? StructToken { get; set; }
     public Token? EndToken { get; set; }
 
     public StructTypeDefinition (
         bool isHidden, Identifier identifier, List<MemberField> memberFields
     )
-        : base(SyntaxKind.StructTypeDefinition)
+        : base(SyntaxKind.StructTypeDefinition, isHidden)
     {
-        IsHidden = isHidden;
         Identifier = identifier;
         MemberFields = memberFields;
 

@@ -47,6 +47,8 @@ public abstract class SyntaxVisitor {
 
     public virtual void Visit (CompilerUnit node) => VisitChildren(node);
     public virtual void Visit (FunctionDefinition node) => VisitChildren(node);
+
+    public virtual void Visit (AliasTypeDefinition node) => VisitChildren(node);
     public virtual void Visit (StructTypeDefinition node) => VisitChildren(node);
 
     public virtual void Visit (BlockStatement node) => VisitChildren(node);
@@ -92,6 +94,14 @@ public abstract class SyntaxVisitor {
     public virtual void Visit (ObjectInitializer node) => VisitChildren(node);
     public virtual void Visit (FieldInitialization node) => VisitChildren(node);
     public virtual void Visit (MemberField node) => VisitChildren(node);
+
+    public virtual void Visit (IdentifierType node) => VisitChildren(node);
+    public virtual void Visit (FunctionType node) => VisitChildren(node);
+    public virtual void Visit (TupleArrayType node) => VisitChildren(node);
+    public virtual void Visit (RawArrayType node) => VisitChildren(node);
+    public virtual void Visit (ObjectType node) => VisitChildren(node);
+    public virtual void Visit (LiteralType node) => VisitChildren(node);
+    public virtual void Visit (UnionType node) => VisitChildren(node);
 
     public virtual void Visit (P_PrintStatement node) => VisitChildren(node);
 }

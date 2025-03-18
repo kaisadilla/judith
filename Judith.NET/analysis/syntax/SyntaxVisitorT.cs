@@ -47,6 +47,8 @@ public abstract class SyntaxVisitor<TResult> {
 
     public virtual TResult? Visit (CompilerUnit node) => VisitChildren(node);
     public virtual TResult? Visit (FunctionDefinition node) => VisitChildren(node);
+
+    public virtual TResult? Visit (AliasTypeDefinition node) => VisitChildren(node);
     public virtual TResult? Visit (StructTypeDefinition node) => VisitChildren(node);
 
     public virtual TResult? Visit (BlockStatement node) => VisitChildren(node);
@@ -92,6 +94,14 @@ public abstract class SyntaxVisitor<TResult> {
     public virtual TResult? Visit (ObjectInitializer node) => VisitChildren(node);
     public virtual TResult? Visit (FieldInitialization node) => VisitChildren(node);
     public virtual TResult? Visit (MemberField node) => VisitChildren(node);
+
+    public virtual TResult? Visit (IdentifierType node) => VisitChildren(node);
+    public virtual TResult? Visit (FunctionType node) => VisitChildren(node);
+    public virtual TResult? Visit (TupleArrayType node) => VisitChildren(node);
+    public virtual TResult? Visit (RawArrayType node) => VisitChildren(node);
+    public virtual TResult? Visit (ObjectType node) => VisitChildren(node);
+    public virtual TResult? Visit (LiteralType node) => VisitChildren(node);
+    public virtual TResult? Visit (UnionType node) => VisitChildren(node);
 
     public virtual TResult? Visit (P_PrintStatement node) => VisitChildren(node);
 }

@@ -343,7 +343,7 @@ public class TypeResolver : SyntaxVisitor {
         var boundProvider = Binder.GetBoundNodeOrThrow<BoundExpression>(node.Provider);
 
         if (boundProvider is not IBoundIdentifyingExpression boundProvAsId) {
-            Messages.Add(CompilerMessage.Analyzers.TypeExpected(node.Provider.Line));
+            Messages.Add(CompilerMessage.Analyzers.TypeExpected(node.Provider));
             boundNode.Type = _cmp.PseudoTypes.Error;
 
             _nodeStates.Mark(node, true, _scope.Current);
@@ -409,13 +409,13 @@ public class TypeResolver : SyntaxVisitor {
 
         if (node.AccessKind == AccessKind.Member) {
             if (boundReceiver.Type == _cmp.PseudoTypes.NoType) {
-                Messages.Add(CompilerMessage.Analyzers.MemberAccessOnlyOnInstances(node.Line));
+                Messages.Add(CompilerMessage.Analyzers.MemberAccessOnlyOnInstances(node));
                 return;
             }
 
             if (boundReceiver.Type.TryGetMember(node.Member.Name, out MemberSymbol? member) == false) {
                 Messages.Add(CompilerMessage.Analyzers.FieldDoesNotExist(
-                    boundReceiver.Type.Name, node.Member.Name, node.Member.Line
+                    node.Receiver, boundReceiver.Type.Name, node.Member.Name
                 ));
                 return;
             }
@@ -430,7 +430,7 @@ public class TypeResolver : SyntaxVisitor {
         }
         else {
             if (boundReceiver.Type != _cmp.PseudoTypes.NoType) {
-                Messages.Add(CompilerMessage.Analyzers.ScopeAccessNotOnInstances(node.Line));
+                Messages.Add(CompilerMessage.Analyzers.ScopeAccessNotOnInstances(node));
                 return;
             }
 

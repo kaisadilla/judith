@@ -3,19 +3,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Judith.NET.analysis.lexical;
 
 namespace Judith.NET.analysis.syntax;
 
-public class YieldStatement : Statement {
-    public Expression Expression { get; init; }
+public class FunctionType : TypeNode {
+    public List<TypeNode> ParameterTypes { get; private init; }
+    public TypeNode ReturnType { get; private init; }
 
-    public Token? YieldToken { get; init; }
-
-    public YieldStatement (Expression expression) : base(SyntaxKind.YieldStatement) {
-        Expression = expression;
-
-        Children.Add(Expression);
+    public FunctionType (List<TypeNode> parameterTypes, TypeNode returnType)
+        : base(SyntaxKind.FunctionType)
+    {
+        ParameterTypes = parameterTypes;
+        ReturnType = returnType;
     }
 
     public override void Accept (SyntaxVisitor visitor) {

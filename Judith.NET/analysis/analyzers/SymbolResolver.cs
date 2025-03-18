@@ -114,7 +114,7 @@ public class SymbolResolver : SyntaxVisitor {
 
         string name = node.Identifier.Name;
 
-        var symbol = FindSymbolOrErrorMsg(name, node.Identifier.Line);
+        var symbol = FindSymbolOrErrorMsg(node, name);
         if (symbol == null) return;
 
         var boundNode = _cmp.Binder.BindIdentifierExpression(node, symbol);
@@ -133,14 +133,14 @@ public class SymbolResolver : SyntaxVisitor {
 
         string name = node.Identifier.Name;
 
-        var symbol = FindSymbolOrErrorMsg(name, node.Identifier.Line);
+        var symbol = FindSymbolOrErrorMsg(node, name);
         if (symbol == null) return;
 
         if (symbol is TypeSymbol typeSymbol) {
             _cmp.Binder.BindTypeAnnotation(node, typeSymbol);
         }
         else {
-            Messages.Add(CompilerMessage.Analyzers.TypeExpected(node.Identifier.Line));
+            Messages.Add(CompilerMessage.Analyzers.TypeExpected(node));
             _cmp.Binder.BindTypeAnnotation(node, _cmp.PseudoTypes.Error);
         }
 
@@ -157,15 +157,15 @@ public class SymbolResolver : SyntaxVisitor {
         return boundNode;
     }
 
-    private Symbol? FindSymbolOrErrorMsg (string name, int line) {
+    private Symbol? FindSymbolOrErrorMsg (SyntaxNode node, string name) {
         var candidates = _finder.FindRecursively(name, _scope.Current, []);
 
         if (candidates.Count == 0) {
-            Messages.Add(CompilerMessage.Analyzers.NameDoesNotExist(name, line));
+            Messages.Add(CompilerMessage.Analyzers.NameDoesNotExist(node, name));
             return null;
         }
         else if (candidates.Count > 1) {
-            Messages.Add(CompilerMessage.Analyzers.NameIsAmbiguous(name, line));
+            Messages.Add(CompilerMessage.Analyzers.NameIsAmbiguous(node, name));
             return null;
         }
         else {

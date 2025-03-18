@@ -3,19 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Judith.NET.analysis.lexical;
 
 namespace Judith.NET.analysis.syntax;
 
-public class YieldStatement : Statement {
-    public Expression Expression { get; init; }
+public class TupleArrayType : SyntaxNode {
+    public List<TypeNode> MemberTypes { get; private init; }
 
-    public Token? YieldToken { get; init; }
-
-    public YieldStatement (Expression expression) : base(SyntaxKind.YieldStatement) {
-        Expression = expression;
-
-        Children.Add(Expression);
+    public TupleArrayType (List<TypeNode> memberTypes)
+        : base(SyntaxKind.TupleArrayType)
+    {
+        MemberTypes = memberTypes;
     }
 
     public override void Accept (SyntaxVisitor visitor) {
