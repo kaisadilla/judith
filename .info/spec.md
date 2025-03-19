@@ -791,6 +791,16 @@ end
 
 Jumptables are not named `switch` to discourage developers coming from languages like C from using it over `match`. Jumptables are a niche feature that is seldom needed to express logic concisely.
 
+# Static variables
+Static variables are variables that exist outside functions, shared globally by all parts of the program. Static variables are declared with the `static`.
+
+```judith
+module game;
+
+static const player_name = "Kevin"
+static var max_score = 0
+```
+
 # Functions
 Functions are defined by the keyword `func`:
 
@@ -1105,7 +1115,7 @@ const scores: Dictionary<String, Num> = [
 Dictionaries are accessed by key:
 ```judith
 scores["Ryan"] -- returns 5.
-scores["Regina] -- returns 'undefined'.
+scores["Regina"] -- returns 'undefined'.
 ```
 
 ## Collection initializer expression
@@ -1229,11 +1239,10 @@ Console::log(person!.name) -- will throw.
 
 Unsafe casting operations are extremely discouraged, as when, left unhandled, can crash a program and, when handled, can be slower than safe casting operations when they fail; as they throw exceptions rather than producing a sentinel `null`.
 
-## <a name="types-narrowing">Type narrowing</a>
+## <a name="types-narrowing">Type narrowing</a> WIP
 Narrowing is the process of refining a broader type into a more specific one based on control flow. While traveling through a possible execution branch of a block of code, when a certain property of a value's type is asserted, that property remains true for the remainder of that branch.
 
-Type narrowing only occurs when the integrity of the value can be asserted at compile time. This happens when the value is a constant rather than a variable.
-
+Type narrowing works by implicitly creating new variables of a more refined type (only when needed). This means that assertions made by type narrowing are always safe.
 
 ### Type checking (`is`)
 With the `is` keyword, a value can be asserted to be (or not to be) of a given type:
@@ -1343,7 +1352,7 @@ const getter: (Num, Office) -> Person = get_person
 Values of a function type are _callable_, which mean that they can be used in call expressions: `<callable>(<arglist>)`. Function types are always reference types.
 
 ## <a name="types-array">Array type</a>
-An array type (not to be confused with the type `Array<_T, _size>`) is a type that defines an array where the type of each value inside it is explicitly defined. Array types are similar to tuple types in other languages.
+An array type (not to be confused with the type `Array<_T>`) is a type that defines a group of values of specific types. Array types are similar to tuple types in other languages.
 
 ```judith
 const info: [String, Num] = ["Kevin", 36]
@@ -1355,7 +1364,7 @@ const n = get_num()
 info[n] -- inferred to be of type "String | Num | undefined".
 ```
 
-When all of the members of an array share the same type, it can be defined with he following syntax:
+When all of the members of an array share the same type, it can be defined with the following syntax:
 
 ```judith
 const five_names: String[5] = ["Kevin", "Alyce", "Grant", "Ruby", "Annie"]
@@ -1367,11 +1376,11 @@ const ten_numbers: Num[10] = [3, 5; 9] -- produces [3, 5, 9, 9, 9, 9, 9, 9, 9, 9
 const ten_42s: Num[10] = [; 42] -- produces [42, 42, 42, 42, 42, 42, 42, 42, 42, 42].
 ```
 
-Note that the size of an array type is always known at compile time, so this syntax cannot be used dynamically:
+Note that the length of an array type is always known at compile time, so this syntax cannot be used dynamically:
 
 ```judith
 const amount = get_amount()
-const nums: Num[amount] = [; 42] -- ERROR: array size must be known at compile time.
+const nums: Num[amount] = [; 42] -- ERROR: array length must be known at compile time.
 ```
 
 ## Object type
@@ -1458,6 +1467,7 @@ typedef option Country
     'France'
     'Italy'
     'Japan'
+    'Other' default -- You can optionally mark one value as default.
 end
 
 var country: Country = 'Germany'
@@ -1564,7 +1574,7 @@ typedef struct Person
 end
 ```
 
-Structs have a default constructor that contains all of its fields in order:
+Structs implicitly define a constructor that contains all of its fields in order:
 
 ```judith
 const p = new Person("Kevin", 28, 'Germany', 103_000d)
@@ -1591,6 +1601,8 @@ employee:Person.salary -- We can still cast employee to person to access
 
 ### Interface
 If structs hold data, interfaces define behavior. Objects cannot be of an interface type, but instead interfaces are implemented into types to give them new functionalities.
+
+**Important note**: Judith interfaces follow the orphan rule, meaning that you can only implement an interface for a type if your project defines either the interface or the type. This, combined with the lack of circular references between dependencies, guarantees that only a single implementation of a specific interface for a specific type can exist in a given project. You can work around the orphan rule by defining an alias for the type you don't own.
 
 ```judith
 -- By convention, interfaces are prefixed with the letter "I".
@@ -1701,121 +1713,189 @@ post:ISummarizable.summary() -- calling ISummarizable.summary()
 Note that, as interfaces are open-ended by design, it is not possible to exhaustively test an interface type, because nothing guarantees that new subtypes of the interface will be created by other libraries or at runtime.
 
 ### Class
-Classes are the most complex type in Judith. They represent state machines, whose behavior is encapsulated and controlled by the class. For this purpose, classes feature privacy rules.
+Classes are the most complex type in Judith. They represent state machines, whose behavior is encapsulated and controlled by the class. For this purpose, classes feature privacy rules and methods.
+
+#### Fields
+Just like structs, classes contain fields. However, class fields behave in a different way:
+
+* By default, a member field is considered **mutable** when used inside the class, but **immutable** when used outside.
 
 ```judith
 typedef class Person
-    -- Fields contained by the class. Fields are variable inside the class, but
-    -- are exposed as constant to the outside. This means that code from the
-    -- outside can read their value, but cannot assign new values to it nor call
-    -- any impure method in them.
     name: String
+end
 
-    -- A member field can be hidden from the outside altogether with the "hid"
-    -- keyword. A hidden field will not be visible at all from outside the class.
+var person: Person = get_person()
+Console::log(person.name) -- valid
+person.name = "Steve" -- ERROR: 'person.name' is immutable.
+```
+
+* Class fields can be hidden from the outside with the `hid` keyword. A hidden field cannot be accessed from the outside at all.
+
+```judith
+typedef class Person
+    -- ...
     hid birth_year: Num?
+end
 
-    -- A member field can be exposed as a variable to the outside, allowing
-    -- code from the outside to mutate its state or assign a new value to it.
-    -- This can be achieved with the "pub" keyword, that makes it public.
+Console::log(person.birth_year) -- ERROR: 'person.birth_year' is not accessible
+                                -- from outside the class.
+```
+
+* Class fields can be exposed as mutable variables with the keyword `pub`.
+
+```judith
+typedef class Person
+    -- ...
     pub country: Country
+end
 
-    -- A member field can be marked as mutable with the "mut" keyword. A mutable
-    -- field can be mutated even by pure methods. Semantically, mutable members
-    -- are not considered part of the object's state, so they should not have
-    -- any effect on the object's behavior.
-    -- note that "mut" is not compatible with "static" or "const", as it wouldn't
-    -- have any effect.
-    mut times_age_was_read: Num = 0 -- Default initializer.
+person.country = 'Italy' -- valid, 'person.country' is mutable.
+```
 
-    -- Sometimes fields contain references to objects not owned by the class.
-    -- Semantically, these objects should not be mutated from inside the class.
-    -- To achieve this effect, using const types can help enforce this constraint,
-    -- as const types cannot be mutated even by impure functions.
-    -- Additionally, this approach allows consumers of the class to use const
-    -- values to initialize the class.
-    -- Note that this doesn't mean 'company' cannot change. As 'company' is a
-    -- reference, there's no guarantee that whoever owns the reference won't
-    -- mutate it. As such, it shouldn't be considered part of the class's state.
-    company: const Company
+* Class fields can be marked as "always mutable" with the `var` keyword. A mutable field can be mutated even when the instance is constant. Semantically, always mutable members represent values that are not part of the instance's state.
 
-    -- static members do not belong to any instance, but rather the class itself.
-    static people_created: Num = 0
+Note that mutable fields are still exposed as constants to the outside, unless explicitly marked as `pub`.
 
-    -- Classes can include constructors inside their own definition.
-    -- Note that any field that doesn't have a default initializer must be
-    -- initialized in the constructor.
-    -- Also note that classes do not have any default constructor. If a class
-    -- has a constructor that takes zero arguments and does nothing, it must
-    -- still be defined.
-    ctor (name: String, birth_year: Num?, country: Country, company: Company)
-        -- The instance a method or constructor is running on is contained in
-        -- a special local named "self".
-        self.name = name
-        -- "self" can be implied by simply using the accessor token "." on nothing.
-        .birth_year = birth_year
-        .country = country
-        .company = company
+```judith
+typedef class Person
+    -- ...
+    var times_age_was_read: Num = 0 -- Default initializer.
+end
+```
 
-        -- similarly, the class itself can be implied by using the scope
-        -- resolution token "::" on nothing. "::people_created" is the same as
-        -- "Person::people_created".
-        ::people_created += 1
-    end
+* Class fields can be marked as "always immutable" with the `const` keyword. This acts in the opposite way as `var`: a `const` field can never be mutated, not even when the instance of the class is mutable. Semantically, always immutable members represent parts of the instance's state that are not controlled by the class. In the following example, although `company` is part of a `Person`'s state, the person itself cannot change the state of the company.
 
-    -- Classes can define their own methods. By default, functions are pure,
-    -- which mean they cannot mutate their own member fields.
-    func print_name ()
+Note that always immutable reference type fields (`company` in this case) can still mutate, if the instance it points to is also pointed to by a mutable variable somewhere else. This makes semantic sense, because a company can still change over time, and these changes can still affect the person's behavior; even if the person itself cannot mutate the company in any way.
+
+```judith
+typedef class Person
+    -- ...
+    const company: Company
+end
+```
+
+Note that `const` is not compatible with `pub`, as `pub` wouldn't have any effect.
+
+#### Member methods
+Classes can define member methods. Member methods are nearly identical to extension methods, with the exception that, because they are defined inside the class, they interact differently with the class's fields, as explained in the previous section.
+
+_See [Types § Associated items § Extension methods](#types-associated-extmethods) for a full explanation of methods._
+
+```judith
+typedef class Person
+    -- ...
+    func print_name (self)
         Console::log(.name)
-        .name = "New name" -- error: pure function cannot mutate the instance.
     end
 
-    func get_age () -> Num
+    func get_age (self) -> Num
         -- Methods defined inside the class can access hidden members.
         const age = .calc_age()
 
-        -- Mutable fields can be mutated even by pure functions.
+        -- Mutable fields can be mutated even when 'self' is immutable.
         .times_age_was_read += 1
-
-        -- Static fields are not part of any instance's state, so they can be
-        -- mutated freely even by pure functions. This specific line doesn't
-        -- make much sense, but it's for demonstrative purposes.
-        ::people_created += 1
 
         return age
     end
 
-    -- The keyword "impure" can be used to define an impure method, which can
-    -- mutate the instance's members. These methods cannot be called on instances
-    -- assigned to constants, but only those assigned to variables.
-    impure func relocate (new_country: Country)
-        -- Valid assignment, as this is an impure function
-        .country = new_country
-    end
-
-    hid func calc_age () -> Num
-        return Date::now().year() - .birth_year
-    end
-
-    -- Since static members are not part of any instance's state, they do not
-    -- have the concept of "purity".
-    static func print_people_created ()
-        Console::log(::people_created)
+    -- An impure member method. Can change "name" as it's a member method and
+    -- takes 'self' as a mutable parameter.
+    func rename (var self, name: String)
+        .name = name
     end
 end
 ```
 
-Classes are created through their constructors. Unlike structs, they cannot be created by manually assigning them values to their fields with an object initialization expression.
+Member methods can be hidden with the `hid` keyword, just like member fields.
 
 ```judith
-var kevin = new Person("Kevin", 1975, 'Germany')
+typedef class Person
+    -- ...
+    hid func calc_age (self) -> Num
+        return Date::now().year() - .birth_year
+    end
+end
+
+p.calc_age() -- ERROR: 'person.birth_year' is not accessible from outside the class.
+```
+
+#### Constructing an instance of a class
+Unlike structs, classes don't implement the empty constructor by default. This means that a class must define, at least, one member constructor method.
+
+```judith
+    ctor (name: String, birth_year: Num?, country: Country, company: Company)
+        .name = name
+        .birth_year = birth_year
+        .country = country
+        .company = company
+    end
+```
+
+Classes cannot be constructed like objects, but must instead call a constructor to be initialized. However, this constructor can be then accompanied by an object initializer to initialize any fields that haven't been initialized yet.
+
+**Important note:** if a field doesn't have a default value, nor a value assigned to it in a constructor, then that field can be assigned a value from the outside during initialization. This applies even to hidden fields. For example, given this constructor:
+
+```judith
+    ctor (name: String)
+        .name = name
+    end
+```
+
+This construction is valid:
+
+```judith
+const p = Person::("Kevin") {
+    birth_year = 1970, -- valid even though 'birth_year' is hidden.
+    country = 'Germany',
+    company = get_company(), -- valid even though 'company' is not public.
+}
+```
+
+This special behavior occurs _only_ during construction. i.e. assigning a value to `p.company` afterwards would be a compile error.
+
+#### Member static variables
+Static variables can be defined directly inside a class. They still work in the same away as any other static variable, with the difference that they are exposed as **immutable** to the outside.
+
+```judith
+typedef class Person
+    -- ...
+
+    static people_created: Num = 0
+
+    ctor ()
+        -- ...
+        people_created += 1 -- valid assignment.
+    end
+end
+
+Person::people_created += 1 -- ERROR: 'Person::people_created' is immutable.
+Console::log(Person::people_created) -- valid.
+```
+
+#### Member functions
+When a function defined inside a class doesn't define `self` as its first parameter, it remains a function rather than becoming a method. However, as it's defined inside the class, these functions get to interact with member static variables as mutable:
+
+```judith
+    func reset_people_created ()
+        ::people_created = 0 -- valid, as it's done from inside the class.
+    end
+end
+```
+
+#### Summary
+The class we created above can be used like this:
+
+```judith
+const company = Company::get_by_name("Ajax")
+var kevin = new Person("Kevin", 1975, 'Germany', company)
 
 Console::log(kevin.name) -- valid, as "name" is visible from the outside.
 kevin.name == "George" -- invalid, as "name" is constant to the outside.
 kevin.country = 'Italy' -- valid, as "country" is variable to the outside.
 
 kevin.print_name() -- valid call, will print "Kevin"
-kevin.calc_age() -- invalid call, calc_age is a hidden member.
+kevin.calc_age() -- invalid call, 'calc_age' is a hidden member.
 kevin.relocate('France') -- valid call, impure functions (that mutate state)
                          -- can be called in variables.
 kevin.print_people_created() -- invalid call, "kevin" object doesn't have a member
@@ -1829,7 +1909,8 @@ kevin.print_name() -- still valid, as it's a pure function.
 Person::print_people_created() -- valid, as this method belongs to Person.
 ```
 
-Classes can implement interfaces in their own declaration, allowing that interface declaration to access private members:
+#### Implementing interfaces
+Classes can implement interfaces in their own declaration. As always, this means that the implementation of the interface gets privileged access to the class's member fields.
 
 ```judith
 typedef class Announcement
@@ -1855,27 +1936,6 @@ typedef class Announcement
 end
 ```
 
-Classes also act as namespaces, allowing types and symbols to be defined inside them. This is a convenient way to create types that only make sense when dealing with a specific class, without polluting the module with them or forcing weird type names such as "Vehicle_Type".
-
-```judith
-typedef class Vehicle
-    typedef set Type
-        'Car',
-        'Boat',
-        'Airplane',
-        'Train',
-    end
-
-    typedef struct Id
-        registrar: String,
-        license: Num,
-    end
-
-    type: Type -- This is Vehicle::Type
-    id: Id -- This is Vehicle::Id
-end
-```
-
 These types are not special nor restricted in any way. They are used as normal, as if the class they are defined in was their namespace:
 
 ```judith
@@ -1886,59 +1946,194 @@ const id: Vehicle::Id = {
 };
 ```
 
-#### Methods
-Methods are functions that are members of a type, and implicitly take an instance of that class as their first parameter (named `self`). This parameter can ommited when using member access syntax (i.e. `self.length` can be expressed as `.length`) In practice, "method" is simply what instance function members are called.
+## Associated items
+Top-level items can be associated with a specific type. Defining a top-level item in this way will make it accessible by qualifying it with the Type's name, _as if it was defined inside the type itself_.
 
-# Extension methods and constructors
-Extension methods are methods implemented into types from outside their definition. Being defined outside means they do not have access to any hidden fields. They are implemented with the `impl` keyword, followed by the function as normal - with the small difference that the function's name includes the type the method belongs to.
+To define associated items, the name given to these items must be qualified with the type to which the item is associated. The following example associates a static variable called `empty` to `String`.
 
 ```judith
-impl func Person::print_name ()
-    Console::log(.name) -- "self" here is of type "Person".
-    .name = "MUTATED" -- invalid, as "self" is a constant and cannot be mutated.
+static const String::empty = ""
+
+const name = String::empty -- 'empty' can now be used as if it was part of 'String'.
+```
+
+You can define all kinds of top-level items as associated items:
+
+```judith
+typedef set Vehicle::Type
+    'Car'
+    'Boat'
+    'Airplane'
+    'Train'
+end
+
+typedef struct Vehicle
+    type: Vehicle::Type -- you can use it inside the type.
+end
+
+const vehicle_type: Vehicle::Type = 'Boat'. -- or outside, too.
+```
+
+Associated items belong to whichever module they are defined in, not to the type they are associated with, which means that the relevant module has to be imported into the file for the associated item to be available. Also, just like extension methods, type-associated items can still be qualified with their modules:
+
+```judith
+module some_mod
+
+typedef set Vehicle::Type
+    'Horse'
+    'Carriage'
+end
+
+-- some other file
+
+const vehicle_type: some_mod::Vehicle::Type = 'Horse'
+```
+
+### Extension methods
+Extension methods are a special case of associated functions. When an associate function defines `self` as its first parameter, it becomes an extension method. `self` is always of the type the function is associated with, and that type can be omitted when defining the parameter. Whether the `self` parameter is taken as `var` or `const` determines whether the method is pure or impure. The name of the method qualifies it into the type it's being implemented in:
+
+```judith
+func Vec2::normal (self) -> Vec2
+    const mag = self.magnitude()
+    return self / mag
 end
 ```
 
-Extension static functions are also allowed:
+Inside a method, `.` and `::` can be used without any preceding name. If done so, `self` is implied for `.` and the type's name is implied for `::`. The previous method can thus be implemented as such:
 
 ```judith
-impl static func Person::turn_into_array (person: Person) -> Auto
-    return [.name, .age, .country, .salary]
+met func Vec2::normal (self) -> Vec2
+    const mag = .magnitude() -- ".magnitude" is equivalent to "self.magnitude".
+    return self / mag
 end
 ```
 
-Extension constructors are defined in just the same way:
+Methods can then be called as if they were members of instances:
 
 ```judith
-impl ctor Person (name: String, country: Country, birth_year: Num)
-    .name = name -- Inside constructors, "self" is a VARIABLE reference to the
-                  -- object being constructed.
-    .country = country
-    .age = Date::now().year() - birth_year
-    .salary = null
-end
-
--- Works just like any other constructor!
-const person = new Person("Kevin", 'Germany', 1977)
+const p = Vec2 { x = 5, y = 3 }
+const normalized = p.normal() -- "p" becomes the argument for the "self" parameter.
 ```
 
-Named extension constructors are also possible:
+### Extension constructors
+Although constructors cannot be top-level items outside classes by themselves (as they need somethign to construct), they can be defined as associated items. A constructor is always a function (never a generator), and always return an instance of the type they are implemented for. Unlike methods, constructors do not take a `self` parameter. Instead, `self` is implicitly created at the start of the constructor, with uninitialized fields. Unlike regular methods, constructors can have no name at all.
 
 ```judith
-impl ctor Person::kevin ()
-    .name = "Kevin"
-    .country = 'Germany'
-    .salary = null
+ctor Vec2 (x, y: Num)
+    .x = x
+    .y = y
 end
 ```
 
-While only classes can define constructors inside their own body, extension constructors can be defined for any type. Even a type as basic and primitive as a bool!:
+Constructors are called like normal functions (with the small exception that they may have no name at all).
 
 ```judith
-impl ctor Bool (str: String)
-    self = if str == "true" => true else => false
+const point = Vec2::(10, 16)
+```
+
+Constructors are allowed to leave certain fields uninitialized, although this will force the caller to complement the function call with a partial initializer constructor.
+
+```judith
+ctor Vec2::with_x (x: Num)
+    .x = x
+    -- notice that we are not initializing "y" here.
+end
+
+const point = Vec2::with_x(5) -- ERROR: Incomplete initialization.
+
+const point = Vec2::with_x(5) {
+    y = 4,
+} -- valid, as we are initializing the fields the constructor left uninitialized.
+```
+
+`self` is the return value of a constructor, which means that reassigning `self` is a valid way to construct an object.
+
+```judith
+ctor Num::parse (str: String)
+    -- logic
+    self = result -- this will make "result" the value 'constructed' by this ctor.
 end
 ```
+
+If the type the constructor belongs to can only be instantiated with a constructor method (as it's commonly the case with classes), `self` will not be created implicitly, and thus will be unavailable until a value is assigned to it:
+
+```judith
+ctor Person::make_local_kevin (country: Country)
+    .country = country -- ERROR: "self" is uninitialized.
+
+    self = Person::("Kevin", 17, country) -- initialize "self" explicitly.
+
+    Console::log(.country) -- valid, as "self" is initialized.
+end
+```
+
+The same happens when a type cannot be instanced directly.
+
+```judith
+typedef Animal = Dog | Cat
+
+ctor Animal::make_adorable ()
+    Console::log(self) - ERROR: What is 'self' here???
+    
+    self = Cat { name = "Macbeth", evil = true }
+
+    Console::log(self) -- valid, as 'self' is now a Cat.
+end
+
+const macbeth = Animal::make_adorable() -- "macbeth" is of type "Animal".
+```
+
+## Default values
+Types in Judith can have default values. The default value of a type can be obtained with the `default` keyword (which can be qualified if needed with the name of the type, e.g. `String::default`).
+
+These are the default values of each type (or lack of):
+
+* **`Bool`**: `false`
+* **Numeric types**: `0`
+* **`String`**: `""`
+* **`Char`**: no default value
+* **`Regex`**: no default value
+* **Nullable types**: `null`
+* **Function types**: no default value
+* **Array type**: If all of its members have a default type, then an array where each index contains the default type for that index's type.
+* **Object type and struct types**: If all of their fields have a default type, then an object or struct instance where each field is initialized to its default value.
+* **Literal type**: itself.
+* **Union type**: no default value
+* **Alias type**: the default value of the aliased type, if any.
+* **Option type**: no default value, unless one option is marked as `default`.
+* **Interface type**: no default value.
+* **Class type**: if the default constructor is defined, then the result of calling such constructor. Else, no default value.
+
+You can add or override the default value of a type by implementing the `IDefault` interface to it.
+
+## Constructing structs and classes
+Every field inside a struct of a class must be explicitly initialized at some point during the construction process. In Judith, these values are never inferred, not even when the type of a field has an available default value.
+
+```judith
+typedef struct Car
+    make: String
+    origin: Country?
+    price: Decimal = 20_000m
+    color?: Color
+end
+
+ctor Car (make: String)
+    .make = make
+end
+
+const my_car = Car::("Honda") {
+    origin = 'Japan',
+}
+```
+
+In this example, `my_car` is initialized correctly, following this logic:
+
+* `make` was assigned a value (`"Honda"`) in the constructor.
+* `origin` was assigned a value (`"Japan"`) in the object initializer.
+* `price` has a default value (20,000), and since it hasn't been assigned a value anywhere, that default value becomes the assigned value.
+* `color` is an optional field. It has not been assigned anywhere so its value is `undefined`.
+
+If `Car` had an extra field `max_speed: Num`, then this initialization would be invalid, as `max_speed` would not be assigned any value in this construction.
 
 # Operator overloading
 Some operators in Judith can be overloaded. This is done with the `oper` keyword, which defines a function that acts as the overloaded operation. Most operators are defined as functions, but a few of them are defined as member methods. Binary operations can be made symmetric with the `#symmetric` directive. When an overloaded operator is marked as symmetric, it will automatically generate an identical overload where the operands are inversed. For example, an overload of `Vec2 + Quaternion` marked as symmetric will create a new function `Quaternion + Vec2` with the exact same body.
@@ -2037,6 +2232,11 @@ Any operator not listed above cannot be overloaded. Among them, these are some o
 
 # Templates
 TODO
+
+# Exceptions
+Judith features exceptions as its main way to handle errors.
+
+TODO: try, catch, finally, exception objects, `try?` (calls a function and suppresses exceptions. if the function returns a value, then suppressing an exception makes the function return `null`).
 
 # Destructuring and spreading
 Destructuring is a feature that allows the developer to unpack values from collections and values that contain members. Destructuring uses the ellipsis operator (`...`), which should not be confused with the range operator (`..`).
@@ -2307,7 +2507,8 @@ my_obj["go"] -- valid, returns "here"
 # Hidden elements (`hid`)
 The keyword `hid` allows developers to restrict the visibility of an object. When used inside a class, as mentioned above, makes the member invisible to the outside. The same applies to namespace members. When used on a top-level item (such as a function, a symbol or a typedef), it confines that definition to the file in which it is defined.
 
-
+# Unsafe Judith
+For performance reasons, Judith offers a set of lower-level features to deal with memory manually. However, most of these features can only be used in `unsafe` contexts.
 
 # Appendix
 
@@ -2451,6 +2652,36 @@ vals = Auto::fill(0) -- inferred to be Array<Num, 5>.
 # TODO
 
 TODO: <a name="appendix-regex">Appendix § Regex</a>
+
+
+# IGNORE - WIP
+
+## Pointers
+Unsafe Judith features two kinds of pointers: immutable and mutable pointers. Immutable pointers (signaled with `&`) allow reading data from the value they point to, but don't allow altering said value. As such, immutable pointers are unsafe to read, but cannot leave the program in an invalid state. On the other hand, mutable pointers (signaled with `*`) can mutate the memory they point to, which means they can leave the program in an invalid state that can lead to memory-related errors in safe code.
+
+The pointer of a value can be obtained with the unary operator `&` (address operator). Creating a pointer to a reference value will mark that value as "in use", which will make the GC ignore that value in any GC operation. This will be the case until the value ceases to be referenced by any pointer.
+
+Note that using the address operator in a reference type will return the address of the 
+
+```judith
+const p = Person::("Kevin", 41, 'Italy')
+
+unsafe
+    -- Immutable pointer.
+    const personPtr: Person& = &p
+    -- Mutable pointer.
+    const extraUnsafePersonPtr: Person* = &p
+
+    -- You can also dereference the result of an expression. Doing this will
+    -- ensure that the value is placed on the heap.
+    const anotherPtr: Person* = &Person::("George", 50, 'Estonia')
+end
+```
+
+Memory cannot be freed manually. Any object referenced by a pointer will be eventually collected by the GC after every pointer to it has been deleted. This applies even to objects created directly as pointers.
+
+## Pointer arithmetic
+Pointers support addition, subtraction and value equality. Adding or subtracting a value to a pointer will add that value multiplied by the size of the data type 
 
 
 

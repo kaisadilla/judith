@@ -1331,6 +1331,7 @@ public class Parser {
         field = SF.MemberField(
             accessToken, staticToken, mutToken, constToken, id, typeAnnotation, evc
         );
+
         return true;
     }
 

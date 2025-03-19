@@ -9,7 +9,13 @@ struct Type;
 struct InstanceObject {
     Object object;
     Type* type;
-    void* fieldTable;
+    /// <summary>
+    /// The first byte in the field table. Notice that instance objects cannot
+    /// be created directly, and 
+    /// </summary>
+    byte fieldTable;
+
+    InstanceObject () {}
 };
 
 struct BoxObject {
@@ -17,3 +23,11 @@ struct BoxObject {
     Type* type;
     Value value;
 };
+
+InstanceObject* makeInstance () {
+    throw "Not implemented";
+}
+
+void freeInstance (InstanceObject* instance) {
+    throw "Not implemented";
+}
