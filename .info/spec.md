@@ -210,7 +210,10 @@ Console::log(person.name) -- ERROR: 'null' doesn't have field 'name'.
 Judith has two features that make working with nullable types easy: null-conditional operators and type narrowing:
 ### Null-conditional operators:
 Null-conditional operators are a variant of access operators that allow safe access to nullable values, returning `null` if that access is not possible:
+
+```judith
 Console::log(person?.name) -- valid, will print either the name, or `null`.
+```
 
 _See [Operations § Access operations § Null-conditional operations](#op-access-nullable) for a full explanation of these operators._
 
@@ -427,6 +430,10 @@ These operations are defined for numbers and return other numbers of the same ty
 * `5 %i 2`: Floor division.
 * `5 %m 2`: Modulo: returns 5 mod 2.
 * `5 %r 2`: Remainder: returns the remainder of 5 / 2, corresponds to % in C.
+
+By default, arithmetic operations are unchecked in Judith, and may overflow or underflow. The default debug configuration makes them checked and makes them panic when overflows or underflows occur.
+
+Inside a checked context (using `checked()`), arithmetic operations will be checked and return exceptions when overflow or underflows occur (_see [Exceptions](#exceptions)_).
 
 By default, arithmetic operations are checked and will throw NumberOverflowException when an underflow or overflow would occur. If done inside an `unchecked` context (using `unchecked()` expression or `unchecked` block modifier), then the underflow or overflow will be allowed to occur.
 
@@ -920,7 +927,7 @@ world.start() -- ERROR local 'world' is no longer accessible.
 ```
 
 ## Return type `Never`
-The return type of a function can be `Never`. This means that the function never returns (because it always throws an error, contains an infinite loop, etc). `return` statements are explicitly forbidden inside `Never` and, if the function has a path that can return, it will result in a compile error.
+The return type of a function can be `Never`. This means that the function never returns (because it always panics, contains an infinite loop, etc). `return` statements are explicitly forbidden inside `Never` and, if the function has a path that can return, it will result in a compile error.
 
 ```judith
 func start () -> Never
@@ -1176,10 +1183,10 @@ const dog: Dog? = animal:?Dog -- will be null, as animal's type is 'Cat'.
 ```
 
 #### Unsafe downcasting operator (`:!`)
-With the unsafe downcasting operator, the cast will throw a `InvalidCastException` exception when it fails. This expression preserves the nullability of the original type:
+With the unsafe downcasting operator, the cast will panic when it fails. This expression preserves the nullability of the original type:
 
 ```judith
-const dog: Dog = animal:!Dog -- will throw, as animal's type is 'Cat'.
+const dog: Dog = animal:!Dog -- will panic, as animal's type is 'Cat'.
 ```
 
 ### <a name="casting-numbers">Number conversion</a>
@@ -1228,16 +1235,16 @@ Keep in mind that most casts done with `:` in a checked context are ones that co
 * `Num` can always be implicitly transformed into any other type, and any type can be transformed into `Num`.
 
 ### Null-forgiving casting
-Nullable types can be casted into their non-nullable counterparts by appending the null-forgiving operator `!` at their end. Casting a `null` value in this way will throw a `NullValueException`.
+Nullable types can be casted into their non-nullable counterparts by appending the null-forgiving operator `!` at their end. Casting a `null` value in this way will panic.
 
 ```judith
 const person: Person? = null
-const person_2: Person = person! -- will throw, as 'person' is null.
+const person_2: Person = person! -- will panic, as 'person' is null.
 
-Console::log(person!.name) -- will throw.
+Console::log(person!.name) -- will panic.
 ```
 
-Unsafe casting operations are extremely discouraged, as when, left unhandled, can crash a program and, when handled, can be slower than safe casting operations when they fail; as they throw exceptions rather than producing a sentinel `null`.
+Unsafe casting operations should only be used when their failure justifies crashing the whole program.
 
 ## <a name="types-narrowing">Type narrowing</a> WIP
 Narrowing is the process of refining a broader type into a more specific one based on control flow. While traveling through a possible execution branch of a block of code, when a certain property of a value's type is asserted, that property remains true for the remainder of that branch.
@@ -2233,10 +2240,212 @@ Any operator not listed above cannot be overloaded. Among them, these are some o
 # Templates
 TODO
 
-# Exceptions
-Judith features exceptions as its main way to handle errors.
+# <a name="exceptions">Exceptions</a>
+Judith has a feature called 'exception handling' designed to handle errors. Despite its name, this feature is not related to the C++ / C# / Java exception system.
 
-TODO: try, catch, finally, exception objects, `try?` (calls a function and suppresses exceptions. if the function returns a value, then suppressing an exception makes the function return `null`).
+**Exceptions in Judith are regular values returned by functions**; and the exception handling system is ultimately syntactic sugar to return exception values and handle them ergonomically.
+
+## Exception option type
+To start with exceptions, we have to introduce a special option type called `Exception`. This type mostly works like any regular option type, with one important difference: it's an open set, meaning that variants can be added to it from the outside. This way, we can define our own exceptions and introduce them into the set:
+
+```judith
+Exception::'file_not_found'
+```
+
+As exceptions are variants of an option type, you can tack additional data to them:
+
+```judith
+Exception::'index_out_of_bounds'[Int]
+Exception::'access_denied'{ user: String, server_message: String }
+```
+
+Similar to associated items, exceptions are owned by the module where they are defined, rather than the 'Exception' option type. This means that you can only use options in the modules you import, and that name collisions can be resolved by fully qualifying them.
+
+## Functions with exceptions
+When a function can return exceptions, these exceptions become part of the return type of the function.
+
+To make a function able to return exceptions, use the `!` token before it's name:
+
+```judith
+func !get_person (index: Int) -> Person
+    -- ...
+end
+```
+
+This `get_person` function is now marked as able to return exceptions. This makes the signature of the function `!(Int) -> Person`, which is not compatible with `(Int) -> Person`. This means that `get_person`'s return type is actually `Person | Exception`.
+
+Before continuing the explanation, we have to introduce one important detail: every single function implicitly defines its own exception option type, which is automatically built from all the possible exceptions that can be returned by that particular function. These option types are special because their variants are just a subset of the variants that exist in `Exception`. This feature is important because it allows Judith to always know which exceptions are possible.
+
+## Returning exceptions
+Exceptions are returned just like any other value:
+
+```judith
+func !get_person (index: Int) -> Person
+    -- Here, we return an exception.
+    return Exception::'index_out_of_bounds'[index] when index >= people.count
+
+    return people[index]
+end
+
+func !divide (divident, divisor: Int) -> Int
+    return Exception::'divide_by_zero' when divisor == 0
+
+    return dividend / divisor
+end
+```
+
+In these examples, the return type of `get_person` is `Person | Exception`, where `Exception` is a subset that can only contain `Exception::'index_out_of_bounds'[Int]`. On the other hand, `divide`'s return type is `Int | Exception`, but here `Exception` is a different subset that can only contain `Exception::'divide_by_zero'`.
+
+## Handling functions with exceptions
+When calling a function with exceptions, there's multiple ways in which we can handle them.
+
+### Treating exceptions are normal values
+If we use a function normally, then we receive a value that is the union of its regular return type and the subset of Exception that the function may return.
+
+It is important to mention that, even though we refer to all subsets with `Exception`, the compiler automatically infers which subset is used by each value.
+
+```judith
+func do_something ()
+    const res = divide(15, 0) -- "res" type is "Int | Exception".
+
+    if res is Int then -- we have to check the type at runtime.
+        set_score(res)
+    end
+
+    -- we ignored the exceptions just like it was any normal value.
+end
+```
+
+### Handling exceptions when received (`catch`)
+Another way to handle exceptions is to do something about them when they are received. To do this, append a `catch` block to the faulty expression to handles the exceptional values.
+
+In this first example, we simply log that an error has occurred and end the function early. By doing this, we guarantee that the result of the expression will not contain exceptions.
+
+```judith
+func do_something ()
+    const res = divide(15, 0) catch ex do
+        Console::log("Error occurred")
+        return
+    end -- here "res" is narrowed to Int.
+
+    set_score(res)
+end
+```
+
+In this second example, instead of returning on exception, we `yield` a new value as the result of the expression. Just like before, this also guarantees that the result of the expression does not contain exceptions, this time because we overrode the exception value with a regular `Int` value.
+
+```judith
+func do_something ()
+    const res = divide(15, 0) catch ex do
+        Console::log("Error occurred")
+        yield 0
+    end -- here "res" is narrowed to Int.
+
+    set_score(res)
+end
+```
+
+In this third example we log the error, but don't deal with the exception. Unlike the previous examples, here we are not "fixing" the exception, so `res` will still potentially contain exceptions.
+
+```judith
+func do_something ()
+    const res = divide(15, 0) catch ex do
+        Console::log("Error occurred")
+    end -- here "res" is NOT narrowed, it's still "Int | Exception"
+        -- as we didn't deal with it.
+
+    set_score(res) -- ERROR: Cannot use "Int | Exception" as "Int".
+end
+```
+
+### Passing down exceptions (`try`)
+Sometimes we can't deal with an exception, but we don't want to suppress it either. In this case, we want to pass down the exception to the caller. To do this, we use `try` before the faulty expression. When we use `try` and the expression returns an exception, our function automatically returns that exception, too.
+
+```judith
+func !do_something ()
+    const res = try divide(15, 0) -- here "res" is of type Int.
+
+    set_score(res)
+end
+```
+
+In this example, we are using `divide()` normally, ignoring its exceptions. The type of the expression is, thus, `Int`, just as if no exceptions could happen. If `divide()` returns an exception, however, `do_something` will immediately return that exception itself. Due to this behavior, `Exception::divide_by_zero` is added to the list of Exception variants `do_something` may return.
+
+All of this means that the above snippet is equivalent to this:
+```judith
+func !do_something ()
+    const res = divide(15, 0)
+    return res when res is Exception
+
+    set_score(res)
+end
+```
+
+### Converting exceptions into null (`try?`)
+By using `try?`, we can ignore exceptions altogether by transforming every faulty value into `null`, which allows us to use syntactic features designed for it.
+
+```judith
+func do_something ()
+    const res = try? divide(15, 0) -- here "res" is of type "Int?".
+
+    set_score(res ?? 0)
+```
+
+### Forgiving the exception (`try!`)
+We can tell the compiler that a faulty expression won't return an expression with `try!`. If the expresion returns an exception, the program will panic.
+
+```judith
+func do_something ()
+    const res = try! divide(15, 0) -- here, "res" is of type "Int". If "divide()"
+                                   -- returns an exception, the program will panic.
+
+    set_score(res)
+end
+```
+
+## Exceptions on functions that don't return values (i.e. Void)
+When a function that doesn't return any value can return exceptions, then correct (i.e. non-faulty) executions of the function will return `undefined`, which is the idiomatic value that represents the lack of a value.
+
+```judith
+const ret_val = do_something() -- "ret_val"'s type "Undefined | Exception".
+```
+
+Note that you are not required to assign the result of a function to anything to handle its exceptions:
+
+```judith
+do_something() catch ex => Console::log("An error happened.")
+```
+
+## Accessing the stack trace
+All `Exception` variants contain a field called `stack_trace`, which automatically collects information about the call stack when created.
+
+```judith
+
+do_something() catch ex do
+    Console::log(ex.stack_trace)
+    panic "do_something() didn't do its thing."
+end
+
+```
+
+## Panic
+Sometimes errors are unrecoverable. In this case, we can crash the program immediately with a message by using the `panic` statement. The `panic` statement can take an expression and will terminate the program immediately, showing a message first if an expression was given to it.
+
+```judith
+func solve_p_np_problem ()
+    panic "Not yet implemented."
+end
+```
+
+In this example, calling `solve_p_np_problem()` will immediatelly cause the program to show a message saying "Not yet implemented." and then exit.
+
+Note that there's no way to recover from a `panic`, as by definition `panic` it used to deal with unrecoverable errors.
+
+
+
+## TODO - Void | Exception => Undefined | Exception
+## TODO - Stack trace
+## TODO - Panic
 
 # Destructuring and spreading
 Destructuring is a feature that allows the developer to unpack values from collections and values that contain members. Destructuring uses the ellipsis operator (`...`), which should not be confused with the range operator (`..`).

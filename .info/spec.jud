@@ -1915,3 +1915,104 @@ const some_char: Char = "This is a string"[5] -- returns "i" as Char.
 -- Characters can be assigned to strings:
 const some_str: String = separator -- valid.
 #endregion
+
+
+-- syntax problems:
+
+const k: SomeOption: 'some_variant'
+[i, j] = lol -- PROBLEM: how do we know this is not the values of 'some_variant'?
+
+-- Solution 1: make line breaks relevant when disambiguating.
+-- Solution 1.2: also allow explicit ";" when needed. In this case, we'd
+-- disambiguate with line break, but ";" allows disambiguating in the same line
+-- (which is bad style, but the option is there.)
+-- Solution 2: make syntax more strict by requiring the syntax 'variant'[value]
+-- not allow any characters between 'variant' and [value]. Thus, the moment you
+-- do 'variant' [value], it's now a variant without values and an array destruc-
+-- turing assignment receiver.
+
+-- IDEA: Error handling
+
+-- Functions can return exceptions. When that's the case, the function is marked
+-- with a "!" before its name. This means that the function actually returns a
+-- union type of its actual return value and 'Exception', which is a special
+-- kind of option type with different syntax:
+-- The 'Exception' option set is actually different for each function, containing
+-- only the exceptions that can be returned by that function. Moreover, these
+-- option sets are not defined by the user anywhere, but are instead generated
+-- automatically by the compiler based on usage.
+
+
+-- Creating new exceptions.
+Exception::'null_pointer'
+Exception::'io'[String]
+Exception::'access_denied'{
+    reason: String
+    try_again: Bool
+}
+
+-- 
+
+
+
+-- "!" before the name indicates that this function can return an Error.
+func !divide (dividend, divisor: Int) -> Int
+    return Exception::!'divide_by_zero' when divisor == 0
+
+    return dividend / divisor
+end
+
+-- When we call a "!" function without handling the error, the error is handled
+-- implicitly by instantly returning the error value. This means that the
+-- function has to be marked as "!" too.
+func !do_something ()
+    const res = divide(15, 0)
+
+    set_score(0)
+end
+
+func do_something ()
+    const res = divide(15, 0) catch err do
+        Console::log("Error occurred")
+        return
+    end
+end
+
+-- In this function, we are handling the error by using the "try?" expression.
+-- The "try?" expression transforms any error returned by a "!" function into
+-- "null". This means divide()'s return value becomes "Int?" and, as such, using
+-- "res" requires checking null values.
+func do_something ()
+    const res = try? divide(15, 0)
+
+    set_score(res ?? 0)
+end
+
+-- In this function, we are handling the error by using the "try" expression.
+-- The "try" expression makes divide() return Int | Error, where "Error" itself
+-- is a union of all kinds of errors divide() may return (in this case, just one:
+-- 'divide_by_zero').
+func do_something ()
+    const res = try divide(15, 0)
+
+    if res is Exception then match res
+        'divide_by_zero' then
+            set_score(0)
+        end
+    end end
+
+
+end
+
+-- In this function, we take the worst option: handling the error by using the
+-- "try!" expression. The "try!" expression makes divide() return Int, and panics
+-- if it returned an error.
+func do_something ()
+    const res = try! divide(15, 0)
+
+    set_score(0)
+end
+
+-- NOTE that this type of error handling is not the same as throw / catch. Here,
+-- the program's structure is not broken, as "bubbling out" errors just means
+-- returning early. 
