@@ -220,7 +220,7 @@ public class Lexer {
 
         // Couldn't match this character to anything, so it's an error.
         Error(CompilerMessage.Lexer.UnexpectedCharacter(_line, c));
-        return null;
+        return MakeToken(TokenKind.Invalid);
     }
 
     #region Check characters

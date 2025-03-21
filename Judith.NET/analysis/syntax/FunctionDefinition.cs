@@ -16,7 +16,7 @@ public class FunctionDefinition : Item {
     public SimpleIdentifier Identifier { get; private init; }
     public ParameterList Parameters { get; private init; }
     public TypeAnnotation? ReturnTypeAnnotation { get; private init; }
-    public BlockStatement Body { get; private init; }
+    public BlockBody Body { get; private init; }
 
     public Token? HidToken { get; init; }
     public Token? FuncToken { get; init; }
@@ -28,7 +28,7 @@ public class FunctionDefinition : Item {
         SimpleIdentifier name,
         ParameterList parameters,
         TypeAnnotation? returnType,
-        BlockStatement body
+        BlockBody body
     )
         : base(SyntaxKind.FunctionDefinition)
     {

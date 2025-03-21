@@ -55,7 +55,7 @@ public class BlockTypeResolver : SyntaxVisitor<RetInfo?> {
     //    return boundNode.ReturnType;
     //}
 
-    public override RetInfo? Visit (BlockStatement node) {
+    public override RetInfo? Visit (BlockBody node) {
         var boundNode = _cmp.Binder.GetBoundNodeOrThrow<BoundBlockStatement>(node);
         // Start with unresolved type.
         List<TypeSymbol> foundRetTypes = new();

@@ -10,6 +10,9 @@ namespace Judith.NET.analysis.lexical;
 
 [JsonConverter(typeof(StringEnumConverter))]
 public enum TokenKind {
+    // Error tokens.
+    Invalid,
+
     // Single-character tokens.
     Comma,
     Colon,

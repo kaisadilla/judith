@@ -1,11 +1,11 @@
-﻿--print("Factorial of 5: ")
---__p_print factorial(5)
---
---print("Factorial of 2: ")
---__p_print factorial(2)
---
---print("Factorial of 10: ")
---__p_print factorial(10)
+﻿print("Factorial of 5: ")
+__p_print factorial(5)
+
+print("Factorial of 2: ")
+__p_print factorial(2)
+
+print("Factorial of 10: ")
+__p_print factorial(10)
 
 func factorial (num: F64) -> F64
     if num == 1 then return 1 end

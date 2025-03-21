@@ -56,7 +56,7 @@ internal class ImplicitNodeAnalyzer : SyntaxVisitor<RetInfo?> {
 
     public override RetInfo? Visit (FunctionDefinition node) {
         // right now, this should always return true.
-        if (node.Body is BlockStatement blockStmt) {
+        if (node.Body is BlockBody blockStmt) {
             _returnRequiredStack.Push(true); // Regular functions must return.
             _yieldRequiredStack.Push(false); // Regular functions don't need to yield.
             _returnAllowedStack.Push(true); // Regular functions can return.
@@ -73,7 +73,7 @@ internal class ImplicitNodeAnalyzer : SyntaxVisitor<RetInfo?> {
         return null;
     }
 
-    public override RetInfo? Visit (BlockStatement node) {
+    public override RetInfo? Visit (BlockBody node) {
         bool hasReturn = false;
         bool hasYield = false;
 
@@ -107,7 +107,7 @@ internal class ImplicitNodeAnalyzer : SyntaxVisitor<RetInfo?> {
         return (hasReturn, hasYield);
     }
 
-    public override RetInfo? Visit (ArrowStatement node) {
+    public override RetInfo? Visit (ArrowBody node) {
         return (false, true);
     }
 

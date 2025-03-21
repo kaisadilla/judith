@@ -71,7 +71,7 @@ public static class CompilerDiagnostics {
     public static void EmitSymbolTable (
         JudithCompilation cmp, string folderPath, string fileName
     ) {
-        string json = Serialize(cmp.SymbolTable);
+        string json = Serialize(cmp.RootSymbolTable);
         WriteFile(folderPath, fileName + ".symbol-table.json", json);
     }
 
@@ -86,7 +86,7 @@ public static class CompilerDiagnostics {
         JudithCompilation cmp, string folderPath, string fileName
     ) {
         var gen = new TypeTableGenerator();
-        gen.Analyze(cmp.SymbolTable);
+        gen.Analyze(cmp.RootSymbolTable);
         string json = Serialize(gen.TypeTable);
         WriteFile(folderPath, fileName + ".type-table.json", json);
     }

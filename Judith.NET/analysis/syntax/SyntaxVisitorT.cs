@@ -51,8 +51,10 @@ public abstract class SyntaxVisitor<TResult> {
     public virtual TResult? Visit (AliasTypeDefinition node) => VisitChildren(node);
     public virtual TResult? Visit (StructTypeDefinition node) => VisitChildren(node);
 
-    public virtual TResult? Visit (BlockStatement node) => VisitChildren(node);
-    public virtual TResult? Visit (ArrowStatement node) => VisitChildren(node);
+    public virtual TResult? Visit (BlockBody node) => VisitChildren(node);
+    public virtual TResult? Visit (ArrowBody node) => VisitChildren(node);
+    public virtual TResult? Visit (ExpressionBody node) => VisitChildren(node);
+
     public virtual TResult? Visit (LocalDeclarationStatement node) => VisitChildren(node);
     public virtual TResult? Visit (ReturnStatement node) => VisitChildren(node);
     public virtual TResult? Visit (YieldStatement node) => VisitChildren(node);

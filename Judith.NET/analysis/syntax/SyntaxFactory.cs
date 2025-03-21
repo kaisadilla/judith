@@ -13,7 +13,7 @@ public static class SyntaxFactory {
         SimpleIdentifier name,
         ParameterList parameters,
         TypeAnnotation? returnType,
-        BlockStatement body
+        BlockBody body
     ) {
         var funcItem = new FunctionDefinition(
             false, hidToken != null, name, parameters, returnType, body
@@ -51,40 +51,48 @@ public static class SyntaxFactory {
         return structTypedef;
     }
 
-    public static BlockStatement BlockStatement (
+    public static BlockBody BlockBody (
         Token? openingToken, List<SyntaxNode> statements, Token closingToken
     ) {
-        var blockStmt = new BlockStatement(statements) {
+        var blockBody = new BlockBody(statements) {
             OpeningToken = openingToken,
             ClosingToken = closingToken,
         };
 
         if (openingToken != null) {
-            blockStmt.SetSpan(new(openingToken.Start, closingToken.End));
-            blockStmt.SetLine(openingToken.Line);
+            blockBody.SetSpan(new(openingToken.Start, closingToken.End));
+            blockBody.SetLine(openingToken.Line);
         }
         else if (statements.Count > 0) {
-            blockStmt.SetSpan(new(statements[0].Span.Start, closingToken.End));
-            blockStmt.SetLine(statements[0].Line);
+            blockBody.SetSpan(new(statements[0].Span.Start, closingToken.End));
+            blockBody.SetLine(statements[0].Line);
         }
         else {
-            blockStmt.SetSpan(new(closingToken.Start, closingToken.End));
-            blockStmt.SetLine(closingToken.Line);
+            blockBody.SetSpan(new(closingToken.Start, closingToken.End));
+            blockBody.SetLine(closingToken.Line);
         }
 
-        return blockStmt;
+        return blockBody;
     }
 
-    public static ArrowStatement ArrowStatement (
-        Token arrowToken, Statement statement
+    public static ArrowBody ArrowBody (
+        Token arrowToken, Expression expression
     ) {
-        var arrowStmt = new ArrowStatement(statement) {
+        var arrowBody = new ArrowBody(expression) {
             ArrowToken = arrowToken,
         };
-        arrowStmt.SetSpan(new(arrowToken.Start, statement.Span.End));
-        arrowStmt.SetLine(arrowToken.Line);
+        arrowBody.SetSpan(new(arrowToken.Start, expression.Span.End));
+        arrowBody.SetLine(arrowToken.Line);
 
-        return arrowStmt;
+        return arrowBody;
+    }
+
+    public static ExpressionBody ExpressionBody (Expression expression) {
+        var exprBody = new ExpressionBody(expression);
+        exprBody.SetSpan(new(expression.Span.Start, expression.Span.End));
+        exprBody.SetLine(expression.Line);
+
+        return exprBody;
     }
 
     public static LocalDeclarationStatement LocalDeclarationStatement (
@@ -136,7 +144,7 @@ public static class SyntaxFactory {
     }
 
     public static IfExpression IfExpression (
-        Token ifToken, Expression test, Statement consequent
+        Token ifToken, Expression test, Body consequent
     ) {
         var ifExpr = new IfExpression(test, consequent, null) {
             IfToken = ifToken,
@@ -151,9 +159,9 @@ public static class SyntaxFactory {
     public static IfExpression IfExpression (
         Token ifToken,
         Expression test,
-        Statement consequent,
+        Body consequent,
         Token elseToken,
-        Statement alternate
+        Body alternate
     ) {
         var ifExpr = new IfExpression(test, consequent, alternate) {
             IfToken = ifToken,
@@ -183,7 +191,7 @@ public static class SyntaxFactory {
         return matchExpr;
     }
 
-    public static LoopExpression LoopExpression (Token loopToken, Statement body) {
+    public static LoopExpression LoopExpression (Token loopToken, Body body) {
         var loopExpr = new LoopExpression(body) {
             LoopToken = loopToken,
         };
@@ -194,7 +202,7 @@ public static class SyntaxFactory {
     }
 
     public static WhileExpression WhileExpression (
-        Token whileToken, Expression test, Statement body
+        Token whileToken, Expression test, Body body
     ) {
         var whileExpr = new WhileExpression(test, body) {
             WhileToken = whileToken,
@@ -210,7 +218,7 @@ public static class SyntaxFactory {
         List<LocalDeclarator> declarators,
         Token inToken,
         Expression enumerable,
-        Statement body
+        Body body
     ) {
         var foreachExpr = new ForeachExpression(declarators, enumerable, body) {
             ForeachToken = foreachToken,
@@ -468,7 +476,7 @@ public static class SyntaxFactory {
     }
 
     public static MatchCase MatchCase (
-        Token? elseToken, List<Expression> tests, Statement consequent
+        Token? elseToken, List<Expression> tests, Body consequent
     ) {
         var matchCase = new MatchCase(tests, consequent, tests.Count == 0) {
             ElseToken = elseToken,

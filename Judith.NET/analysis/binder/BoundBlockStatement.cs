@@ -14,10 +14,10 @@ public enum BlockEvaluationKind {
 }
 
 public class BoundBlockStatement : BoundNode {
-    public new BlockStatement Node => (BlockStatement)base.Node;
+    public new BlockBody Node => (BlockBody)base.Node;
 
     public BlockEvaluationKind EvaluationKind { get; set; }
     public TypeSymbol? Type { get; set; }
 
-    public BoundBlockStatement (BlockStatement blockStmt) : base(blockStmt) { }
+    public BoundBlockStatement (BlockBody blockStmt) : base(blockStmt) { }
 }

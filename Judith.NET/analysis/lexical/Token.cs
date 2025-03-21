@@ -57,6 +57,7 @@ public class Token {
 
     public static string GetTokenName (TokenKind kind) {
         return kind switch {
+            TokenKind.Invalid => "Invalid",
             // Single-character tokens.
             TokenKind.Comma => "Comma",
             TokenKind.Colon => "Colon",

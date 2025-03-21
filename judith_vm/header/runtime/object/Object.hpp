@@ -4,9 +4,10 @@
 namespace ObjectType {
     enum : byte {
         INVALID,
-        UTF8_STRING, // UTF-8
-        FUNCTION,
-        INSTANCE,
+        UTF8_STRING, // A value of the type String.
+        FUNCTION, // A value containing a function.
+        INSTANCE, // A value containing the instance of an object.
+        BOX, // A value containing a boxed vm Value.
     };
 }
 

@@ -10,6 +10,8 @@ public struct SourceSpan {
     public int Start { get; set; }
     public int End { get; set; }
 
+    public readonly int Length => End - Start;
+
     public static SourceSpan None { get; } = new(-1, -1);
 
     public SourceSpan () {

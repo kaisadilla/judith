@@ -34,10 +34,13 @@ public enum SyntaxKind
     ConstructorImplementation,
     InterfaceImplementation,
 
+    // Bodies
+    BlockBody,
+    ArrowBody,
+    ExpressionBody,
+
     // Statements
     LocalDeclarationStatement,
-    BlockStatement,
-    ArrowStatement,
     ReturnStatement,
     YieldStatement,
     BreakStatement,

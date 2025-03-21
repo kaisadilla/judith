@@ -58,7 +58,7 @@ public class JasmScriptCompiler : IJudithCompiler {
         // 3. Analyze.
         Analyze();
 
-        if (Compilation.IsValidProgram == false) {
+        if (Compilation.IsValidProgram == false || Messages.Errors.Count != 0) {
             return;
         }
 

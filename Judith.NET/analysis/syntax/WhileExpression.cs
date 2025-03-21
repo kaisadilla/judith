@@ -9,11 +9,11 @@ namespace Judith.NET.analysis.syntax;
 
 public class WhileExpression : Expression {
     public Expression Test { get; init; }
-    public Statement Body { get; init; }
+    public Body Body { get; init; }
 
     public Token? WhileToken { get; init; }
 
-    public WhileExpression (Expression test, Statement body)
+    public WhileExpression (Expression test, Body body)
         : base(SyntaxKind.WhileExpression) {
         Test = test;
         Body = body;

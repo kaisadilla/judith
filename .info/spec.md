@@ -1348,12 +1348,19 @@ _For a full explanation of primitive types, see [Primitives]_(#primitives).
 _\* Type is a reference type._
 
 ## Function types
-Function types are types that define functions. The type of a function depends on its signature (type of each of its parameter and return type). Function types are expressed with the following syntax: `(<&lt;>parameter types separated by commas>) -> <return type>`. For example:
+Function types are types that define functions. The type of a function depends on its signature (type of each of its parameter and return type). Function types are expressed with the following syntax: `(<"!" if can return exceptions><parameter types separated by commas>) -> <return type>`. For example:
 
 ```judith
 func get_person (id: Num, office: Office) -> Person end
+func !get_person_2 (id: Num, office: Office) -> Person end
 
-const getter: (Num, Office) -> Person = get_person
+var getter: (Num, Office) -> Person = get_person -- valid
+getter = get_person_2 -- invalid, as signatures don't match.
+
+var getter2: !(Num, Office) -> Person = get_person_2 -- valid, because it has "!".
+getter2 = get_person -- valid, as "(Num, Office) -> Person" can be assigned
+                     -- to "!(Num, Office) -> Person".
+
 ```
 
 Values of a function type are _callable_, which mean that they can be used in call expressions: `<callable>(<arglist>)`. Function types are always reference types.
@@ -1391,6 +1398,8 @@ const nums: Num[amount] = [; 42] -- ERROR: array length must be known at compile
 ```
 
 ## Object type
+TODO: Explain that object types are dictionaries of key-value pairs with constraints. Explain that object types can be used as structural types.
+
 An object type is a struct-like type defined by its member fields:
 
 ```judith
@@ -1465,7 +1474,7 @@ const integer: Int = id:Int -- valid, explicit cast is allowed.
 ```
 
 ### Option
-A option type is defined as a group of string literals. Literals used in an option are not strings, and so use single quotes rather than double quotes.
+An option type is defined as a group of string literals. Literals used in an option are not strings, and so use single quotes rather than double quotes.
 
 ```judith
 typedef option Country
@@ -1504,40 +1513,40 @@ You can combine variants with different kinds of types:
 
 ```judith
 typedef Message
-    'Quit'
-    'Move'{ x: Num, y: Num }
-    'Write'[String]
-    'ChangeColor'[Num, Num, Num]
+    'quit'
+    'move'{ x: Num, y: Num }
+    'write'[String]
+    'change_color'[Num, Num, Num]
 end
 ```
 
 This option has four variants with different types:
-* `'Quit'` contains no data.
-* `'Move'` contains an object type with fields `x` and `y` of type `Num`.
-* `'Write'` contains an array with a single `String`.
-* `'ChangeColor'` contains an array of three `Num`.
+* `'quit'` contains no data.
+* `'move'` contains an object type with fields `x` and `y` of type `Num`.
+* `'write'` contains an array with a single `String`.
+* `'change_color'` contains an array of three `Num`.
 
 You can use `match` to pattern match an option type:
 
 ```judith
 match message do
-    'Quit' then -- Basic variant with no additional data.
+    'quit' then -- Basic variant with no additional data.
         Console::log("Connection ended.")
     end
-    'Move'(pos) then -- 'Move' object gets assigned to 'pos'.
+    'move'(pos) then -- 'Move' object gets assigned to 'pos'.
         move_obj(pos.x, pos.y)
     end
-    'Write'(txt) then -- 'Write'[0] gets assigned to 'txt'.
+    'write'(txt) then -- 'Write'[0] gets assigned to 'txt'.
         Console::log(txt)
     end
-    'ChangeColor'(r, g, b) then -- 'ChangeColor'[0] gets assigned to r,
+    'change_color'(r, g, b) then -- 'change_color'[0] gets assigned to r,
                                 -- [1] to g, [2] to 'b'.
         paint_obj(r, g, b, 1)
     end
 end
 ```
 
-Options are designed to be efficient, compiling to as little as it can. An option set without additional data becomes a single `int`, while ones with data become an `int` and a pointer.
+Options are designed to be efficient, compiling to as little as it can. An option set without additional data becomes a single `Int`, while ones with data become an `Int` and a pointer.
 
 Usually the type of an option's variant can be inferred from usage. However, for cases where this isn't true, the variant can be qualified:
 

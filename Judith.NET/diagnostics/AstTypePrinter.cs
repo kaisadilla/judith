@@ -43,7 +43,7 @@ public class AstTypePrinter : SyntaxVisitor {
         base.Visit(node);
     }
 
-    public override void Visit (BlockStatement node) {
+    public override void Visit (BlockBody node) {
         var boundNode = _cmp.Binder.GetBoundNodeOrThrow<BoundBlockStatement>(node);
 
         TypedNodes.Add($"BlockStmt: Type: {FQN(boundNode.Type)}");
@@ -120,13 +120,13 @@ public class AstTypePrinter : SyntaxVisitor {
     public override void Visit (LocalDeclarator node) {
         var boundNode = _cmp.Binder.GetBoundNodeOrThrow<BoundLocalDeclarator>(node);
 
-        TypedNodes.Add($"LocalDecl: {node.Identifier.Name} - Type: {FQN(boundNode.Type)}");
+        TypedNodes.Add($"LocalDecl: {node.Name.Name} - Type: {FQN(boundNode.Type)}");
     }
 
     public override void Visit (Parameter node) {
         var boundNode = _cmp.Binder.GetBoundNodeOrThrow<BoundParameter>(node);
 
-        TypedNodes.Add($"Parameter: {node.Declarator.Identifier.Name} - Type: {FQN(boundNode.Symbol.Type)}");
+        TypedNodes.Add($"Parameter: {node.Declarator.Name.Name} - Type: {FQN(boundNode.Symbol.Type)}");
     }
 
     public override void Visit (FieldInitialization node) {

@@ -10,7 +10,7 @@ namespace Judith.NET.analysis.syntax;
 public class ForeachExpression : Expression {
     public List<LocalDeclarator> Declarators { get; init; }
     public Expression Enumerable { get; init; }
-    public Statement Body { get; init; }
+    public Body Body { get; init; }
 
     public Token? ForeachToken { get; init; }
     public Token? InToken { get; init; }
@@ -18,7 +18,7 @@ public class ForeachExpression : Expression {
     public ForeachExpression (
         List<LocalDeclarator> declarators,
         Expression enumerable,
-        Statement body
+        Body body
     )
         : base(SyntaxKind.ForeachExpression) {
         Declarators = declarators;

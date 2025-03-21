@@ -10,13 +10,13 @@ namespace Judith.NET.analysis.syntax;
 
 public class IfExpression : Expression {
     public Expression Test { get; init; }
-    public Statement Consequent { get; init; }
-    public Statement? Alternate { get; init; }
+    public Body Consequent { get; init; }
+    public Body? Alternate { get; init; }
 
     public Token? IfToken { get; init; }
     public Token? ElseToken { get; init; }
 
-    public IfExpression (Expression test, Statement consequent, Statement? alternate)
+    public IfExpression (Expression test, Body consequent, Body? alternate)
         : base(SyntaxKind.IfExpression) {
         Test = test;
         Consequent = consequent;

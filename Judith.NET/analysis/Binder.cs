@@ -94,7 +94,7 @@ public class Binder {
         return boundStructTypeDef;
     }
 
-    public BoundBlockStatement BindBlockStatement (BlockStatement blockStmt) {
+    public BoundBlockStatement BindBlockStatement (BlockBody blockStmt) {
         if (TryGetBoundNode(blockStmt, out BoundBlockStatement? boundBlockStmt) == false) {
             boundBlockStmt = new(blockStmt);
             BoundNodes[blockStmt] = boundBlockStmt;

@@ -83,7 +83,7 @@ public class JudithIRGenerator {
         return new(name, type, mutability);
     }
 
-    private List<IRStatement> CompileFunctionBody (BlockStatement blockStmt) {
+    private List<IRStatement> CompileFunctionBody (BlockBody blockStmt) {
         List<IRStatement> statements = [];
 
         foreach (var node in blockStmt.Nodes) {
@@ -97,7 +97,7 @@ public class JudithIRGenerator {
         return statements;
     }
 
-    private List<IRStatement> CompileBlockStatement (BlockStatement blockStmt) {
+    private List<IRStatement> CompileBlockStatement (BlockBody blockStmt) {
         List<IRStatement> statements = [];
 
         foreach (var node in blockStmt.Nodes) {
@@ -216,7 +216,7 @@ public class JudithIRGenerator {
         List<IRStatement> consequent;
         List<IRStatement>? alternate;
 
-        if (node.Consequent is BlockStatement consequentBlockStmt) {
+        if (node.Consequent is BlockBody consequentBlockStmt) {
             consequent = CompileBlockStatement(consequentBlockStmt);
         }
         else {
@@ -226,7 +226,7 @@ public class JudithIRGenerator {
         if (node.Alternate == null) {
             alternate = null;
         }
-        else if (node.Alternate is BlockStatement alternateBlockStmt) {
+        else if (node.Alternate is BlockBody alternateBlockStmt) {
             alternate = CompileBlockStatement(alternateBlockStmt);
         }
         else {
@@ -261,7 +261,7 @@ public class JudithIRGenerator {
         string type = _native.TypeRefs.Void.Name;// TODO: boundExpr.Type.FullyQualifiedName;
         IRExpression test = CompileExpression(node.Test);
 
-        if (node.Body is BlockStatement blockStmt) {
+        if (node.Body is BlockBody blockStmt) {
             var body = CompileBlockStatement(blockStmt);
 
             return new IRWhileExpression(test, body, type);

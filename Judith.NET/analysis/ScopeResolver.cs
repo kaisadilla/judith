@@ -16,7 +16,7 @@ public class ScopeResolver {
 
     public ScopeResolver (JudithCompilation cmp) {
         _cmp = cmp;
-        Current = _cmp.SymbolTable;
+        Current = _cmp.RootSymbolTable;
     }
 
     /// <summary>

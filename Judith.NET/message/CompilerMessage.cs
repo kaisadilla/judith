@@ -58,6 +58,34 @@ public class CompilerMessage {
         return $"[{Origin}/{Kind}] {Code,4} - {Message} (Line {Source.GetLine()})";
     }
 
+    public string GetElaborateMessage (string? src = null) {
+        string location;
+
+        if (Source.AsLine.HasValue) {
+            location = "line: " + Source.AsLine.Value;
+        }
+        else if (Source.AsToken != null) {
+            location = $"line: {Source.AsToken.Line} (at '{Source.AsToken.Lexeme}')";
+        }
+        else if (Source.AsNode != null) {
+            if (src != null) {
+                string snippet = src.Substring(
+                    Source.AsNode.Span.Start, Source.AsNode.Span.Length
+                );
+
+                location = $"line: {Source.AsNode.Line} (around '{snippet}')";
+            }
+            else {
+                location = $"line: {Source.AsNode.Line} (in '{Source.AsNode}')";
+            }
+        }
+        else {
+            throw new InvalidUnionException();
+        }
+
+        return $"[{Origin} / {Kind}] {Code,4} - {Message} \n  - at {location}";
+    }
+
     public static class Lexer {
         public static CompilerMessage UnexpectedCharacter (
             int line, char unexpectedChar

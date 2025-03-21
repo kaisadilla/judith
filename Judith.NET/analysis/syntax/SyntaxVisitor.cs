@@ -51,8 +51,10 @@ public abstract class SyntaxVisitor {
     public virtual void Visit (AliasTypeDefinition node) => VisitChildren(node);
     public virtual void Visit (StructTypeDefinition node) => VisitChildren(node);
 
-    public virtual void Visit (BlockStatement node) => VisitChildren(node);
-    public virtual void Visit (ArrowStatement node) => VisitChildren(node);
+    public virtual void Visit (BlockBody node) => VisitChildren(node);
+    public virtual void Visit (ArrowBody node) => VisitChildren(node);
+    public virtual void Visit (ExpressionBody node) => VisitChildren(node);
+
     public virtual void Visit (LocalDeclarationStatement node) => VisitChildren(node);
     public virtual void Visit (ReturnStatement node) => VisitChildren(node);
     public virtual void Visit (YieldStatement node) => VisitChildren(node);

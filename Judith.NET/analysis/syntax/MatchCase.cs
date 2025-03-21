@@ -9,12 +9,12 @@ namespace Judith.NET.analysis.syntax;
 
 public class MatchCase : SyntaxNode {
     public List<Expression> Tests { get; init; }
-    public Statement Consequent { get; init; }
+    public Body Consequent { get; init; }
     public bool IsElseCase { get; init; }
 
     public Token? ElseToken { get; init; }
 
-    public MatchCase (List<Expression> tests, Statement consequent, bool isElseCase)
+    public MatchCase (List<Expression> tests, Body consequent, bool isElseCase)
         : base(SyntaxKind.MatchCase) {
         Tests = tests;
         Consequent = consequent;

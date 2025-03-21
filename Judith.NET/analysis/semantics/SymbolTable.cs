@@ -56,23 +56,20 @@ public class SymbolTable {
     public Dictionary<string, SymbolTable> ChildTables { get; } = [];
 
     /// <summary>
-    /// Returns true if this is the global table.
+    /// Returns true if this is the root table of a project.
     /// </summary>
     [MemberNotNullWhen(false, nameof(Parent))]
-    public bool IsGlobalTable => Parent == null;
+    public bool IsRootTable => Parent == null;
+
+    /// <summary>
+    /// Returns true if this is the global scope.
+    /// </summary>
+    public bool IsGlobalTable => Parent == null && Name == "";
 
     /// <summary>
     /// Returns true if this is an anonymous scope.
     /// </summary>
     public bool IsAnonymousTable => Symbol == null;
-
-    /// <summary>
-    /// Returns true if this scope can be split between more than one assembly.
-    /// This is the case for modules, since two assemblies can define the same
-    /// module.
-    /// </summary>
-    public bool CanBeSplit => ScopeKind == ScopeKind.Global
-        || ScopeKind == ScopeKind.Module;
 
     public string Qualifier {
         get {
@@ -91,11 +88,24 @@ public class SymbolTable {
         Symbol = symbol;
     }
 
-    public static SymbolTable CreateGlobalTable (string assembly) {
-        Symbol symbol = new(SymbolKind.Module, "", "", assembly);
-        SymbolTable tbl = new(ScopeKind.Global, "", null, symbol);
+    public static SymbolTable CreateRootTable (string assembly, string[] name) {
+        if (name.Length <= 0) throw new("At least one name must be provided.");
 
-        return tbl;
+        Symbol rootSymbol = new(SymbolKind.Module, name[0], name[0], assembly);
+        SymbolTable root = new(ScopeKind.Global, name[0], null, rootSymbol);
+
+        SymbolTable parent = root;
+        for (int i = 1; i < name.Length; i++) {
+            Symbol childSymbol = new(
+                SymbolKind.Module, name[i], parent.Qualify(name[i]), assembly
+            );
+            parent.AddSymbol(childSymbol);
+            SymbolTable child = parent.CreateChildTable(ScopeKind.Module, childSymbol);
+
+            parent = child;
+        }
+
+        return root;
     }
 
     /// <summary>
@@ -103,7 +113,7 @@ public class SymbolTable {
     /// </summary>
     /// <param name="name">An unqualified name.</param>
     public string Qualify (string name) {
-        if (IsGlobalTable) return name;
+        if (Name == "") return name;
         return Qualifier + "/" + name;
     }
 
@@ -144,16 +154,12 @@ public class SymbolTable {
     /// <typeparam name="T">The type of the symbol to add.</typeparam>
     /// <param name="createSymbol">The definer function for this symbol.</param>
     /// <returns></returns>
-    public T AddSymbol<T> (Func<SymbolTable, T> createSymbol) where T : Symbol {
-        var symbol = createSymbol(this);
-
+    public void AddSymbol<T> (T symbol) where T : Symbol {
         if (Symbols.ContainsKey(symbol.Name)) throw new Exception(
             $"'{symbol.Name}' is already defined in this table."
         );
 
         Symbols[symbol.Name] = symbol;
-
-        return symbol;
     }
 
     /// <summary>
@@ -200,7 +206,7 @@ public class SymbolTable {
     }
 
     /// <summary>
-    /// Returns the root module (the global one) that contains this table.
+    /// Returns the root module that contains this table.
     /// Throws an exception if the max depth is reached.
     /// </summary>
     public SymbolTable GetRootTable (int maxDepth = 256) {
@@ -209,7 +215,7 @@ public class SymbolTable {
         for (int i = 0; i <= maxDepth; i++) {
             if (i == maxDepth) throw new ModuleDepthTooHighException(maxDepth);
 
-            if (root.IsGlobalTable) break;
+            if (root.IsRootTable) break;
 
             root = root.Parent;
         }
@@ -218,24 +224,21 @@ public class SymbolTable {
     }
 
     /// <summary>
-    /// Assuming this table acts as the root, returns the table found at the
-    /// path given (table names separated by "/"). If the path doesn't lead
-    /// anywhere, returns null.
+    /// Returns the table located at the path given, if it exists, taking this
+    /// table as the root. Returns null otherwise.
     /// </summary>
-    /// <param name="fullPath">The path to the table sought.</param>
-    public SymbolTable? GetTableInTree (string fullPath) {
-        if (fullPath == "") return this;
+    /// <param name="path">The path to the table sought.</param>
+    public SymbolTable? GetTableInTree (string[] path) {
+        if (path.Length == 0) return this;
 
-        var names = fullPath.Split('/');
-
-        SymbolTable? table = this;
-        for (int i = 0; i < names.Length; i++) {
-            if (table.TryGetChildTable(names[i], out table) == false) {
+        SymbolTable? parent = this;
+        for (int i = 0; i < path.Length; i++) {
+            if (parent.TryGetChildTable(path[i], out parent) == false) {
                 return null;
             }
         }
 
-        return table;
+        return parent;
     }
 }
 

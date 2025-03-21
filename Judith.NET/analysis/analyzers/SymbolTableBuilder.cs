@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Formats.Asn1.AsnWriter;
 
 namespace Judith.NET.analysis.analyzers;
 
@@ -49,9 +50,11 @@ public class SymbolTableBuilder : SyntaxVisitor {
 
         var paramTypes = _cmp.Binder.GetParamTypes(node.Parameters);
 
-        var symbol = _scope.Current.AddSymbol(tbl => new FunctionSymbol(
-            paramTypes, name, tbl.Qualify(name), _cmp.AssemblyName
-        ));
+        var symbol = new FunctionSymbol(
+            paramTypes, name, _scope.Current.Qualify(name), _cmp.AssemblyName
+        );
+        _scope.Current.AddSymbol(symbol);
+
         symbol.Type = _cmp.PseudoTypes.Function;
         var scope = _scope.Current.CreateChildTable(ScopeKind.FunctionBlock, symbol);
         _scope.BeginScope(scope);
@@ -72,10 +75,12 @@ public class SymbolTableBuilder : SyntaxVisitor {
             return;
         }
 
-        TypeSymbol symbol = _scope.Current.AddSymbol(tbl => new TypeSymbol(
-            SymbolKind.StructType, name, tbl.Qualify(name), _cmp.AssemblyName
-        ));
-        symbol.Type = _cmp.PseudoTypes.NoType;
+        TypeSymbol symbol = new TypeSymbol(
+            SymbolKind.StructType, name, _scope.Current.Qualify(name), _cmp.AssemblyName
+        ) {
+            Type = _cmp.PseudoTypes.NoType
+        };
+        _scope.Current.AddSymbol(symbol);
 
         var scope = _scope.Current.CreateChildTable(ScopeKind.StructSpace, symbol);
         var boundNode = _cmp.Binder.BindStructTypeDefinition(node, symbol, scope);
@@ -87,7 +92,7 @@ public class SymbolTableBuilder : SyntaxVisitor {
         _nodeStates[node] = NodeState.Completed;
     }
 
-    public override void Visit (BlockStatement node) {
+    public override void Visit (BlockBody node) {
         // Block statements do not create symbols, but we bind them in this step anyway.
         // Block statements will use bound nodes to store their return / yield type(s).
         _cmp.Binder.BindBlockStatement(node);
@@ -137,12 +142,13 @@ public class SymbolTableBuilder : SyntaxVisitor {
     }
 
     public override void Visit (LocalDeclarator node) {
-        var symbol = _scope.Current.AddSymbol(tbl => new Symbol(
+        var symbol = new Symbol(
             SymbolKind.Local,
-            node.Identifier.Name,
-            tbl.Qualify(node.Identifier.Name),
+            node.Name.Name,
+            _scope.Current.Qualify(node.Name.Name),
             _cmp.AssemblyName
-        ));
+        );
+        _scope.Current.AddSymbol(symbol);
 
         _cmp.Binder.BindLocalDeclarator(node, symbol);
 
@@ -150,12 +156,13 @@ public class SymbolTableBuilder : SyntaxVisitor {
     }
 
     public override void Visit (Parameter node) {
-        var symbol = _scope.Current.AddSymbol(tbl => new Symbol(
+        var symbol = new Symbol(
             SymbolKind.Parameter,
-            node.Declarator.Identifier.Name,
-            tbl.Qualify(node.Declarator.Identifier.Name),
+            node.Declarator.Name.Name,
+            _scope.Current.Qualify(node.Declarator.Name.Name),
             _cmp.AssemblyName
-        ));
+        );
+        _scope.Current.AddSymbol(symbol);
 
         _cmp.Binder.BindParameter(node, symbol);
 
@@ -184,12 +191,13 @@ public class SymbolTableBuilder : SyntaxVisitor {
     ) {
         foreach (var node in nodes) {
             // TODO: Check member methods.
-            var memberSymbol = _scope.Current.AddSymbol(tbl => new MemberSymbol(
+            var memberSymbol = new MemberSymbol(
                 SymbolKind.MemberField,
                 node.Identifier.Name,
-                tbl.Qualify(node.Identifier.Name),
+                _scope.Current.Qualify(node.Identifier.Name),
                 _cmp.AssemblyName
-            ));
+            );
+            _scope.Current.AddSymbol(memberSymbol);
 
             _cmp.Binder.BindMemberField(node, memberSymbol);
             typeSymbol.MemberFields.Add(memberSymbol);

@@ -53,20 +53,20 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
         };
     }
 
-    public override object Visit (BlockStatement node) {
+    public override object Visit (BlockBody node) {
         return new {
-            Class = nameof(BlockStatement),
+            Class = nameof(BlockBody),
             node.Kind,
             Nodes = node.Nodes.Select(n => Visit(n)),
             Semantics = GetBoundOrNull(node),
         };
     }
 
-    public override object Visit (ArrowStatement node) {
+    public override object Visit (ArrowBody node) {
         return new {
-            Class = nameof(ArrowStatement),
+            Class = nameof(ArrowBody),
             node.Kind,
-            Statement = Visit(node.Statement),
+            Statement = Visit(node.Expression),
             Semantics = GetBoundOrNull(node),
         };
     }
@@ -307,7 +307,7 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
         return new {
             Class = nameof(LocalDeclarator),
             node.Kind,
-            Identifier = Visit(node.Identifier),
+            Identifier = Visit(node.Name),
             node.LocalKind,
             TypeAnnotation = VisitIfNotNull(node.TypeAnnotation),
             Semantics = GetBoundOrNull(node),

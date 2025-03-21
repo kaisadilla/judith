@@ -12,7 +12,7 @@ public class JudithCompilation {
     public JudithProgram Program { get; private set; }
 
     public PseudoTypeCollection PseudoTypes { get; private set; }
-    public SymbolTable SymbolTable { get; private set; }
+    public SymbolTable RootSymbolTable { get; private set; }
     public Binder Binder { get; private set; }
 
     public MessageContainer Messages { get; private set; } = new();
@@ -47,7 +47,7 @@ public class JudithCompilation {
             Dependencies = [],
         };
 
-        SymbolTable = SymbolTable.CreateGlobalTable(AssemblyName);
+        RootSymbolTable = SymbolTable.CreateRootTable(AssemblyName, [""]); // TODO: root module is a parameter.
         Binder = new(this);
     }
 

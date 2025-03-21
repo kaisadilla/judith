@@ -2016,3 +2016,9 @@ end
 -- NOTE that this type of error handling is not the same as throw / catch. Here,
 -- the program's structure is not broken, as "bubbling out" errors just means
 -- returning early. 
+
+
+
+-- IDEA Extended type syntax:
+
+-- Partial<_T> is a version of _T where every field is optional.

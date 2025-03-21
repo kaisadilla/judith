@@ -8,11 +8,11 @@ using Judith.NET.analysis.lexical;
 namespace Judith.NET.analysis.syntax;
 
 public class LoopExpression : Expression {
-    public Statement Body { get; init; }
+    public Body Body { get; init; }
 
     public Token? LoopToken { get; init; }
 
-    public LoopExpression (Statement body) : base(SyntaxKind.LoopExpression) {
+    public LoopExpression (Body body) : base(SyntaxKind.LoopExpression) {
         Body = body;
 
         Children.Add(Body);

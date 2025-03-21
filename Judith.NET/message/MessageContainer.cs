@@ -32,4 +32,10 @@ public class MessageContainer {
         Warnings.AddRange(other.Warnings);
         Errors.AddRange(other.Errors);
     }
+
+    public IEnumerable<CompilerMessage> GetMessages () {
+        foreach (var m in Errors) yield return m;
+        foreach (var m in Warnings) yield return m;
+        foreach (var m in Infos) yield return m;
+    }
 }

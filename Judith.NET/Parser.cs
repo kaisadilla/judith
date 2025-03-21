@@ -49,12 +49,6 @@ public class Parser {
         }
     }
 
-    private void SkipComments () {
-        while (IsAtEnd() == false && Peek().Kind == TokenKind.Comment) {
-            Advance();
-        }
-    }
-
     #region Helper methods
     /// <summary>
     /// Returns true if the current token matches the kind given. In this
@@ -216,7 +210,7 @@ public class Parser {
 
         TryConsumeTypeAnnotation(TokenKind.MinusArrow, out TypeAnnotation? returnType);
 
-        if (TryConsumeBlockStatement(null, out BlockStatement? body) == false) {
+        if (TryConsumeBlockBody(null, out BlockBody? body) == false) {
             throw Error(CompilerMessage.Parser.BodyExpected(Peek()));
         }
 
@@ -357,16 +351,16 @@ public class Parser {
         return true;
     }
 
-    private bool TryConsumeBodyStatement (
-        TokenKind? openingTokenKind, [NotNullWhen(true)] out BodyStatement? bodyStatement
+    private bool TryConsumeBody (
+        TokenKind? openingTokenKind, [NotNullWhen(true)] out Body? bodyStatement
     ) {
         // Arrow must be tried first, since block statement may not have an
         // opening token (and thus would report an error trying to read an arrow).
-        if (TryConsumeArrowStatement(out ArrowStatement? arrowStmt)) {
+        if (TryConsumeArrowBody(out ArrowBody? arrowStmt)) {
             bodyStatement = arrowStmt;
             return true;
         }
-        if (TryConsumeBlockStatement(openingTokenKind, out BlockStatement? blockStmt)) {
+        if (TryConsumeBlockBody(openingTokenKind, out BlockBody? blockStmt)) {
             bodyStatement = blockStmt;
             return true;
         }
@@ -375,8 +369,8 @@ public class Parser {
         return false;
     }
 
-    private bool TryConsumeBlockStatement (
-        TokenKind? openingTokenKind, [NotNullWhen(true)] out BlockStatement? blockStatement
+    private bool TryConsumeBlockBody (
+        TokenKind? openingTokenKind, [NotNullWhen(true)] out BlockBody? blockStatement
     ) {
         Token? openingToken = null;
         if (
@@ -398,22 +392,22 @@ public class Parser {
         }
         Token closingToken = PeekPrevious();
 
-        blockStatement = SF.BlockStatement(openingToken, statements, closingToken);
+        blockStatement = SF.BlockBody(openingToken, statements, closingToken);
         return true;
     }
 
-    private bool TryConsumeArrowStatement (
-        [NotNullWhen(true)] out ArrowStatement? arrowStatement
+    private bool TryConsumeArrowBody (
+        [NotNullWhen(true)] out ArrowBody? arrowBody
     ) {
         if (TryConsume(TokenKind.EqualArrow, out Token? arrowToken) == false) {
-            arrowStatement = null;
+            arrowBody = null;
             return false;
         }
-        if (TryConsumeStatement(out Statement? stmt) == false) {
-            throw Error(CompilerMessage.Parser.StatementExpected(Peek()));
+        if (TryConsumeExpression(out Expression? expr) == false) {
+            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek()));
         }
 
-        arrowStatement = SF.ArrowStatement(arrowToken, stmt);
+        arrowBody = SF.ArrowBody(arrowToken, expr);
         return true;
     }
 
@@ -472,14 +466,14 @@ public class Parser {
         if (TryConsumeExpression(out Expression? test) == false) {
             throw Error(CompilerMessage.Parser.ExpressionExpected(Peek()));
         }
-        if (TryConsumeBodyStatement(
-            TokenKind.KwThen, out BodyStatement? consequent
+        if (TryConsumeBody(
+            TokenKind.KwThen, out Body? consequent
         ) == false) {
             throw Error(CompilerMessage.Parser.BodyExpected(Peek()));
         }
 
-        if (consequent.Kind == SyntaxKind.BlockStatement) {
-            var blockStmt = (BlockStatement)consequent;
+        if (consequent.Kind == SyntaxKind.BlockBody) {
+            var blockStmt = (BlockBody)consequent;
 
             if (blockStmt.ClosingToken == null) throw new Exception(
                 "Block consequent needs an closing token."
@@ -496,7 +490,7 @@ public class Parser {
             ifExpression = _If();
             return true;
         }
-        else if (consequent.Kind == SyntaxKind.ArrowStatement) {
+        else if (consequent.Kind == SyntaxKind.ArrowBody) {
             if (TryConsume(TokenKind.KwElsif, out Token? _)) {
                 ifExpression = _Elsif();
                 return true;
@@ -520,15 +514,15 @@ public class Parser {
                 throw Error(CompilerMessage.Parser.ElsifBodyExpected(Peek()));
             }
 
-            var alternateStmt = SF.ExpressionStatement(alternate);
+            var alternateBlock = SF.ExpressionBody(alternate);
 
-            return SF.IfExpression(elsifToken, test, consequent, elsifToken, alternateStmt);
+            return SF.IfExpression(elsifToken, test, consequent, elsifToken, alternateBlock);
         }
 
         IfExpression _Else () {
             var elseToken = PeekPrevious();
 
-            if (TryConsumeBodyStatement(null, out BodyStatement? alternate) == false) {
+            if (TryConsumeBody(null, out Body? alternate) == false) {
                 throw Error(CompilerMessage.Parser.BodyExpected(Peek()));
             }
 
@@ -577,7 +571,7 @@ public class Parser {
             loopExpression = null;
             return false;
         }
-        if (TryConsumeBodyStatement(null, out BodyStatement? body) == false) {
+        if (TryConsumeBody(null, out Body? body) == false) {
             throw Error(CompilerMessage.Parser.BodyExpected(Peek()));
         }
 
@@ -595,7 +589,7 @@ public class Parser {
         if (TryConsumeExpression(out Expression? test) == false) {
             throw Error(CompilerMessage.Parser.ExpressionExpected(Peek()));
         }
-        if (TryConsumeBodyStatement(TokenKind.KwDo, out BodyStatement? body) == false) {
+        if (TryConsumeBody(TokenKind.KwDo, out Body? body) == false) {
             throw Error(CompilerMessage.Parser.BodyExpected(Peek()));
         }
 
@@ -630,7 +624,7 @@ public class Parser {
         if (TryConsumeExpression(out Expression? enumerable) == false) {
             throw Error(CompilerMessage.Parser.ExpressionExpected(Peek()));
         }
-        if (TryConsumeBodyStatement(TokenKind.KwDo, out BodyStatement? body) == false) {
+        if (TryConsumeBody(TokenKind.KwDo, out Body? body) == false) {
             throw Error(CompilerMessage.Parser.BodyExpected(Peek()));
         }
 
@@ -1258,7 +1252,7 @@ public class Parser {
         }
 
         TokenKind? then = elseToken == null ? TokenKind.KwThen : null;
-        if (TryConsumeBodyStatement(then, out BodyStatement? consequent) == false) {
+        if (TryConsumeBody(then, out Body? consequent) == false) {
             throw Error(CompilerMessage.Parser.BodyExpected(Peek()));
         }
 

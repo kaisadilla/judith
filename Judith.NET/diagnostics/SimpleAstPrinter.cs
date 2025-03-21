@@ -86,7 +86,7 @@ public class SimpleAstPrinter : SyntaxVisitor<List<string>> {
         return txt;
     }
 
-    public override List<string> Visit (BlockStatement node) {
+    public override List<string> Visit (BlockBody node) {
         List<string> txt = [];
 
         foreach (var n in node.Nodes) {
@@ -96,10 +96,10 @@ public class SimpleAstPrinter : SyntaxVisitor<List<string>> {
         return txt;
     }
 
-    public override List<string> Visit (ArrowStatement node) {
+    public override List<string> Visit (ArrowBody node) {
         List<string> txt = [];
 
-        List<string> expr = Visit(node.Statement);
+        List<string> expr = Visit(node.Expression);
 
         txt.Add("=> " + expr[0]);
         if (expr.Count > 1) {
@@ -370,7 +370,7 @@ public class SimpleAstPrinter : SyntaxVisitor<List<string>> {
         List<string> txt = [];
 
         txt.Add(node.LocalKind == LocalKind.Constant ? "[const] " : "[var] ");
-        txt[^1] += node.Identifier.Name;
+        txt[^1] += node.Name.Name;
         if (node.TypeAnnotation != null) {
             AddInline(txt, Visit(node.TypeAnnotation), 1);
         }

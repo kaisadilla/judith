@@ -8,17 +8,16 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.analysis.syntax;
 
-public abstract class BodyStatement : Statement {
-    protected BodyStatement (SyntaxKind kind) : base(kind) { }
+public abstract class Body : SyntaxNode {
+    protected Body (SyntaxKind kind) : base(kind) { }
 }
 
-public class BlockStatement : BodyStatement {
-    public List<SyntaxNode> Nodes { get; init; }
+public class BlockBody : Body {
+    public List<SyntaxNode> Nodes { get; private init; }
     public Token? OpeningToken { get; init; }
     public Token? ClosingToken { get; init; }
 
-    public BlockStatement (List<SyntaxNode> nodes)
-        : base(SyntaxKind.BlockStatement) {
+    public BlockBody (List<SyntaxNode> nodes) : base(SyntaxKind.BlockBody) {
         Nodes = nodes;
 
         Children.AddRange(Nodes);
@@ -38,14 +37,30 @@ public class BlockStatement : BodyStatement {
     }
 }
 
-public class ArrowStatement : BodyStatement {
-    public Statement Statement { get; init; }
+public class ArrowBody : Body {
+    public Expression Expression { get; private init; }
     public Token? ArrowToken { get; init; }
 
-    public ArrowStatement (Statement statement) : base(SyntaxKind.ArrowStatement) {
-        Statement = statement;
+    public ArrowBody (Expression expr) : base(SyntaxKind.ArrowBody) {
+        Expression = expr;
 
-        Children.Add(Statement);
+        Children.Add(Expression);
+    }
+
+    public override void Accept (SyntaxVisitor visitor) {
+        visitor.Visit(this);
+    }
+
+    public override T? Accept<T> (SyntaxVisitor<T> visitor) where T : default {
+        return visitor.Visit(this);
+    }
+}
+
+public class ExpressionBody : Body {
+    public Expression Expression { get; private init; }
+
+    public ExpressionBody (Expression expression) : base(SyntaxKind.ExpressionBody) {
+        Expression = expression;
     }
 
     public override void Accept (SyntaxVisitor visitor) {

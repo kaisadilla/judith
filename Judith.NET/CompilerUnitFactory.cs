@@ -41,7 +41,7 @@ public static class CompilerUnitFactory {
             //),
         ]);
 
-        BlockStatement body = new(implicitFunctionNodes);
+        BlockBody body = new(implicitFunctionNodes);
 
         FunctionDefinition implicitFunc = new(
             true,

@@ -32,7 +32,7 @@ Console.WriteLine(
     $"Errors: {compiler.Messages.Errors.Count}."
 );
 
-PrintMessages(compiler.Messages);
+PrintMessages(compiler.Messages, src);
 
 Console.WriteLine("Generating debug files...");
 CompilerDiagnostics.GenerateCompilationFiles(compiler, OUT_DIR, "test");
@@ -62,14 +62,8 @@ if (compiler.Assembly != null) {
     Console.WriteLine(dasm.Disassembly);
 }
 
-static void PrintMessages (MessageContainer messages) {
-    foreach (var m in messages.Errors) {
-        Console.WriteLine("ERROR: " + m.Message);
-    }
-    foreach (var m in messages.Warnings) {
-        Console.WriteLine("WARNING: " + m.Message);
-    }
-    foreach (var m in messages.Infos) {
-        Console.WriteLine("INFO: " + m.Message);
+static void PrintMessages (MessageContainer messages, string src) {
+    foreach (var m in messages.GetMessages()) {
+        Console.WriteLine(m.GetElaborateMessage(src));
     }
 }
