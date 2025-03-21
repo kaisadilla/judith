@@ -13,11 +13,11 @@ public enum BlockEvaluationKind {
     Yield,
 }
 
-public class BoundBlockStatement : BoundNode {
-    public new BlockBody Node => (BlockBody)base.Node;
+public class BoundBody : BoundNode {
+    public new Body Node => (Body)base.Node;
 
-    public BlockEvaluationKind EvaluationKind { get; set; }
+    public BlockEvaluationKind EvaluationKind { get; set; } // TODO: Probably irrelevant
     public TypeSymbol? Type { get; set; }
 
-    public BoundBlockStatement (BlockBody blockStmt) : base(blockStmt) { }
+    public BoundBody (Body body) : base(body) { }
 }

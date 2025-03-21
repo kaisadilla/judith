@@ -7,6 +7,14 @@ __p_print factorial(2)
 print("Factorial of 10: ")
 __p_print factorial(10)
 
+-- const a = if false then
+--     yield 3
+-- end -- we can't compile "yield" yet.
+
+if true then
+    println("This always prints")
+end
+
 func factorial (num: F64) -> F64
     if num == 1 then return 1 end
 

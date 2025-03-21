@@ -24,7 +24,6 @@ public class SymbolResolver : SyntaxVisitor {
     private readonly SymbolFinder _finder;
 
     private NodeStateManager _nodeStates = new();
-    public int Resolutions { get; private set; } = 0;
 
     public SymbolResolver (JudithCompilation cmp) {
         _cmp = cmp;
@@ -33,8 +32,6 @@ public class SymbolResolver : SyntaxVisitor {
     }
 
     public void Analyze (CompilerUnit unit) {
-        Resolutions = 0;
-
         foreach (var item in unit.TopLevelItems) {
             Visit(item);
         }
@@ -53,8 +50,7 @@ public class SymbolResolver : SyntaxVisitor {
         if (node.ReturnTypeAnnotation != null) Visit(node.ReturnTypeAnnotation);
 
         if (_nodeStates.IsComplete(node) == false) {
-            Resolutions++;
-            _nodeStates.Mark(node, true, _scope.Current);
+            _nodeStates.Mark(node, true, _scope.Current, true);
         }
     }
 
@@ -78,8 +74,7 @@ public class SymbolResolver : SyntaxVisitor {
         _scope.EndScope();
 
         if (_nodeStates.IsComplete(node) == false) {
-            Resolutions++;
-            _nodeStates.Mark(node, true, _scope.Current);
+            _nodeStates.Mark(node, true, _scope.Current, true);
         }
     }
 
@@ -91,8 +86,7 @@ public class SymbolResolver : SyntaxVisitor {
         _scope.EndScope();
 
         if (_nodeStates.IsComplete(node) == false) {
-            Resolutions++;
-            _nodeStates.Mark(node, true, _scope.Current);
+            _nodeStates.Mark(node, true, _scope.Current, true);
         }
     }
 
@@ -105,8 +99,7 @@ public class SymbolResolver : SyntaxVisitor {
 
         Visit(node.Receiver);
 
-        Resolutions++;
-        _nodeStates.Mark(node, true, _scope.Current);
+        _nodeStates.Mark(node, true, _scope.Current, true);
     }
 
     public override void Visit (IdentifierExpression node) {
@@ -121,7 +114,10 @@ public class SymbolResolver : SyntaxVisitor {
         string name = simpleName.Name;
 
         var symbol = FindSymbolOrErrorMsg(node, name);
-        if (symbol == null) return;
+        if (symbol == null) {
+            _nodeStates.Mark(node, false, _scope.Current, false);
+            return;
+        }
 
         var boundNode = _cmp.Binder.BindIdentifierExpression(node, symbol);
 
@@ -130,8 +126,7 @@ public class SymbolResolver : SyntaxVisitor {
             boundNode.AssociatedType = typeSymbol;
         }
 
-        Resolutions++;
-        _nodeStates.Mark(node, true, _scope.Current);
+        _nodeStates.Mark(node, true, _scope.Current, true);
     }
 
     public override void Visit (TypeAnnotation node) {
@@ -147,7 +142,10 @@ public class SymbolResolver : SyntaxVisitor {
         string name = simpleId.Name;
 
         var symbol = FindSymbolOrErrorMsg(node, name);
-        if (symbol == null) return;
+        if (symbol == null) {
+            _nodeStates.Mark(node, false, _scope.Current, false);
+            return;
+        }
 
         if (symbol is TypeSymbol typeSymbol) {
             _cmp.Binder.BindTypeAnnotation(node, typeSymbol);
@@ -157,9 +155,7 @@ public class SymbolResolver : SyntaxVisitor {
             _cmp.Binder.BindTypeAnnotation(node, _cmp.PseudoTypes.Error);
         }
 
-
-        Resolutions++;
-        _nodeStates.Mark(node, true, _scope.Current);
+        _nodeStates.Mark(node, true, _scope.Current, true);
     }
 
     private T GetBoundNodeOrThrow<T> (SyntaxNode node) where T : BoundNode {

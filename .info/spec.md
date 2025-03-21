@@ -938,12 +938,12 @@ end
 ```
 
 ## Generators
-Generators are a special type of function that uses `yield` statements to return values, one by one, when iterated
+Generators are a special type of function that uses `yield return` statements to return values, one by one, when iterated.
 
 ```judith
-generator get_single_digit_numbers () -- return type: IEnumerable<Num>
+generator get_single_digit_numbers () -> Num -- return type: IEnumerable<Num>
     for i in 0..10 do
-        yield i
+        yield return i
     end
 end
 
@@ -955,6 +955,8 @@ for i in gen do -- equals 2, then 3, 4, 5, 6, 7, 8, 9
     -- statements
 end
 ```
+
+`return` statements are not allowed inside a generator, as the return value is built from `yield return` statements. The reason for the `yield return` syntax is to make it clear that execution continues after that statement, and that it's not a regular `yield` used in expression structures.
 
 ## First-class functions
 Functions in Judith are first-class, which means they can be treated like any other value (assigned to locals and fields, passed as parameters, etc.).
@@ -2295,7 +2297,7 @@ We can constrain our templates (and thus, guarantee that certain operations will
 
 ```judith
 template<_T>
-rule<_T + _T> -- We establish the rule that the overload _T + _T exists.
+rule(_T + _T) -- We establish the rule that the overload _T + _T exists.
 typedef struct NamedValue
 (...)
 ```
@@ -2312,37 +2314,37 @@ Other available rules for type parameters are:
 `_T` has a method with the given signature:
 
 ```judith
-rule<_T.some_method(Num, Num) -> Void>
+rule(_T.some_method(Num, Num) -> Void)
 ```
 
 `_T` has an associated function with the given signature:
 
 ```judith
-rule<_T::some_func(String) -> String>
+rule(_T::some_func(String) -> String)
 ```
 
 `_T` has an associated type:
 
 ```judith
-rule<_T::Pool>
+rule(_T::Pool)
 ```
 
  - This associated type can also have its own rules:
 
 ```judith
-rule<!_T::Pool.pool_method(_T) -> Void>
+rule(!_T::Pool.pool_method(_T) -> Void)
 ```
 
 Operator overload exists:
 
 ```judith
-rule<_T * Num>
+rule(_T * Num)
 ```
 
 `_T` is of a given type:
 
 ```judith
-rule<_T is String | Num>
+rule(_T is String | Num)
 ```
 
 ## Constant parameters
@@ -2350,7 +2352,7 @@ Aside from types, template parameters can also represent compile-time constants.
 
 ```judith
 template<_T, _divisor: _T>
-rule<_T / _T>
+rule(_T / _T)
 func n_divide (dividend: _T) -> _T
     return dividend / _divisor
 end
@@ -2369,8 +2371,8 @@ You can define rules that apply tests to the constant parameter:
 
 ```judith
 template<_T, _divisor: _T>
-rule<_T / _T>
-rule<_divisor != 0> -- cannot use '0' for '_divisor'
+rule(_T / _T)
+rule(_divisor != 0) -- cannot use '0' for '_divisor'
 func n_divide (dividend: _T) - _T
 (...)
 
@@ -2382,8 +2384,8 @@ Templates can be specialized, which allows certain arguments to behave different
 
 ```judith
 template<_T, _exp: Num>
-rule<_T * _T>
-rule<_exp >= 0>
+rule(_T * _T)
+rule(_exp >= 0)
 func pow (var val: _T) -> _T
     for i in 0..(_exp - 1) do
         val *= _val
@@ -2400,10 +2402,20 @@ To define a specialization, you still use `template<>`, but you skip any paramet
 ```judith
 template<_T> -- we don't specify "_exp", because that's the value we'll specialize.
 -- here we don't define a rule for _T * _T since we don't need it.
-rule<_T = 1> -- but we define a rule specifying that we can assign "1" to a type _T.
+rule(_T = 1) -- but we define a rule specifying that we can assign "1" to a type _T.
 func pow<0> (val: _T) -> _T
     return 1
 end
+```
+
+You can specialize a class's methods individually from outside the class, but doing so means that you'll have outsider access to the class's fields (i.e. read-only unless it's a `pub` field, and can't see hidden fields).
+
+## Wildcard template argument
+Sometimes, you don't care about template parameters. When this happens, you can use `?` as a wildcard to indicate that you accept any parameter.
+
+```judith
+const col: List<?> = get_people() -- get_people() returns List<Person>.
+col[0].name -- ERROR: col[0] is of type "Unknown", which doesn't have member "name".
 ```
 
 # <a name="exceptions">Exceptions</a>

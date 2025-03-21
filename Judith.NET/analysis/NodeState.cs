@@ -28,6 +28,8 @@ public class NodeStateManager {
     private Dictionary<SyntaxNode, NodeState> _states = [];
     private Dictionary<SyntaxNode, SymbolTable> _scopes = [];
 
+    public bool ResolutionMade { get; set; } = false;
+
     public bool IsComplete (SyntaxNode node) {
         return _states.TryGetValue(node, out var state)
             && state == NodeState.Completed;
@@ -56,8 +58,11 @@ public class NodeStateManager {
     /// </summary>
     /// <param name="node">The node to mark.</param>
     /// <param name="isResolved">Whether it's completed or unresolved.</param>
-    public void Mark (SyntaxNode node, bool isResolved, SymbolTable scope) {
+    /// <param name="workDone">Whether some work was done with the node, even
+    /// if the work isn't complete.</param>
+    public void Mark (SyntaxNode node, bool isResolved, SymbolTable scope, bool workDone) {
         Mark(node, isResolved ? NodeState.Completed : NodeState.Unresolved, scope);
+        ResolutionMade = ResolutionMade || workDone;
     }
 
     public bool TryGetScope (

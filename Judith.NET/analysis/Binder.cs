@@ -94,13 +94,13 @@ public class Binder {
         return boundStructTypeDef;
     }
 
-    public BoundBlockStatement BindBlockStatement (BlockBody blockStmt) {
-        if (TryGetBoundNode(blockStmt, out BoundBlockStatement? boundBlockStmt) == false) {
-            boundBlockStmt = new(blockStmt);
-            BoundNodes[blockStmt] = boundBlockStmt;
+    public BoundBody BindBody (Body body) {
+        if (TryGetBoundNode(body, out BoundBody? boundBody) == false) {
+            boundBody = new(body);
+            BoundNodes[body] = boundBody;
         }
 
-        return boundBlockStmt;
+        return boundBody;
     }
 
     public BoundLocalDeclarationStatement BindLocalDeclarationStatement (

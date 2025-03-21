@@ -33,6 +33,7 @@ public class JudithCompilation {
 
             Error = TypeSymbol.FreeSymbol(SymbolKind.ErrorPseudoType, "<error-type>"),
 
+            Auto = TypeSymbol.FreeSymbol(SymbolKind.PseudoType, "Auto"),
             Anonymous = TypeSymbol.FreeSymbol(SymbolKind.PseudoType, "<anonymous-type>"),
             Function = TypeSymbol.FreeSymbol(SymbolKind.FunctionType, "Function"),
         };
@@ -74,19 +75,15 @@ public class JudithCompilation {
 
         // 4. Resolve symbols.
         // Resolves which symbol each identifier is referring to.
-        SymbolResolver symbolResolver = new(this);
-        foreach (var cu in Program.Units) {
-            symbolResolver.Analyze(cu);
-        }
-        Messages.Add(symbolResolver.Messages);
+        ResolveSymbols();
         if (Messages.HasErrors) return;
 
-        // 5. Resolve types & 6. Resolve block types.
+        // 5. Resolve types and block types.
         ResolveTypes();
         if (Messages.HasErrors) return;
 
-        // 7. Evaluate wellformedness (semantically).
-        // 7.1. Type analysis.
+        // 6. Evaluate wellformedness (semantically).
+        // 6.1. Type analysis.
         TypeAnalyzer typeAnalizer = new(this);
         foreach (var cu in Program.Units) {
             typeAnalizer.Analyze(cu);
@@ -99,29 +96,62 @@ public class JudithCompilation {
         IsValidProgram = Messages.HasErrors == false;
     }
 
-    private void ResolveTypes () {
-        // Resolves any type in the AST that can be resolved. As some nodes
-        // reference other nodes (whose type may not be resolved yet), this
-        // pass will leave some types unresolved.
-        TypeResolver typeResolver = new(this);
+    private void ResolveSymbols () {
+        SymbolResolver symbolResolver = new(this);
         foreach (var cu in Program.Units) {
-            typeResolver.Analyze(cu);
+            symbolResolver.Analyze(cu);
+        }
+        Messages.Add(symbolResolver.Messages);
+    }
+
+    private void ResolveTypes () {
+        TypeResolver typeResolver = new(this);
+        BodyTypeResolver bodyTypeResolver = new(this);
+
+        // We do a first pass through all the nodes in the AST. Some of them
+        // will have their type resolved immediately, but some will depend on
+        // other nodes and thus need to wait for these other nodes to be resolved.
+        foreach (var cu in Program.Units) {
+            typeResolver.StartAnalysis(cu);
         }
         Messages.Add(typeResolver.Messages);
 
-        int passes = 0; // TODO: Temporary.
-        while (typeResolver.IsComplete == false) {
-            typeResolver.CompleteAnalysis();
-            passes++;
-
-            if (passes > 256) throw new("256 passes???");
-        }
-
-        BlockTypeResolver blockTypeResolver = new(this);
+        // We also calculate the value returned / yielded by bodies. As above,
+        // we may not be able to resolve all bodies in the first pass.
         foreach (var cu in Program.Units) {
-            blockTypeResolver.Analyze(cu);
+            bodyTypeResolver.StartAnalysis(cu);
         }
-        Messages.Add(blockTypeResolver.Messages);
+        Messages.Add(bodyTypeResolver.Messages);
+
+#if DEBUG
+        int passes = 0;
+#endif
+        // We now keep iterating over and over
+        while (
+            typeResolver.NodeStates.AreAllComplete() == false
+            || bodyTypeResolver.NodeStates.AreAllComplete() == false
+        ) {
+            typeResolver.ContinueAnalysis();
+            bodyTypeResolver.ContinueAnalysis();
+
+            // If nothing was resolved, then we'll start the next loop from the
+            // same state, which will yield the same result (assuming correct
+            // implementation).
+            if (
+                typeResolver.NodeStates.ResolutionMade == false
+                && bodyTypeResolver.NodeStates.ResolutionMade == false
+            ) {
+                throw new(
+                    "Type resolution entered an infinite loop, or work done was " +
+                    "not properly reported."
+                );
+            }
+
+#if DEBUG
+            passes++;
+            if (passes > 1_024) throw new("1024 passes???");
+#endif
+        }
     }
 
     public class PseudoTypeCollection {
@@ -131,6 +161,7 @@ public class JudithCompilation {
 
         public required TypeSymbol Error { get; init; }
 
+        public required TypeSymbol Auto { get; init; }
         public required TypeSymbol Anonymous { get; init; }
         public required TypeSymbol Function { get; init; }
     }

@@ -44,9 +44,23 @@ public class AstTypePrinter : SyntaxVisitor {
     }
 
     public override void Visit (BlockBody node) {
-        var boundNode = _cmp.Binder.GetBoundNodeOrThrow<BoundBlockStatement>(node);
+        var boundNode = _cmp.Binder.GetBoundNodeOrThrow<BoundBody>(node);
 
-        TypedNodes.Add($"BlockStmt: Type: {FQN(boundNode.Type)}");
+        TypedNodes.Add($"BlockBody: Type: {FQN(boundNode.Type)}");
+        base.Visit(node);
+    }
+
+    public override void Visit (ArrowBody node) {
+        var boundNode = _cmp.Binder.GetBoundNodeOrThrow<BoundBody>(node);
+
+        TypedNodes.Add($"ArrowBody: Type: {FQN(boundNode.Type)}");
+        base.Visit(node);
+    }
+
+    public override void Visit (ExpressionBody node) {
+        var boundNode = _cmp.Binder.GetBoundNodeOrThrow<BoundBody>(node);
+
+        TypedNodes.Add($"ExprBody: Type: {FQN(boundNode.Type)}");
         base.Visit(node);
     }
 
@@ -60,6 +74,18 @@ public class AstTypePrinter : SyntaxVisitor {
         var boundNode = _cmp.Binder.GetBoundNodeOrThrow<BoundYieldStatement>(node);
 
         TypedNodes.Add($"YieldStmt: ({node.Expression}) - Type: {FQN(boundNode.Type)}");
+    }
+
+    public override void Visit (IfExpression node) {
+        var boundNode = _cmp.Binder.GetBoundNodeOrThrow<BoundIfExpression>(node);
+
+        TypedNodes.Add($"IfExpr: {node} - Type: {FQN(boundNode.Type)}");
+    }
+
+    public override void Visit (WhileExpression node) {
+        var boundNode = _cmp.Binder.GetBoundNodeOrThrow<BoundWhileExpression>(node);
+
+        TypedNodes.Add($"WhileExpr: {node} - Type: {FQN(boundNode.Type)}");
     }
 
     public override void Visit (AssignmentExpression node) {

@@ -67,6 +67,9 @@ public enum MessageCode {
     MemberAccessOnlyOnInstances,
     ScopeAccessNotOnInstances,
     FieldDoesNotExist,
+    UnexpectedReturn,
+    UnexpectedYield,
+    UnexpectedYieldReturn,
 
     // BlockTypeResolver
     InconsistentReturnBehavior,

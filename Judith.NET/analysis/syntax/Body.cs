@@ -61,6 +61,8 @@ public class ExpressionBody : Body {
 
     public ExpressionBody (Expression expression) : base(SyntaxKind.ExpressionBody) {
         Expression = expression;
+
+        Children.Add(Expression);
     }
 
     public override void Accept (SyntaxVisitor visitor) {

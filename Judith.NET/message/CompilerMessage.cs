@@ -571,6 +571,36 @@ public class CompilerMessage {
             );
         }
 
+        public static CompilerMessage UnexpectedReturn (SyntaxNode node) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.TypeResolver,
+                (int)MessageCode.UnexpectedReturn,
+                $"Return statements cannot be used in this context.",
+                new(node)
+            );
+        }
+
+        public static CompilerMessage UnexpectedYield (SyntaxNode node) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.TypeResolver,
+                (int)MessageCode.UnexpectedYield,
+                $"Yield statements cannot be used in this context.",
+                new(node)
+            );
+        }
+
+        public static CompilerMessage UnexpectedYieldReturn (SyntaxNode node) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.TypeResolver,
+                (int)MessageCode.UnexpectedYieldReturn,
+                $"Yield return statements cannot be used in this context.",
+                new(node)
+            );
+        }
+
         public static CompilerMessage InconsistentReturnBehavior (SyntaxNode node) {
             return new(
                 MessageKind.Error,
