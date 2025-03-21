@@ -2247,7 +2247,164 @@ Any operator not listed above cannot be overloaded. Among them, these are some o
 * Null-coalescing operator: `??`.
 
 # Templates
-TODO
+**`EXPERIMENTAL`**
+
+Templates are Judith's way to implement generics. They are type-safe and only allow operations that can be proven correct.
+
+## Type parameters
+
+To create a template for a top-level item, simply prefix it with the `template` declarator:
+
+```judith
+template<_T>
+typedef struct NamedValue
+    name: String
+    value: _T -- "_T" is the type provided by the template.
+end
+```
+
+You can then use the template struct by providing it with a type:
+
+```judith
+const val = NamedValue<Num> { -- here, we specify that "_T" will be "Num".
+    name: "Score",
+    value: 73 -- here, "value" is of type "Num".
+}
+```
+
+You can refine the kind of type parameter the template takes:
+
+```judith
+template<_T: struct> -- _T has to be a struct
+template<_T: class> -- _T has to be a class
+template<_T: value> -- _T has to be a value type
+template<_T: reference> -- _T has to be a reference type
+```
+
+## Template rules
+
+While defining `NamedValue<_T>`, we can only do operations that we know are valid. The following example is invalid, because it makes incorrect assumptions about `_T`:
+
+```judith
+func NamedValue<_T>::increase_by (b: _T) -> _T
+    return .value += b -- ERROR: type "_T" does not define operator '+'.
+end
+```
+
+We can constrain our templates (and thus, guarantee that certain operations will exist) by stating template rules with the `rule` keyword:
+
+```judith
+template<_T>
+rule<_T + _T> -- We establish the rule that the overload _T + _T exists.
+typedef struct NamedValue
+(...)
+```
+
+With this rule, the extension method we defined above (`increase_by`) would become valid, as now we've guaranteed that we'll be able to sum two `_T` together. However, this also means that now `NamedValue` cannot be used with any value that cannot be added together:
+
+```judith
+var val: NamedValue<Num> -- valid, as Num + Num exists.
+var val: NamedValue<Bool> -- ERROR: Bool + Bool doesn't exist.
+```
+
+Other available rules for type parameters are:
+
+`_T` has a method with the given signature:
+
+```judith
+rule<_T.some_method(Num, Num) -> Void>
+```
+
+`_T` has an associated function with the given signature:
+
+```judith
+rule<_T::some_func(String) -> String>
+```
+
+`_T` has an associated type:
+
+```judith
+rule<_T::Pool>
+```
+
+ - This associated type can also have its own rules:
+
+```judith
+rule<!_T::Pool.pool_method(_T) -> Void>
+```
+
+Operator overload exists:
+
+```judith
+rule<_T * Num>
+```
+
+`_T` is of a given type:
+
+```judith
+rule<_T is String | Num>
+```
+
+## Constant parameters
+Aside from types, template parameters can also represent compile-time constants. To achieve this, simply specify the type of the constant accepted by that parameter:
+
+```judith
+template<_T, _divisor: _T>
+rule<_T / _T>
+func n_divide (dividend: _T) -> _T
+    return dividend / _divisor
+end
+```
+
+We can now use it with any compile-time constant:
+
+```judith
+const res = n_divide<5>(20) -- valid, returns "4".
+const res = n_divide<get_num()>(20) -- ERROR: Template parameter must be resolved
+                                    -- at compile time.
+```
+
+## Constant parameter template rules
+You can define rules that apply tests to the constant parameter:
+
+```judith
+template<_T, _divisor: _T>
+rule<_T / _T>
+rule<_divisor != 0> -- cannot use '0' for '_divisor'
+func n_divide (dividend: _T) - _T
+(...)
+
+const res = n_divide<0>(10) -- ERROR - '0' doesn't satisfy this rule.
+```
+
+## Template specialization
+Templates can be specialized, which allows certain arguments to behave differently from others. Any specialization must be defined in the same module as the template itself.
+
+```judith
+template<_T, _exp: Num>
+rule<_T * _T>
+rule<_exp >= 0>
+func pow (var val: _T) -> _T
+    for i in 0..(_exp - 1) do
+        val *= _val
+    end
+
+    return val
+end
+```
+
+This function is called as `pow<b>(a)` to do a^b, but has one flaw: when _exp is `0`, it should return `1`, but instead it returns `val`. We can fix this by specializing the template for when `_exp` = `0`.
+
+To define a specialization, you still use `template<>`, but you skip any parameters that will be specialized (even if that means `template<>` is left empty). The specialized parameter appears instead after the name of the item (just as when you use a template item). Keep in mind that template specializations do not inherit the rules of the original template, since we may not need the same constrains.
+
+```judith
+template<_T> -- we don't specify "_exp", because that's the value we'll specialize.
+-- here we don't define a rule for _T * _T since we don't need it.
+rule<_T = 1> -- but we define a rule specifying that we can assign "1" to a type _T.
+func pow<0> (val: _T) -> _T
+    return 1
+end
+```
 
 # <a name="exceptions">Exceptions</a>
 Judith has a feature called 'exception handling' designed to handle errors. Despite its name, this feature is not related to the C++ / C# / Java exception system.
@@ -2296,7 +2453,7 @@ func !get_person (index: Int) -> Person
     return people[index]
 end
 
-func !divide (divident, divisor: Int) -> Int
+func !divide (dividend, divisor: Int) -> Int
     return Exception::'divide_by_zero' when divisor == 0
 
     return dividend / divisor
@@ -2450,14 +2607,8 @@ In this example, calling `solve_p_np_problem()` will immediatelly cause the prog
 
 Note that there's no way to recover from a `panic`, as by definition `panic` it used to deal with unrecoverable errors.
 
-
-
-## TODO - Void | Exception => Undefined | Exception
-## TODO - Stack trace
-## TODO - Panic
-
 # Destructuring and spreading
-Destructuring is a feature that allows the developer to unpack values from collections and values that contain members. Destructuring uses the ellipsis operator (`...`), which should not be confused with the range operator (`..`).
+Destructuring is a feature that allows the developer to unpack values from collections and values that contain members.
 
 Destructuring can be done in two ways: by destructuring content, or by destructuring members:
 
@@ -2467,14 +2618,14 @@ Content destructuring assigns values contained in an enumerable collection, in w
 ```judith
 const countries = ['Japan', 'China', 'South Korea', 'Taiwan']
 
-const [ japan, china ] = ...countries -- The first two elements of the arrea are
-                                      -- assigned to the declared locals.
+const [ japan, china ] = countries -- The first two elements of the arrea are
+                                   -- assigned to the declared locals.
 ```
 
 The last local declared can capture all remaining values if expressed with `...`, like this:
 
 ```judith
-const [ japan, china, ...others ] = ...countries 
+const [ japan, china, ...others ] = countries 
 ```
 
 Here, the value of others is an array that contains `['South Korea', 'Taiwan']`.
@@ -2489,34 +2640,34 @@ const person = Person {
     country: 'Germany'
 }
 
-const { name, age } = ...person -- The members Person.name and Person.age are
-                                -- assigned to name and age.
+const { name, age } = person -- The members Person.name and Person.age are
+                             -- assigned to name and age.
 ```
 
 Locals created by member destructuring do not need to use the original member's name:
 
 ```judith
-const { name => person_name } = ...person
+const { name => person_name } = person
 ```
 
 It is a compile-time error to destructure a member that doesn't exist.
 
 ```judith
-const { name, city } = ...person -- ERROR: Person.city doesn't exist
-const { name } = ...2 -- ERROR: Num.name doesn't exist
+const { name, city } = person -- ERROR: Person.city doesn't exist
+const { name } = 2 -- ERROR: Num.name doesn't exist
 ```
 
 When destructuring a member method, the method remains bound to the instance they were destructured from
 
 ```judith
-const { get_nth_birthday } = ...person -- ok.
+const { get_nth_birthday } = person -- ok.
 get_nth_birthday(80) -- calls person.get_nth_birthday
 ```
 
 Just like with content destructuring, you can capture all remaining members with a `...` local. In this case, the remaining local will be an object type.
 
 ```judith
-const { name, ...rest } -- 'rest' contains { age = 39, country = 'Germany' }.
+const { name, ...rest } = person -- 'rest' contains { age = 39, country = 'Germany' }.
 ```
 
 ## Spread
