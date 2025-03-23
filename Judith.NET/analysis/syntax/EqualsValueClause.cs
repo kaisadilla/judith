@@ -8,13 +8,15 @@ using Judith.NET.analysis.lexical;
 namespace Judith.NET.analysis.syntax;
 
 public class EqualsValueClause : SyntaxNode {
-    public Expression Value { get; init; }
+    public List<Expression> Values { get; init; }
     public Token? EqualsToken { get; init; }
 
-    public EqualsValueClause (Expression value) : base(SyntaxKind.EqualsValueClause) {
-        Value = value;
+    public EqualsValueClause (List<Expression> value)
+        : base(SyntaxKind.EqualsValueClause)
+    {
+        Values = value;
 
-        Children.Add(Value);
+        Children.AddRange(Values);
     }
 
     public override void Accept (SyntaxVisitor visitor) {

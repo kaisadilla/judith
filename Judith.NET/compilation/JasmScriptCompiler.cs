@@ -4,6 +4,7 @@ using Judith.NET.analysis.syntax;
 using Judith.NET.builder;
 using Judith.NET.codegen;
 using Judith.NET.codegen.jasm;
+using Judith.NET.debugging;
 using Judith.NET.ir;
 using Judith.NET.message;
 using System;
@@ -42,6 +43,8 @@ public class JasmScriptCompiler : IJudithCompiler {
     public IRProgram? IRProgram { get; private set; } = null;
 
     public JasmAssembly? Assembly { get; private set; }
+
+    public DebuggingInfo DebuggingInfo { get; private set; } = new();
 
     public JasmScriptCompiler (string fileName, string source) {
         FileName = fileName;
@@ -153,6 +156,7 @@ public class JasmScriptCompiler : IJudithCompiler {
         );
 
         var gen = new JudithIRGenerator(Compilation, IRNativeHeader.Ver1());
+        gen.SetDebuggingInfo(DebuggingInfo);
         gen.Generate();
 
         IRProgram = gen.Program;

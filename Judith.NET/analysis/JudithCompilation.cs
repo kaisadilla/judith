@@ -62,7 +62,13 @@ public class JudithCompilation {
         if (Messages.HasErrors) return;
 
         // 2. Evaluate wellformedness (semantically agnostic).
-        // TODO.
+        AgnosticValidator agnosticValidator = new(this);
+        foreach (var cu in Program.Units) {
+            agnosticValidator.Analyze(cu);
+        }
+        Messages.Add(agnosticValidator.Messages);
+        if (Messages.HasErrors) return;
+
 
         // 3. Build symbol table.
         // Add all the different symbols that exist in the program to the table,

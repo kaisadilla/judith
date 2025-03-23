@@ -2,6 +2,7 @@
 using Judith.NET.analysis.binder;
 using Judith.NET.analysis.semantics;
 using Judith.NET.analysis.syntax;
+using Judith.NET.debugging;
 using Judith.NET.ir.syntax;
 using System.Diagnostics.CodeAnalysis;
 using System.Xml.Linq;
@@ -11,6 +12,7 @@ namespace Judith.NET.ir;
 public class JudithIRGenerator {
     private JudithCompilation _cmp;
     private IRNativeHeader _native;
+    private DebuggingInfo? _debugInfo = null;
 
     private IRNativeHeader.TypeCollection NativeTypes => _native.TypeRefs;
 
@@ -19,6 +21,10 @@ public class JudithIRGenerator {
     public JudithIRGenerator (JudithCompilation cmp, IRNativeHeader nativeHeader) {
         _cmp = cmp;
         _native = nativeHeader;
+    }
+
+    public void SetDebuggingInfo (DebuggingInfo? info) {
+        _debugInfo = info;
     }
 
     [MemberNotNull(nameof(Program))]
@@ -66,7 +72,10 @@ public class JudithIRGenerator {
         var kind = IRFunctionKind.Function; // TODO.
         bool isMethod = false; // TODO.
 
-        return new(name, parameters, returnType, body, kind, isMethod);
+        IRFunction irFunc = new(name, parameters, returnType, body, kind, isMethod);
+        LinkToSource(irFunc, node);
+
+        return irFunc;
     }
 
     private IRParameter CompileParameter (Parameter node) {
@@ -80,7 +89,10 @@ public class JudithIRGenerator {
             _ => IRMutability.Constant,
         };
 
-        return new(name, type, mutability);
+        IRParameter irParam = new(name, type, mutability);
+        LinkToSource(irParam, node);
+
+        return irParam;
     }
 
     private List<IRStatement> CompileFunctionBody (BlockBody blockStmt) {
@@ -117,6 +129,8 @@ public class JudithIRGenerator {
                 return CompileLocalDeclarationStatement((LocalDeclarationStatement)stmt);
             case SyntaxKind.ReturnStatement:
                 return CompileReturnStatement((ReturnStatement)stmt);
+            case SyntaxKind.YieldStatement:
+                return CompileYieldStatement((YieldStatement)stmt);
             case SyntaxKind.ExpressionStatement:
                 return CompileExpressionStatement((ExpressionStatement)stmt);
             case SyntaxKind.P_PrintStatement:
@@ -131,11 +145,11 @@ public class JudithIRGenerator {
     private List<IRStatement> CompileLocalDeclarationStatement (
         LocalDeclarationStatement localDeclStmt
     ) {
-        if (localDeclStmt.DeclaratorList.Declarators.Count != 1) {
-            throw new NotImplementedException("Multiple declaration not yet supported.");
-        }
         if (localDeclStmt.DeclaratorList.DeclaratorKind != LocalDeclaratorKind.Regular) {
             throw new NotImplementedException("Declarator kind not yet supported.");
+        }
+        if (localDeclStmt.DeclaratorList.Declarators.Count != 1) {
+            throw new NotImplementedException("Multiple declaration not yet supported.");
         }
 
         var boundDecl = Bound<BoundLocalDeclarator>(
@@ -152,28 +166,43 @@ public class JudithIRGenerator {
 
         IRExpression? init = null;
         if (localDeclStmt.Initializer != null) {
-            init = CompileExpression(localDeclStmt.Initializer.Value);
+            init = CompileExpression(localDeclStmt.Initializer.Values[0]);
         }
 
-        return [new IRLocalDeclarationStatement(name, type, mutability, init)];
+        IRLocalDeclarationStatement irLocalDecl = new(name, type, mutability, init);
+        LinkToSource(irLocalDecl, localDeclStmt);
+
+        return [irLocalDecl];
     }
 
     private List<IRStatement> CompileReturnStatement (ReturnStatement returnStmt) {
-        IRExpression? returnExpr = null;
+        IRExpression? returnedExpr = null;
         if (returnStmt.Expression != null) {
-            returnExpr = CompileExpression(returnStmt.Expression);
+            returnedExpr = CompileExpression(returnStmt.Expression);
         }
 
-        return [new IRReturnStatement(returnExpr)];
+        IRReturnStatement irReturnStmt = new(returnedExpr);
+        LinkToSource(irReturnStmt, returnStmt);
+
+        return [irReturnStmt];
+    }
+
+    private List<IRStatement> CompileYieldStatement (YieldStatement yieldStmt) {
+        IRExpression yieldedExpr = CompileExpression(yieldStmt.Expression);
+
+        var irYieldStmt = new IRYieldStatement(yieldedExpr);
+        LinkToSource(irYieldStmt, yieldStmt);
+
+        return [irYieldStmt];
     }
 
     private List<IRStatement> CompileExpressionStatement (ExpressionStatement exprStmt) {
-        var expr = exprStmt.Expression;
+        var irExpr = CompileExpression(exprStmt.Expression);
 
-        var irExpr = CompileExpression(expr);
-        var irStmt = new IRExpressionStatement(irExpr);
+        IRExpressionStatement irExprStmt = new(irExpr);
+        LinkToSource(irExprStmt, exprStmt);
 
-        return [irStmt];
+        return [irExprStmt];
     }
 
     private IRExpression CompileExpression (Expression expr) {
@@ -208,9 +237,9 @@ public class JudithIRGenerator {
 
     private IRIfExpression CompileIfExpression (IfExpression node) {
         var boundExpr = Bound<BoundIfExpression>(node);
-        //if (boundExpr.Type == null) ThrowIncompleteNode(node);
+        if (boundExpr.Type == null) ThrowIncompleteNode(node);
 
-        string type = _native.TypeRefs.Void.Name;// TODO: boundExpr.Type.FullyQualifiedName;
+        string type = boundExpr.Type.FullyQualifiedName;
         IRExpression test = CompileExpression(node.Test);
 
         List<IRStatement> consequent;
@@ -233,7 +262,10 @@ public class JudithIRGenerator {
             throw new NotImplementedException("Cannot compile non-block statements yet.");
         }
 
-        return new(test, consequent, alternate, type);
+        IRIfExpression irIfExpr = new(test, consequent, alternate, type);
+        LinkToSource(irIfExpr, node);
+
+        return irIfExpr;
     }
 
     private IRWhileExpression CompileLoopExpression (LoopExpression node) {
@@ -256,15 +288,18 @@ public class JudithIRGenerator {
 
     private IRWhileExpression CompileWhileExpression (WhileExpression node) {
         var boundExpr = Bound<BoundWhileExpression>(node);
-        //if (boundExpr.Type == null) ThrowIncompleteNode(node);
+        if (boundExpr.Type == null) ThrowIncompleteNode(node);
 
-        string type = _native.TypeRefs.Void.Name;// TODO: boundExpr.Type.FullyQualifiedName;
+        string type = boundExpr.Type.FullyQualifiedName;
         IRExpression test = CompileExpression(node.Test);
 
         if (node.Body is BlockBody blockStmt) {
             var body = CompileBlockStatement(blockStmt);
 
-            return new IRWhileExpression(test, body, type);
+            IRWhileExpression irWhileExpr = new(test, body, type);
+            LinkToSource(irWhileExpr, node);
+
+            return irWhileExpr;
         }
         else {
             throw new NotImplementedException("Cannot compile non-block statements yet.");
@@ -279,48 +314,67 @@ public class JudithIRGenerator {
         var left = CompileExpression(expr.Left);
         var right = CompileExpression(expr.Right);
 
-        return new(left, right, type);
+        IRAssignmentExpression irAssignmentExpr = new(left, right, type);
+        LinkToSource(irAssignmentExpr, expr);
+
+        return irAssignmentExpr;
     }
 
-    private IRExpression CompileBinaryExpression (BinaryExpression expr) {
-        var boundExpr = Bound<BoundBinaryExpression>(expr);
-        if (boundExpr.Type == null) ThrowIncompleteNode(expr);
+    private IRExpression CompileBinaryExpression (BinaryExpression node) {
+        var boundExpr = Bound<BoundBinaryExpression>(node);
+        if (boundExpr.Type == null) ThrowIncompleteNode(node);
 
         string type = boundExpr.Type.FullyQualifiedName;
-        var left = CompileExpression(expr.Left);
-        var right = CompileExpression(expr.Right);
+        var left = CompileExpression(node.Left);
+        var right = CompileExpression(node.Right);
 
-        switch (expr.Operator.OperatorKind) {
+        IRExpression irExpr;
+
+        switch (node.Operator.OperatorKind) {
             case OperatorKind.Add:
-                return CompileBinaryAddExpression(left, right, type, IRMathOperation.Add);
+                irExpr = CompileBinaryAddExpression (left, right, type, IRMathOperation.Add);
+                break;
             case OperatorKind.Subtract:
-                return CompileBinaryAddExpression(left, right, type, IRMathOperation.Subtract);
+                irExpr = CompileBinaryAddExpression(left, right, type, IRMathOperation.Subtract);
+                break;
             case OperatorKind.Multiply:
-                return CompileBinaryAddExpression(left, right, type, IRMathOperation.Multiply);
+                irExpr = CompileBinaryAddExpression(left, right, type, IRMathOperation.Multiply);
+                break;
             case OperatorKind.Divide:
-                return CompileBinaryAddExpression(left, right, type, IRMathOperation.Divide);
+                irExpr = CompileBinaryAddExpression(left, right, type, IRMathOperation.Divide);
+                break;
             case OperatorKind.Equals:
-                return CompileComparisonExpression(left, right, type, IRComparisonOperation.Equals);
+                irExpr = CompileComparisonExpression(left, right, type, IRComparisonOperation.Equals);
+                break;
             case OperatorKind.NotEquals:
-                return CompileComparisonExpression(left, right, type, IRComparisonOperation.NotEquals);
+                irExpr = CompileComparisonExpression(left, right, type, IRComparisonOperation.NotEquals);
+                break;
             case OperatorKind.ReferenceEquals:
                 throw new NotImplementedException("Reference comparison not yet implemented.");
             case OperatorKind.ReferenceNotEquals:
                 throw new NotImplementedException("Reference comparison not yet implemented.");
             case OperatorKind.LessThan:
-                return CompileComparisonExpression(left, right, type, IRComparisonOperation.LessThan);
+                irExpr = CompileComparisonExpression(left, right, type, IRComparisonOperation.LessThan);
+                break;
             case OperatorKind.LessThanOrEqualTo:
-                return CompileComparisonExpression(left, right, type, IRComparisonOperation.LessThanOrEqualTo);
+                irExpr = CompileComparisonExpression(left, right, type, IRComparisonOperation.LessThanOrEqualTo);
+                break;
             case OperatorKind.GreaterThan:
-                return CompileComparisonExpression(left, right, type, IRComparisonOperation.GreaterThan);
+                irExpr = CompileComparisonExpression(left, right, type, IRComparisonOperation.GreaterThan);
+                break;
             case OperatorKind.GreaterThanOrEqualTo:
-                return CompileComparisonExpression(left, right, type, IRComparisonOperation.GreaterThanOrEqualTo);
+                irExpr = CompileComparisonExpression(left, right, type, IRComparisonOperation.GreaterThanOrEqualTo);
+                break;
             default:
                 throw new NotImplementedException(
                     $"Cannot yet compile binary expression with operator " +
-                    $"'{expr.Operator.OperatorKind}'."
+                    $"'{node.Operator.OperatorKind}'."
                 );
         }
+
+        LinkToSource(irExpr, node);
+
+        return irExpr;
     }
     
     private IRExpression CompileUnaryExpression (UnaryExpression node) {
@@ -330,15 +384,22 @@ public class JudithIRGenerator {
         string type = boundNode.Type.FullyQualifiedName;
         var expr = CompileExpression(node.Expression);
 
+        IRExpression irExpr;
+
         switch (node.Operator.OperatorKind) {
             case OperatorKind.Subtract:
-                return CompileUnaryAddExpression(expr, type, IRUnaryOperation.Negate);
+                irExpr = CompileUnaryAddExpression(expr, type, IRUnaryOperation.Negate);
+                break;
             default:
                 throw new NotImplementedException(
                     $"Cannot yet compile binary expression with operator " +
                     $"'{node.Operator.OperatorKind}'."
                 );
         }
+
+        LinkToSource(irExpr, node);
+
+        return irExpr;
     }
 
     private IRExpression CompileBinaryAddExpression (
@@ -377,66 +438,84 @@ public class JudithIRGenerator {
         );
     }
 
-    private IRCallExpression CompileCallExpression (CallExpression expr) {
-        var boundExpr = Bound<BoundCallExpression>(expr);
-        if (boundExpr.Type == null) ThrowIncompleteNode(expr);
+    private IRCallExpression CompileCallExpression (CallExpression node) {
+        var boundExpr = Bound<BoundCallExpression>(node);
+        if (boundExpr.Type == null) ThrowIncompleteNode(node);
 
         string type = boundExpr.Type.FullyQualifiedName;
-        var callee = CompileExpression(expr.Callee);
+        var callee = CompileExpression(node.Callee);
         List<IRArgument> arguments = [];
 
-        foreach (var arg in expr.Arguments.Arguments) {
+        foreach (var arg in node.Arguments.Arguments) {
             arguments.Add(CompileArgument(arg));
         }
 
-        return new(callee, arguments, type);
+        IRCallExpression irCallExpr = new(callee, arguments, type);
+        LinkToSource(irCallExpr, node);
+
+        return irCallExpr;
     }
 
-    private IRArgument CompileArgument (Argument arg) {
-        var expr = CompileExpression(arg.Expression);
+    private IRArgument CompileArgument (Argument node) {
+        var expr = CompileExpression(node.Expression);
 
-        return new(expr);
+        IRArgument irArg = new(expr);
+        LinkToSource(irArg, node);
+
+        return irArg;
     }
 
-    private IRIdentifierExpression CompileIdentifierExpression (IdentifierExpression expr) {
-        var boundExpr = Bound<BoundIdentifierExpression>(expr);
-        if (boundExpr.Type == null) ThrowIncompleteNode(expr);
+    private IRIdentifierExpression CompileIdentifierExpression (IdentifierExpression node) {
+        var boundExpr = Bound<BoundIdentifierExpression>(node);
+        if (boundExpr.Type == null) ThrowIncompleteNode(node);
 
         string type = boundExpr.Type.FullyQualifiedName;
+
+        IRIdentifierExpression irIdExpr;
 
         if (
             boundExpr.Symbol.Kind == SymbolKind.Local
             || boundExpr.Symbol.Kind == SymbolKind.Parameter
         ) {
-            return new(
+            irIdExpr = new(
                 boundExpr.Symbol.Name,
                 IRIdentifierKind.Local,
                 type
             );
         }
         else {
-            return new(
+            irIdExpr = new(
                 boundExpr.Symbol.FullyQualifiedName,
                 IRIdentifierKind.Global,
                 type
             );
         }
+
+        LinkToSource(irIdExpr, node);
+
+        return irIdExpr;
     }
 
-    private IRLiteralExpression CompileLiteralExpression (LiteralExpression expr) {
-        var boundExpr = Bound<BoundLiteralExpression>(expr);
-        if (boundExpr.Type == null) ThrowIncompleteNode(expr);
+    private IRLiteralExpression CompileLiteralExpression (LiteralExpression node) {
+        var boundExpr = Bound<BoundLiteralExpression>(node);
+        if (boundExpr.Type == null) ThrowIncompleteNode(node);
 
         var value = boundExpr.Value;
         var type = boundExpr.Type.FullyQualifiedName;
 
-        return new IRLiteralExpression(value, type);
+        IRLiteralExpression irLiteralExpr = new(value, type);
+        LinkToSource(irLiteralExpr, node);
+
+        return irLiteralExpr;
     }
 
-    private List<IRStatement> Compile_P_PrintStatement (P_PrintStatement pStmt) {
-        var expr = CompileExpression(pStmt.Expression);
+    private List<IRStatement> Compile_P_PrintStatement (P_PrintStatement node) {
+        var expr = CompileExpression(node.Expression);
 
-        return [new IR_P_PrintStatement(expr)];
+        IR_P_PrintStatement ir_P_PrintStmt = new(expr);
+        LinkToSource(ir_P_PrintStmt, node);
+
+        return [ir_P_PrintStmt];
     }
 
     [DoesNotReturn]
@@ -446,5 +525,17 @@ public class JudithIRGenerator {
 
     private T Bound<T> (SyntaxNode node) where T : BoundNode {
         return _cmp.Binder.GetBoundNodeOrThrow<T>(node);
+    }
+
+    /// <summary>
+    /// When the debugger info is provided, links the IR node given to the
+    /// Judith node given.
+    /// </summary>
+    /// <param name="irNode">The IR node to link.</param>
+    /// <param name="judithNode">The Judith node to link.</param>
+    private void LinkToSource (IRNode irNode, SyntaxNode judithNode) {
+        if (_debugInfo == null) return;
+
+        _debugInfo.IRNodeMap[irNode] = judithNode;
     }
 }

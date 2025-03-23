@@ -81,6 +81,9 @@ public class JasmFunctionCompiler {
             case IRReturnStatement returnStmt:
                 CompileReturnStatement(returnStmt);
                 break;
+            case IRYieldStatement returnStmt:
+                CompileYieldStatement(returnStmt);
+                break;
             case IRExpressionStatement exprStmt:
                 CompileExpressionStatement(exprStmt);
                 break;
@@ -120,6 +123,10 @@ public class JasmFunctionCompiler {
         }
 
         Chunk.WriteInstruction(OpCode.RET);
+    }
+
+    public void CompileYieldStatement (IRYieldStatement stmt) {
+        CompileExpression(stmt.Expression);
     }
 
     public void CompileExpressionStatement (IRExpressionStatement stmt) {

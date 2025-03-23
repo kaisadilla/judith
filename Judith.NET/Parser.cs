@@ -1076,11 +1076,17 @@ public class Parser {
             return false;
         }
 
-        if (TryConsumeExpression(out Expression? expr) == false) {
-            throw Error(CompilerMessage.Parser.ExpressionExpected(Peek()));
-        }
+        List<Expression> expressions = [];
 
-        clause = SF.EqualsValueClause(equalToken, expr);
+        do {
+            if (TryConsumeExpression(out Expression? expr) == false) {
+                throw Error(CompilerMessage.Parser.ExpressionExpected(Peek()));
+            }
+
+            expressions.Add(expr);
+        } while (Match(TokenKind.Comma));
+
+        clause = SF.EqualsValueClause(equalToken, expressions);
         return true;
     }
 

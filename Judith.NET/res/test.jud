@@ -7,9 +7,13 @@ __p_print factorial(2)
 print("Factorial of 10: ")
 __p_print factorial(10)
 
--- const a = if false then
---     yield 3
--- end -- we can't compile "yield" yet.
+const a: F64 = if false then
+    --yield 3
+else
+    --yield 5
+end
+print("A value: ")
+__p_print a
 
 if true then
     println("This always prints")

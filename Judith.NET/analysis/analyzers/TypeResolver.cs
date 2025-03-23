@@ -108,6 +108,10 @@ public class TypeResolver : SyntaxVisitor {
     }
 
     public override void Visit (LocalDeclarationStatement node) {
+        if (node.DeclaratorList.DeclaratorKind != LocalDeclaratorKind.Regular) {
+            throw new NotImplementedException("Declarator kind not yet supported.");
+        }
+
         if (Binder.TryGetBoundNode(
             node, out BoundLocalDeclarationStatement? boundNode) == false
         ) {
@@ -119,39 +123,70 @@ public class TypeResolver : SyntaxVisitor {
             Visit(node.Initializer);
         }
 
-        // TODO: Multiple return values. This is just scaffolding.
-        // The initial implicit type is the initializer's type, if able.
-        var implicitType = _cmp.PseudoTypes.Unresolved;
-        if (node.Initializer != null) {
-            if (Binder.TryGetBoundNode(node.Initializer.Value, out BoundExpression? expr)) {
-                if (TypeSymbol.IsResolved(expr.Type)) implicitType = expr.Type;
-            }
-        }
-
         bool isResolved = true;
         bool workDone = false;
 
-        var inheritedType = implicitType; // Scaffolding.
-        foreach (var localDecl in node.DeclaratorList.Declarators) {
-            var boundLocalDecl = Binder.GetBoundNodeOrThrow<BoundLocalDeclarator>(localDecl);
-
-            if (TypeSymbol.IsResolved(boundLocalDecl.Type) == false) {
-                if (localDecl.TypeAnnotation == null) {
-                    boundLocalDecl.Symbol.Type = inheritedType;
-                }
-                else {
-                    var type = GetType(localDecl.TypeAnnotation);
-                    boundLocalDecl.Symbol.Type = type;
-                }
-
-                boundLocalDecl.Type = boundLocalDecl.Symbol.Type;
-
-                bool typeResolved = TypeSymbol.IsResolved(boundLocalDecl.Type);
-                isResolved = isResolved && typeResolved;
-                workDone = workDone || typeResolved;
+        // If there's an initializer, then we match declarators and values.
+        if (node.Initializer != null) {
+            if (node.DeclaratorList.Declarators.Count != node.Initializer.Values.Count) {
+                throw new(
+                    "Amount of declarators and initializers expected to match."
+                );
             }
 
-            implicitType = boundLocalDecl.Type ?? _cmp.PseudoTypes.Unresolved;
+            for (int i = 0; i < node.DeclaratorList.Declarators.Count; i++) {
+                var boundDecl = Binder.GetBoundNodeOrThrow<BoundLocalDeclarator>(
+                    node.DeclaratorList.Declarators[i]
+                );
+
+                // If this declaration is already resolved, jump to the next.
+                if (TypeSymbol.IsResolved(boundDecl.Type)) continue;
+
+                var boundInit = Binder.GetBoundNodeOrThrow<BoundExpression>(
+                    node.Initializer.Values[i]
+                );
+
+                // Assign the type to the symbol defined by this decl.
+                boundDecl.Symbol.Type = boundInit.Type;
+                // And give that symbol's type to the bound decl itself.
+                boundDecl.Type = boundDecl.Symbol.Type;
+
+                bool declResolved = TypeSymbol.IsResolved(boundDecl.Type);
+                isResolved = isResolved && declResolved;
+                workDone = workDone || declResolved;
+            }
+
+            NodeStates.Mark(node, isResolved, _scope.Current, workDone);
+        }
+        else {
+            LocalDeclarator decl;
+            BoundLocalDeclarator boundDecl;
+            TypeSymbol? currentType = null;
+
+            for (int i = node.DeclaratorList.Declarators.Count - 1; i >= 0; i--) {
+                decl = node.DeclaratorList.Declarators[i];
+                boundDecl = Binder.GetBoundNodeOrThrow<BoundLocalDeclarator>(decl);
+
+                if (decl.TypeAnnotation != null) {
+                    currentType = GetType(decl.TypeAnnotation); // never returns null.
+                }
+
+                if (currentType == null) {
+                    throw new(
+                        "Uninitialized declarations must have a type annotation."
+                    );
+                }
+
+                // If this declaration is already resolved, jump to the next.
+                if (TypeSymbol.IsResolved(boundDecl.Type)) continue;
+
+                boundDecl.Symbol.Type = currentType;
+                boundDecl.Type = boundDecl.Symbol.Type;
+
+                bool declResolved = TypeSymbol.IsResolved(boundDecl.Type);
+                isResolved = isResolved && declResolved;
+                workDone = workDone || declResolved;
+            }
         }
 
         NodeStates.Mark(node, isResolved, _scope.Current, workDone);

@@ -24,6 +24,7 @@ public enum MessageKind {
 public enum MessageOrigin {
     Lexer,
     Parser,
+    AgnosticValidator,
     SymbolTableBuilder,
     SymbolResolver,
     Binder,
@@ -405,6 +406,43 @@ public class CompilerMessage {
     }
 
     public static class Analyzers {
+        public static CompilerMessage InvalidExpressionForStatement (
+            SyntaxNode node
+        ) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.AgnosticValidator,
+                (int)MessageCode.InvalidExpressionForStatement,
+                $"This expression cannot be used as a statement.",
+                new(node)
+            );
+        }
+
+        public static CompilerMessage InitializersMustMatchVariables (
+            SyntaxNode node
+        ) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.AgnosticValidator,
+                (int)MessageCode.InitializersMustMatchDeclarators,
+                $"The number of values the initialization must match the " +
+                $"number of variables in the declaration.",
+                new(node)
+            );
+        }
+
+        public static CompilerMessage UninitializedDeclaratorsMustHaveType (
+            SyntaxNode node
+        ) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.AgnosticValidator,
+                (int)MessageCode.UninitializedDeclaratorsMustHaveType,
+                $"Cannot infer type of uninitialized variable.",
+                new(node)
+            );
+        }
+
         public static CompilerMessage DefinitionAlreadyExist (
             SyntaxNode node, string name
         ) {

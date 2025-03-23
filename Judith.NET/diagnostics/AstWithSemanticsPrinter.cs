@@ -318,7 +318,7 @@ public class AstWithSemanticsPrinter : SyntaxVisitor<object> {
         return new {
             Class = nameof(EqualsValueClause),
             node.Kind,
-            Value = Visit(node.Value),
+            Value = node.Values.Select(v => Visit(v)),
             Semantics = GetBoundOrNull(node),
         };
     }

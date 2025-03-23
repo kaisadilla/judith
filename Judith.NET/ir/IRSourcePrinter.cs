@@ -98,6 +98,9 @@ public class IRSourcePrinter {
             case IRReturnStatement returnStmt:
                 PrintReturnStatement(returnStmt);
                 break;
+            case IRYieldStatement yieldStmt:
+                PrintYieldStatement(yieldStmt);
+                break;
             case IRExpressionStatement exprStmt:
                 PrintExpressionStatement(exprStmt);
                 break;
@@ -133,6 +136,12 @@ public class IRSourcePrinter {
             PrintExpression(stmt.Expression);
             Write(");");
         }
+    }
+
+    public void PrintYieldStatement (IRYieldStatement stmt) {
+        Write("yield (");
+        PrintExpression(stmt.Expression);
+        Write(");");
     }
 
     public void PrintExpressionStatement (IRExpressionStatement stmt) {

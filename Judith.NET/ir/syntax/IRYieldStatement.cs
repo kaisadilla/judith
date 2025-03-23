@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 
 namespace Judith.NET.ir.syntax;
 
-public class IRArgument : IRNode {
+public class IRYieldStatement : IRStatement {
     public IRExpression Expression { get; private set; }
 
-    public IRArgument (IRExpression expression) {
+    public IRYieldStatement (IRExpression expression) {
         Expression = expression;
     }
 }

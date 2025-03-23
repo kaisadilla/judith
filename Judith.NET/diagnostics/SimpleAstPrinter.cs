@@ -381,7 +381,10 @@ public class SimpleAstPrinter : SyntaxVisitor<List<string>> {
     public override List<string> Visit (EqualsValueClause node) {
         List<string> txt = [" = "];
 
-        AddInline(txt, Visit(node.Value), 1);
+        foreach (var v in node.Values) {
+            AddInline(txt, Visit(v), 1);
+            txt[^1] += ", ";
+        }
 
         return txt;
     }
@@ -528,7 +531,7 @@ public class SimpleAstPrinter : SyntaxVisitor<List<string>> {
     }
 
     private void AddInline (List<string> arr, List<string>? toAdd, int indent) {
-        if (toAdd == null) return;
+        if (toAdd == null || toAdd.Count == 0) return;
 
         arr[^1] += toAdd[0];
         if (toAdd.Count > 1) {

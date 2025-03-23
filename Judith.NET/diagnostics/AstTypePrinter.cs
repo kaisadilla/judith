@@ -156,7 +156,7 @@ public class AstTypePrinter : SyntaxVisitor {
     }
 
     public override void Visit (FieldInitialization node) {
-        var boundInit = _cmp.Binder.GetBoundNodeOrThrow<BoundExpression>(node.Initializer.Value);
+        var boundInit = _cmp.Binder.GetBoundNodeOrThrow<BoundExpression>(node.Initializer.Values[0]);
 
         TypedNodes.Add($"FieldInit: {node.FieldName.Name} - Expr ({node.Initializer}) " +
             $"Type: {FQN(boundInit.Type)}");

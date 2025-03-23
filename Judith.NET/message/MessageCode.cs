@@ -45,8 +45,13 @@ public enum MessageCode {
     FieldMustBeInitialized,
 
     // 3xxx - Analyzer errors
+    // Agnostic analyzer
+    InvalidExpressionForStatement = 3_000,
+    InitializersMustMatchDeclarators,
+    UninitializedDeclaratorsMustHaveType,
+
     // SymbolTableBuilder
-    DefinitionAlreadyExist = 3_000,
+    DefinitionAlreadyExist,
 
     // SymbolResolver
     NameDoesNotExist,

@@ -396,12 +396,16 @@ public static class SyntaxFactory {
     }
 
     public static EqualsValueClause EqualsValueClause (
-        Token equalsToken, Expression value
+        Token equalsToken, List<Expression> values
     ) {
-        var clause = new EqualsValueClause(value) {
+        if (values.Count == 0) {
+            throw new("EqualsValueClause must have at least one value.");
+        }
+
+        var clause = new EqualsValueClause(values) {
             EqualsToken = equalsToken
         };
-        clause.SetSpan(new(clause.EqualsToken.Start, clause.Value.Span.End));
+        clause.SetSpan(new(clause.EqualsToken.Start, clause.Values[^1].Span.End));
         clause.SetLine(clause.EqualsToken.Line);
 
         return clause;
