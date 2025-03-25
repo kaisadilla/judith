@@ -8,9 +8,9 @@ print("Factorial of 10: ")
 __p_print factorial(10)
 
 const a: F64 = if false then
-    --yield 3
+    yield 3
 else
-    --yield 5
+    yield 5
 end
 print("A value: ")
 __p_print a

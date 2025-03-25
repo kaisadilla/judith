@@ -2,7 +2,7 @@
 
 #include "root.hpp"
 
-struct Block;
+class Block;
 struct AssemblyFile;
 
 std::string disassembleAssembly (const AssemblyFile& file);

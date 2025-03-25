@@ -572,6 +572,6 @@ static size_t disassembleInstruction (
     case OpCode::PRINT:
         return printInstruction(str, chunk, "PRINT", index);
     default:
-        break;
+        return index + 1;
     }
 }
