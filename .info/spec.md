@@ -310,6 +310,31 @@ var p1: &Person = get_person_1() -- ok
 var p2: &mut Person = get_person_2() -- ok
 ```
 
+#### Borrowing values
+Functions can borrow a value and return it to its original owner after they return. This allows functions to mutate values they receive as parameters without erasing the value from its previous owner. To do this, we use the `inout` keyword, which replaces `const` / `var` in the declaration of the parameter, and behaves as `var`:
+
+```judith
+func rename_person (inout person: Person)
+    person.name = "Kevin"
+end
+
+var p = get_person()
+rename_person(p) -- here, "rename_person" borrows the value of "p".
+-- here, "p" is given back the ownership of the value.
+Console::log(p.name) -- Valid, "p" keeps having the value.
+```
+
+Since `inout` parameters are returned to their original owner, their ownership cannot be given away (although they can be used as arguments for other `inout` parameters).
+
+```judith
+func do_stuff (inout person: Person) -> Auto
+    --return person -- ERROR: Would transfer ownership.
+    --var b = in person -- ERROR: Would transfer ownership.
+
+    rename_person(person) -- Valid: "rename_person" is only borrowing.
+end
+```
+
 #### Ownership in fields
 Ownership in fields follow the same logic as ownership in locals:
 
@@ -323,7 +348,39 @@ end
 ```
 
 #### Shared ownership
+Although this is highly discouraged, Judith allows the creation of values that are owned by multiple variables with the `shared` type modifier.
 
+```judith
+var a: shared Person = get_person()
+const b: shared Person = a
+```
+
+In this snippet, both `a` and `b` own the same person value. A shared value is always mutable. As such, a reference to a shared value is always mutable.
+
+```judith
+var c: &shared Person = a -- here, the Person referenced by c may be mutated.
+```
+
+Since values can only be mutated by their owned, shared values are the only kind of values that can be mutated from multiple places.
+
+#### Inferring ownership type
+When assigning the value of a variable to another variable, ownership can be inferred:
+
+```judith
+const a: Person
+var b: Person
+
+const c = a -- type inferred as "Person".
+var d = a -- type inferred as "&Person", because "d" is mutable.
+const e = b -- type inferred as "&mut Person", because "b" is mutable.
+var f = b -- type inferred as "&mut Person", because "b" is mutable.
+
+const g = shared Person::("Kevin") -- type inferred as "shared Person"
+const h = g -- type inferred as "shared Person"
+const i = &g -- type inferred as "&shared Person"
+
+const j = in b -- type inferred as "Person", ownership moved to "j".
+```
 
 ## Type
 
@@ -3049,10 +3106,12 @@ my_obj.go -- error, "my_obj" doesn't have members.
 my_obj["go"] -- valid, returns "here"
 ```
 
-# Value and reference types
+# Inline and pointer types
+TODO: Rewrite value/reference as inline/pointer.
+
 Types in Judith can be either value types or reference types. A variable of a value type contains an instance of the type, while a variable of a reference type contains a reference (pointer) to the instance.
 
-## Value types
+## Inline types
 Value types exist directly in the variable that contains them. As such, when assigning a value type to another variable, the value is _copied_ into the receiving variable.
 
 ```judith
@@ -3072,7 +3131,7 @@ The following types are value types:
 
 All other types are reference types.
 
-## Reference types
+## Pointer types
 Reference types contain pointers to values that are allocated on the managed heap. As such, multiple variables can point to the same instance in memory, and thus changing one of them changes all of them.
 
 # Allocations (stack and heap)
