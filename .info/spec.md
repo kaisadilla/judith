@@ -3366,7 +3366,249 @@ TODO: describe `parallel while`, `parallel for`, etc.
 TODO
 
 # Unsafe Judith
-For performance reasons, Judith offers a set of lower-level features to deal with memory manually. However, most of these features can only be used in `unsafe` contexts.
+**`EXPERIMENTAL`** Unsafe Judith is a special set of features that break Judith's safety guarantees. This set of features is only available in unsafe contexts. Unsafe Judith exists because the analysis done by the compiler is conservative: any operation that the compiler cannot guarantee is safe is rejected, even if the operation is actually safe. This guarantees that the compiler never accepts invalid programs, but it also makes it reject some valid ones.
+
+Most unsafe operations are closely related to memory manipulation, but unsafe Judith is not limited to that. Any feature that breaks any of Judith's guarantees is considered unsafe.
+
+When working with unsafe Judith, the developer takes responsibility for ensuring the safety of the operations done inside it. Writing incorrect code inside an unsafe block can cause bugs _anywhere_ in the program, even in contexts deemed safe. However, the existence of unsafe contexts guarantees that, if any of these bugs is ever found anywhere, its origin will be in an unsafe block.
+
+A regular developer will probably never need to use unsafe Judith, but unsafe Judith allows developers to write more performant code when needed. Writing unsafe Judith is not inherently wrong, but should never be done to work around safe Judith's rules.
+
+When working with unsafe code, it is recommended that the unsafe code is wrapped around safe abstractions, to limit the reach of the unsafe context as much as possible.
+
+## Unsafe context
+Unsafe Judith can only be used inside unsafe contexts. These contexts are created inside blocks of code marked with the `unsafe` keyword.
+
+```judith
+-- unsafe item: its whole body is unsafe, and it makes the item
+-- unsafe to use.
+unsafe func do_dangerous_stuff ()
+    -- unsafe code
+end
+
+unsafe typedef class DangerousClass
+    -- every method, constructor, etc. here is unsafe.
+end
+
+-- unsafe block: only the content of the block is unsafe. The block can
+-- exist inside a safe context. The developer is responsible for ensuring
+-- the safety of the code inside the block.
+func my_safe_func () -- this is a regular, safe function
+    const a = 3 -- safe code
+
+    unsafe do
+        -- unsafe code
+    end
+
+    -- more safe code
+end
+
+my_safe_func() -- function being called in a safe context.
+```
+
+## Pointers
+A pointer in Judith (not to be confused with pointer types) works in the same way as a pointer in C: it contains an address to a location in memory, and specifies which type should be assumed to exist at that location. Judith distinguishes between two types of pointers: pointers to unmanaged objects (`*`) and pointers to managed ones (`%`).
+
+### Unmanaged pointers
+Unmanaged pointers are pointers to values that are not controlled by the garbage collector. As such, the developer is responsible for their memory management tasks.
+
+```judith
+const person_ptr: Person* = Person*::() -- returns a Person*, more on it later.
+```
+
+Pointers behave like wrappers on the value they point to, using wrapper syntax to dereference said value. This access bypasses privacy rules for class fields, meaning that `hid` or `internal` fields can be accessed, and that non-`pub` fields can be mutated.
+
+```judith
+--person_ptr.name = "John" -- ERROR, Person* does not contain a field 'name'.
+person_ptr->name = "John" -- ok
+(*person_ptr).name = "John" -- also ok
+```
+
+Pointer arithmetic is allowed in unsafe Judith. When adding `n` to a `T*`, the pointer will be offset by `n * sizeof(T)`. Note that, since `Int` always corresponds to the system's native integer type, it's always the same size as memory addresses.
+
+```judith
+var a: I64* = &ptr 5 -- create a "5" in the heap and get a raw pointer to it.
+Console::log(a) -- outputs "0x00000500" (for example).
+a += 1
+Console::log(a) -- outputs "0x00000508" (increased by 8, as sizeof(I64) = 8)
+```
+
+Using the indexing operator (`[]`), we can do memory arithmetic automatically:
+
+```judith
+var a: I64* = Usf::mem_alloc<I64>(10) -- allocate memory for 10 I64s.
+a[5] = 20 -- "a[5]" is equivalent to "*(a + 5)".
+```
+
+Upcasting between pointer types is always allowed, meaning that the developer is responsible for ensuring the cast makes sense. This is known as a "reinterpret cast".
+
+```judith
+var a: I64* = &ptr 42
+var b: F64 = *(a:F64*) -- here we cast "a" to "F64*" and dereference it.
+```
+
+In this example, we are reinterpreting the value pointed to by "a" as an F64. The meaning of the bytes used to form the int64 `42` when interpreted as a `float64` is up to the underlying system.
+
+A reinterpret cast can transform reference types (such as `&mut Person`) into owning types (such as `Person`), or managed pointers (such as `Person%`) into unmanaged ones (such as `Person*`). As such, they are inherently dangerous and can even crash Judith's runtime if used incorrectly.
+
+```judith
+const a = Person::("Kevin") -- a owns a Person as an immutable value.
+var ptr = &gcptr a -- "ptr"'s type is "Person%".
+
+var b: Person = *a -- dereferences "ptr" into a "Person", owned by "b".
+b.name = "John"
+
+Console::log(a) -- prints "john", even though it was "Kevin" and is immutable.
+```
+
+What happened here is that, using reinterpret casts, we allowed `b` to own the same value `a` already owns. This isn't inherently wrong if this behavior is wanted, but it's extremely dangerous as now `a` is falsely "guaranteeing" that its value won't be mutated, even though `b` can mutate it.
+
+Pointers can point to the null pointer by using `nullptr`
+
+```judith
+var p: Person* = nullptr
+```
+
+### Building unmanaged objects
+There are several ways to get unmanaged objects:
+
+1. Define constructors and functions that return unmanaged pointers, rather than regular objects. These constructors are always unsafe:
+
+```judith
+unsafe ctor Person* ()
+    -- here, "self" is of type Person*.
+    self->name = "John"
+    ->age = 33 -- "self" is also implicit with "->".
+end
+```
+
+2. Allocate memory for the object (which is uninitalized) and initialize it manually:
+
+```judith
+var p: Person* = Usf::mem_alloc<Person>() -- returns a value of type "Person*"
+-- here, the person's values are not initialized and should not be read.
+p->name = "John"
+p->age = 41
+Console::log(p->name) -- now it's safe to do this.
+```
+
+3. Get an unmanaged pointer from a managed value. Doing this will NOT make the value unmanaged, and thus managing its memory manually can result in unexpected behavior. The garbage collector will respect the unumanaged pointer and not collect or move the value while an unmanaged pointer to it exists. Be aware that there's no way for this pointer to know it's pointing to a managed object and thus, pointer arithmetic and other features will not work properly on it.
+
+```judith
+const p = Person::("John")
+var ptr: Person* = &ptr p
+```
+
+When you are done with an unmanaged pointer, you must free its memory explicitly:
+
+```judith
+Usf::mem_free(ptr)
+```
+
+### Managed pointers
+Managed pointers are pointers to values that are controlled by the garbage collector.
+
+```judith
+-- get a raw pointer to the gc's handle for a Person.
+const person_ptr: Person% = &gcptr get_person()
+```
+
+When doing pointer arithmetic for `T%`, `gcsizeof(T)` is used instead, which includes the size of the GC handle.
+
+## Memory operations
+The namespace `Usf` includes an array of unsafe functions that can be used to manipulate memory directly:
+
+1. `Usf::mem_alloc<T>(length: Int = 1) -> T*`: allocates memory for an unmanaged pointer of the given type, and returns a pointer to it. The optional parameter `length` is used to allocate contiguous memory for multiple values instead.
+
+```judith
+-- a pointer to a byte
+const ptr: Byte* = Usf::malloc<Byte>()
+
+-- a pointer to a C-style array of 10 people:
+const arr: Person* = Usf::malloc<Person>(10)
+```
+
+2. `Usf::mem_set<T>(ptr: T*, value: T, length: Int = 1)`: sets the memory at the address given to be a copy of the value given. The optional parameter `length` is used to do this operation on multiple contiguous addresses.
+
+```judith
+-- set the value pointed to by "ptr" to 12.
+Usf::mem_set<Byte>(ptr, 12)
+-- set all the values in the C-style array to be the same as the person given.
+Usf::mem_set<Person>(arr, { name = "John", age = 35 }, 10)
+```
+
+3. `Usf::mem_copy<T>(dest: T*, src: T*, length: Int = 1)`: copies a block of memory starting in the pointer `src` to the pointer `dest`. The optional parameter `length` is used to do this operation on multiple contiguous addresses. If the source and destination blocks of memory overlap, unexpected behavior can occur.
+
+```judith
+var ptr_2: Byte* = Usf::malloc<Byte>()
+var arr_2: Person* = Usf::malloc<Person>(10)
+
+Usf::mem_copy(ptr_2, ptr)
+Usf::mem_copy(arr_2, arr, 10)
+```
+
+4. `Usf::mem_move<T>(dest: T*, src: T*, length: Int = 1)`: moves a block of memory starting in the pointer `src` to the pointer `dest`. The optional parameter `length` is used to do this operation on multiple contiguous addresses. The source and destination blocks of memory may overlap.
+
+```judith
+var ptr_3: Byte* = Usf::malloc<Byte>()
+var arr_3: Person* = Usf::malloc<Person>(10)
+
+Usf::mem_move(ptr_3, ptr_2)
+Usf::mem_move(arr_3, arr_2, 10)
+```
+
+5. `Usf::mem_compare<T>(a: T*, b: T*, length: Int = 1) -> Bool`: compares the memory at the two pointers given, and returns whether they are exactly the same. The optional parameter `length` is used to do this operation on multiple contiguous addresses, in which case the function will return true if the two entire blocks of memory are exactly the same.
+
+```judith
+Usf::mem_compare(ptr, ptr_3)
+Usf::mem_compare(arr, arr_3, 10)
+```
+
+6. `Usf::mem_find<T>(ptr: T*, value: T, length: Int) -> T*`: starting at `ptr`, searches for a pointer that matches the value given; up to `length` places away. If no pointer is found, `nullptr` is returned.
+
+7. `Usf::stack_alloc<T>(length: Int = 1)`: Similar to `Usf::mem_alloc`, but allocates the memory on the stack. This operation may not be supported in some systems.
+
+_Note: as always, template parameters are inferred from usage when possible. They are explicitly written in the examples above to make the examples more clear._
+
+## Memory unions
+Memory unions are c-style unions. They contain multiple fields that all coexist in the same address in memory. As such, only one of them is valid at a given time. The rest are safe to read (as the size of the memory union is equal to the size of the biggest member of the union), but their content will probably not make any sense.
+
+Passing memory unions as black boxes is not unsafe, but accessing values from it is unsafe.
+
+```judith
+typedef memory_union Id
+    as_number: Num
+    as_string: String
+end
+
+func get_id () -> Id -- the function is safe
+    unsafe do -- we can only assign to a memory union in an unsafe context.
+        return Id { as_number = 42 }
+    end
+end
+
+func print_id (id: Id)
+    unsafe do -- reading also requires an unsafe context.
+        Console::log(id.as_number) -- output: 42
+    end
+end
+
+const id = get_id() -- passing the id around is not unsafe.
+print_id(id) -- this is also safe.
+```
+
+Memory union syntax can also be used for anonymous types:
+
+```judith
+typedef struct Person
+    name: String
+    age: Num
+    id: memory_union
+        as_number: Number
+        as_guid: Guid
+    end
+end
+```
 
 # Reflection
 TODO: Add restrictions that guarantee immutability is not broken.
