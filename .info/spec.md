@@ -2514,7 +2514,7 @@ In these examples, the return type of `get_person` is `Person | Exception`, wher
 ## Handling functions with exceptions
 When calling a function with exceptions, there's multiple ways in which we can handle them.
 
-### Treating exceptions are normal values
+### Treating exceptions as normal values
 If we use a function normally, then we receive a value that is the union of its regular return type and the subset of Exception that the function may return.
 
 It is important to mention that, even though we refer to all subsets with `Exception`, the compiler automatically infers which subset is used by each value.
@@ -2829,6 +2829,8 @@ The following types are pointer types:
 * Literal types where the literal's type is a pointer type.
 
 ### Ownership
+_See [Concurrency](#concurrency) for an explanation of how ownership works with concurrency-related constructs._
+
 In Judith, values have owners. Unlike in languages like Rust, ownership is not related to memory management, but instead describes which variable (if any) is allowed to mutate the value. 
 
 With inline types, ownership is usually irrelevant as regular assignments create new values that will be owned by whichever variable it was assigned to - thus, ownership for them only appears when explicitly using reference syntax. With pointer types, however, it is possible to have multiple variables point to the same value.
@@ -3033,7 +3035,7 @@ end
 ```
 
 #### Shared ownership
-Although this is highly discouraged, Judith allows the creation of values that are owned by multiple variables. To do this, we use a `^` before the name of the type.
+Judith allows the creation of values that are owned by multiple variables. To do this, we use a `^` before the name of the type.
 
 ```judith
 var a: ^Person = get_person()
@@ -3046,7 +3048,7 @@ In this snippet, both `a` and `b` own the same person value. A shared value is a
 var c: &mut ^Person = a -- here, the Person referenced by c may be mutated.
 ```
 
-Since values can only be mutated by their owner, shared values are the only kind of values that can be mutated from multiple places. For this reason, shared values are always assumed to be mutable.
+Since shared values have multiple owners, there's no way to guarantee that a shared value will not be mutable, so it's not possible to obtain references to them as immutable.
 
 #### Inferring ownership type
 When assigning the value of a variable to another variable, ownership can be inferred:
@@ -3099,6 +3101,24 @@ const person = get_person()
 var something: &Any = person -- valid, we are getting a reference to `Any`.
 ```
 
+#### References to inline types
+You can create references to mutable inline types:
+
+```judith
+var a: Num = 5
+const b = &mut a -- 'b' is of type &mut Num
+a = 10
+Console::log(b) -- outputs "10", because "b" is referencing whatever value "a" has.
+```
+
+You cannot create a reference to an immutable inline value. You should simply copy the value instead.
+
+```judith
+const a: Bool = true
+--const b: &Bool = a -- ERROR: Simply make "b" another immutable Bool instead.
+const b: Bool = a -- Ok.
+```
+
 #### Value lifetimes
 As explained above, ownership in Judith is unrelated to memory management. Pointer values in Judith are handled by the garbage collector, and a reference to a value will keep the value alive even if the owner of the value has already disappeared.
 
@@ -3113,6 +3133,30 @@ end
 var my_car_ref: &Car = get_car_ref()
 -- here the variable that owns the car no longer exists anywhere.
 Console::log(my_car_ref.engine) -- Valid, "my_car_ref" is still alive in memory.
+```
+
+## Influencing memory management
+
+### `Box<T>`
+`Box<T>` is a pointer type that wraps a value (usually of an inline type). 
+
+```jud
+var a: Num = 20 -- regular number (inline type)
+var b = a -- regular copy, also of type "Num".
+
+var c = Box(a) -- creates a boxed value (copying it), type "Box<Num>".
+var d = c -- creates a reference to c, type "&mut Box<Num>"
+
+c = 50 -- ERROR: cannot assign "50" to c.
+*c = 50 -- Valid, we are assigning to the value contained in the box.
+c.value = 50 -- Also valid, same as above
+
+Console::log(d) -- outputs "50", since "d" is just a reference to "c".
+
+d = Box(200) -- invalid, "Box<Num>" is not of type "&mut Box<Num>".
+
+var e = *c -- here we unwrap c, e is thus of type "Num".
+e = 100 -- mutates "e", but not "c".
 ```
 
 ### Inline structs and classes
@@ -3147,28 +3191,178 @@ end
 
 Note that the compiler usually inlines variables of pointer types when it makes sense. Using `inline` serves mainly to enforce the rules that make a variable allowed to be inlined.
 
-## References to inline types
-You can create references to mutable inline types:
-
-```judith
-var a: Num = 5
-const b = &mut a -- 'b' is of type &mut Num
-a = 10
-Console::log(b) -- outputs "10", because "b" is referencing whatever value "a" has.
-```
-
-You cannot create a reference to an immutable inline value. You should simply copy the value instead.
-
-```judith
-const a: Bool = true
---const b: &Bool = a -- ERROR: Simply make "b" another immutable Bool instead.
-const b: Bool = a -- Ok.
-```
-
 # Allocations (stack and heap)
 TODO - This describes the contracts of each type and how the JuVM leverages that to decide between stack and heap allocation.
 
-# Concurrency and multithreading, coroutines
+# <a name="concurrency">Concurrency</a>
+
+## Coroutines
+Coroutines in Judith are directly inspired by Go's _goroutines_, although feature some changes. Coroutines are managed by Judith's runtime, and the developer only needs to enqueue them.
+
+```judith
+func slow ()
+    Thread::wait(3000)
+    Console::log(f"End of slow at {Time::time}")
+end
+
+func do_stuff ()
+    slow()
+
+    Console::log(f"End of do_stuff at {Time::time}")
+end
+
+--- output ---
+End of slow at 3000
+End of do_stuff at 3000
+```
+
+In this first example, `slow` is a function that takes 5 seconds to complete (doing the very busy work of nothing). In `do_stuff`, we call `slow()` and wait for it to finish, preventing `do_stuff` from continuing execution for 5 seconds. Only after `slow` is done, `do_stuff` can continue and print its message.
+
+To solve this problem, we can call `slow()` in a new coroutine. This will allow `do_stuff` to continue its execution without having to wait for `slow` to end. To fire a new coroutine, we use the `async` keyword.
+
+```judith
+func do_stuff ()
+    async slow()
+
+    Console::log(f"End of do_stuff at {Time::time}")
+end
+
+--- output ---
+End of do_stuff at 0
+End of slow at 3000
+```
+
+Here, `do_stuff` has called its printing function before `slow` did. This is because `do_stuff` simply tasked Judith with executing `slow()` in a new coroutine. Note that, once we do `async`, the execution of `do_stuff` and `slow` became _de-synchronized_, which means that it's not possible to determine which one of the two will finish execution first. If `do_stuff` suffered a delay for whatever reason, `slow` could still print its message first:
+
+```judith
+func do_stuff ()
+    async slow
+    Thread::wait(6000)
+
+    Console::log(f"End of do_stuff at {Time::time}")
+end
+
+--- output ---
+End of slow at 3000
+End of do_stuff at 6000
+```
+
+Sometimes this behavior is fine, as we launch new coroutines and no longer care about their execution. Other times, though, we do care about what the coroutine is doing, and want to _re-synchronize_ both executions at a later point. For this reason, the `async` expression returns a `Coroutine<T>` object that holds the execution state of the coroutine we started. This object will also store any values returned by the coroutine.
+
+```judith
+func slow_get_score () -> Num
+    Thread::wait(300)
+    return 42
+end
+
+func print_score ()
+    const score_co = async slow_get_score() -- "score" is Coroutine<Num>.
+    Console::log(score_co) -- here we'll print the coroutine itself.
+
+    const score: Num = await score -- here we wait for the coroutine to end
+    Console::log(score) 
+end
+
+--- output ---
+(Coroutine<Num> { pending }) -- could also be "Coroutine<Num> { resolved }"
+42
+```
+
+In this example, `slow_get_score` is being executed asynchronously, and we are receiving a `Coroutine<Num>` that tracks its progress. In our first log, we just printed the `Coroutine<Num>` object itself, instantly. Then, we create a new variable (`score`) that waits for the coroutine to end and then takes its result.
+
+`Coroutine<T>` respects ownership semantics, but some of its fields are effectively controlled by the runtime rather than its owner (for example, the field that indicates whether the coroutine is done). Awaiting a coroutine is a mutable action that can only be done on the variable that owns it. When we do this, we gain ownership of the value retrieved immediately. This means that we cannot use `await` twice on the same coroutine, as the second `await` would no longer own any value.
+
+When we have a reference to a coroutine, we can query it to check if it's done, but we cannot retrieve the value it returned.
+
+When the coroutine doesn't return any value, it becomes `Coroutine<Undefined>` and `await` will produce `undefined`.
+
+When a coroutine is created for a function that returns exceptions, we don't deal with exceptions right away. Instead, we receive a `!Coroutine<T>`. The `await` expression for a `!Coroutine<T>` follows the same rules as calling a function with exceptions: we can do `await c catch ex do end`, `try await c`, `try? await c` and `try! await c`.
+
+## Channels
+Channels in Judith are ways to transfer data between coroutines in a safe manner, when the data is not returned directly. A channel is opened when it's created, and new values can be pushed into it. When we're done, we seal the channel, meaning that it can't receive any more values. We can read values from the channel at any time, an action that will block execution if the channel hasn't received the next value yet.
+
+```judith
+func produce_numbers (var chan: Chan<Num>) -- take a channel as a parameter
+    for i in 100..105 do
+        Thread::wait(3000)
+        chan.push(c)
+    end
+
+    chan.seal() -- IMPORTANT! If we don't seal it, the receiver cannot know
+                -- the channel won't receive new values.
+end
+
+var chan = Chan<Num>::() -- create a channel, opening it.
+async produce_numbers(chan) -- pass the channel to a coroutine.
+```
+
+In this example, we created a channel and passed it as an argument to `produce_numbers`, who pushes 5 numbers (100 through 104) to the channel. We can now receive these numbers in different ways:
+
+1. Iterate the channel, meaning that, every iteration, we wait until we receive a new value. When the channel is sealed, the iteration is complete. Every iteration, we take ownership of the value we receive. Note that any values that have been consumed yet will not be part of this loop.
+
+```jud
+for i in chan do -- we consume values from the channel.
+    Console::log(f"{i} at {Time::time} ms")
+end
+
+Console::log("Exited the loop")
+
+--- output ---
+100 at 3000 ms
+200 at 6000 ms
+300 at 9000 ms
+400 at 12000 ms
+500 at 15000 ms
+Exited the loop
+```
+
+2. Read a single value from the channel with `await`. This expression can return the `'channel_has_no_more_values'` exception if we call it after we've consumed every possible value from the channel, which means that the return type of `await` is `T | Exception`.
+
+```jud
+-- all of these are of type "T | Exception".
+const val_0 = await chan
+const val_1 = await chan
+const val_2 = await chan
+const val_3 = await chan
+const val_4 = await chan
+const val_5 = await chan
+
+Console::log(val_0)
+Console::log(val_1)
+Console::log(val_2)
+Console::log(val_3)
+Console::log(val_4)
+Console::log(val_5)
+
+--- output ---
+100
+101
+102
+103
+104
+channel_has_no_more_values
+```
+
+`Chan<T>`, like every construct in Judith, respects ownership semantics. Adding values to a channel, or sealing it, are mutating actions, and thus only the owner can do it, and only when the value is mutable. However, reading values from it does not mutate the channel, and thus any variable can do it, even if they just hold a reference to the channel. Just like with `Coroutine<T>`, using await immediately awards ownership of the value received, and that value cannot be received in anyway by anyone else via `await`. In case multiple coroutines are trying to read values from the same chan, whoever reads it first will get the value. It is not possible to determine, at compile time, which coroutine will receive which value, just that each value will be received by someone.
+
+## Cogroups
+**`EXPERIMENTAL`** Judith's `CoGroup<T>` represent a group of coroutines. When a new coroutine is fired, it can be added to a cogroup (and get a reference to that coroutine) using `async(group)`. Doing this still grants ownership of the `Coroutine<T>` to the async expression - the cogroup only receives a reference to it. Coroutines cannot be accessed from the cogroup - instead, the cogroup acts as a black box that can be queried for information that concerns every coroutine.
+
+```jud
+var group = CoGroup<Num>::()
+var score_co_0 = async(group) slow_get_score() -- Type: Coroutine<Num>
+var score_co_1 = async(group) slow_get_score()
+var score_co_2 = async(group) slow_get_score()
+
+group.await_all() -- will block execution until every coroutine is done.
+```
+
+TODO: Explain the uses of this.
+
+## Parallelism
+TODO: describe `parallel while`, `parallel for`, etc.
+
+## Threads
 TODO
 
 # Unsafe Judith
@@ -3318,12 +3512,21 @@ const type_data = typeof(Employee) -- the TypeMetadata of 'Employee'.
 
 Note that extension methods, constructors and interfaces will not be returned by these operations, as they aren't actually bound to their types.
 
-# Visibility modifiers (`hid` and `internal`)
-Judith features two keywords that affect the visibility of an item: `hid` and `internal`.
+# Visibility modifiers (`hid`, `internal` and `export`)
+Judith features three keywords that affect the visibility of an item: `hid`, `internal` and `export`.
 
 With `hid`, the visibility of the item is confined to either the file (if used in a top-level item) or the namespace or class the item belongs to (if used in an item that is part of a namespace or class).
 
-`internal`, on the other hand, restricts the visibility of an item to the project in which the item appears.
+`internal` and `export`, on the other hand, establish the visibility of items from outside the project. By default, top-level items in Judith are not visible outside the project. To make an item visible, you have to mark it with `export`:
+
+```judith
+export typedef struct Person --! ... -- end
+```
+
+In general, this is all that is involved when dealing with visibility from outside the project. There's, however, one extra case: when we want to make a (non hidden) field in an exported class not visible from other projects. To do this, we mark it as `internal`.
+
+# Input, output, console
+TODO
 
 # FFI
 TODO
