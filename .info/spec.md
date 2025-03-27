@@ -6,12 +6,12 @@ Single-line comments are introduced with `--`:
 ```
 
 ## Multi-line comments
-Multi-line comments are introduced with `--[[` and ended with `]]--`:
+Multi-line comments are introduced with `--!` and ended with `--`:
 ```judith
---[[
+--!
     This is a
     multiline comment
-]]--
+--
 ```
 
 ## Documentation comments (JuDoc)
@@ -185,203 +185,6 @@ var name = "Alyce" -- mutable local, can be mutated.
 name = "Kevin" -- ok.
 ```
 
-### Ownership
-By default, a value in Judith is owned by a single variable. That variable determines whether the value it owns is mutable or immutable. Variables can be defined to reference values they don't own, by assigning _references_ to them.
-
-Assuming we have a struct `Person` with two fields (`name` and `age`), here we are creating two new people:
-
-```judith
-const a: Person = Person::("Kevin", 26)
-var b: Person = Person::("John", 35)
-```
-
-Here, `a` and `b` each own an instance of `Person` (Kevin and John, respectively). Since `a` is an immutable local, the value "Kevin" is an immutable value. `b`, however, is a mutable local, and thus "John" is a mutable value.
-
-#### References
-
-We cannot freely assign `a` and `b` to other variables, but we can create references to them. Using `&`, we specify that a variable contains a reference to an **immutable** value:
-
-```judith
-const c: &Person = a
-var d: &Person = a
-```
-
-Here, `c` and `d` reference (but don't own) the value `a` contains. It is important to realize that `&Person` is a reference to an immutable `Person` value, which means that `d` **CANNOT** mutate that `Person` even though `d` itself is mutable. **References cannot be mutated, even if the variable itself is mutable**. A mutable variable that contains a reference can be reassigned, but cannot mutate the reference.
-
-```judith
-d.name = "Isaac" -- ERROR: cannot mutate a value of type "&Person".
-```
-
-When a value is immutable, we do not have to distinguish between owner and reference, as both behave in exactly the same way:
-
-```judith
-const e: Person = a -- valid
-```
-
-Here, the assignment to `e` is valid because it's irrelevant who owns the value and who references it, since neither of them can mutate it. In practice, we'll always skip specifying reference semantics for immutable variables.
-
----
-
-When we are dealing with mutable values, we have to use `&mut` to specify that a variable contains a reference to a **mutable** value.
-
-```judith
---var f: &Person = b -- ERROR: 'b' is mutable, can't be assigned to '&Person'.
-var g: &mut Person = b -- valid
-```
-
-Here the assignment to `f` is invalid, as we are defining `f` as a reference to an immutable value, but `b` is mutable. The assignment to `g` is valid, since `g` is defined as a reference to a mutable value. `g` itself cannot mutate the reference, but the reference may be mutated by `b` at any point.
-
-We can assign immutable references to mutable ones, but not vice-versa.
-
-```judith
-var h: &mut Person = a -- Valid.
-```
-
-Here, `h` declares that it's reference is mutable. It's not true, as `a` owns an immutable value, but that doesn't alter `h`'s behavior in any way. We can treat mutable references as a wider type than immutable references.
-
----
-
-Ideally, references should be seldom used, as the ideal model for an application would only use mutable values referenced by a single variable, and immutable values referenced by multiple variables. However, references allow us to work more comfortably with values without breaking immutability guarantees.
-
-#### Transferring ownership
-We can transfer ownership of a value from one variable to another using the `in` keyword. After transferring ownership, the original variable ceases to exist. Generally, this is used to transfer values owned by `var` variables:
-
-```judith
-var p: Person = get_person()
--- some statements that mutate p
-const p2: Person = in p -- here, the person's ownership is transferred to "p2".
---Console::log(p.name) -- ERROR: "p" no longer exists.
-Console::log(p2.name) -- Valid.
-```
-
-Transferring ownership from a `const` to another `const` is possible, but pointless.
-
-Transferring ownership from a `const` to a `var` is not allowed, as that would break every immutable reference obtained from the `const` variable.
-
-```judith
-const p: Person = get_person()
---var p2: Person = in p -- ERROR: cannot transfer ownership from const to var.
-```
-
-#### Ownership in functions
-Function parameters and return types are also bound by ownership semantics.
-
-```judith
-func do_0 (a: Person) -- here, "a" is an immutable reference.
-func do_1 (a: &Person) -- exact same as above.
-func do_2 (a: &mut Person) -- "a" is an immutable reference to a mutable value.
-func do_3 (var a: Person) -- here, "a" owns the person.
-func do_4 (var a: &Person) -- "a" is a mutable reference to an immutable value.
-func do_5 (var a: &mut Person) -- mutable reference to mutable value.
-```
-
-Note that `do_0` and `do_1` are both references, following the logic that a reference to an immutable value is indistinguishable from the owner of the value.
-
-```judith
-const p0: Person -- "p0" owns an immutable Person.
-do_0(p0) -- valid, we are referencing "p0".
-do_1(p0) -- same as above.
-do_0(Person::("Kevin", 44)) -- valid.
-
-var p1: Person -- "p1" owns a mutable Person.
-do_2(p1) -- valid
--- do_3(p1) -- invalid, as do_3's parameter owns the value.
-do_3(in p1) -- we have to transfer ownership to the function.
-
-var p2: Person -- "p1" no longer exists, so we'll need a new Person.
---do_4(p2) -- Invalid, as we cannot guarantee "p2" is immutable.
-do_4(p0) -- valid
-do_5(p2) -- valid
-do_5(p0) -- also valid
-```
-
----
-
-Return types can specify whether they transfer ownership or just offer a reference. Note that, in this context, the difference between `Person` and `&Person` is NOT trivial, as we don't have control over whether the return value is assigned to a mutable or immutable variable.
-
-```judith
-func get_person_0 () -> Person end -- here, we are transferring ownership.
-func get_person_1 () -> &Person end -- here, we get an immutable reference.
-func get_person_2 () -> &mut Person end -- returns a mutable reference.
-
-var p0: Person = get_person_0() -- valid, we now own Person.
---var p1: Person = get_person_1() -- error, we are getting an immutable ref.
-var p1: &Person = get_person_1() -- ok
-var p2: &mut Person = get_person_2() -- ok
-```
-
-#### Borrowing values
-Functions can borrow a value and return it to its original owner after they return. This allows functions to mutate values they receive as parameters without erasing the value from its previous owner. To do this, we use the `inout` keyword, which replaces `const` / `var` in the declaration of the parameter, and behaves as `var`:
-
-```judith
-func rename_person (inout person: Person)
-    person.name = "Kevin"
-end
-
-var p = get_person()
-rename_person(p) -- here, "rename_person" borrows the value of "p".
--- here, "p" is given back the ownership of the value.
-Console::log(p.name) -- Valid, "p" keeps having the value.
-```
-
-Since `inout` parameters are returned to their original owner, their ownership cannot be given away (although they can be used as arguments for other `inout` parameters).
-
-```judith
-func do_stuff (inout person: Person) -> Auto
-    --return person -- ERROR: Would transfer ownership.
-    --var b = in person -- ERROR: Would transfer ownership.
-
-    rename_person(person) -- Valid: "rename_person" is only borrowing.
-end
-```
-
-#### Ownership in fields
-Ownership in fields follow the same logic as ownership in locals:
-
-```judith
-typedef struct Company
-    boss: Person -- mutable field that owns the person.
-    boss: &Person -- mutable field containing a reference to immutable value.
-    const boss: Person -- immutable field (reference or owning, irrelevant).
-    boss: &mut Person -- contains a reference to a mutable value.
-end
-```
-
-#### Shared ownership
-Although this is highly discouraged, Judith allows the creation of values that are owned by multiple variables with the `shared` type modifier.
-
-```judith
-var a: shared Person = get_person()
-const b: shared Person = a
-```
-
-In this snippet, both `a` and `b` own the same person value. A shared value is always mutable. As such, a reference to a shared value is always mutable.
-
-```judith
-var c: &shared Person = a -- here, the Person referenced by c may be mutated.
-```
-
-Since values can only be mutated by their owned, shared values are the only kind of values that can be mutated from multiple places.
-
-#### Inferring ownership type
-When assigning the value of a variable to another variable, ownership can be inferred:
-
-```judith
-const a: Person
-var b: Person
-
-const c = a -- type inferred as "Person".
-var d = a -- type inferred as "&Person", because "d" is mutable.
-const e = b -- type inferred as "&mut Person", because "b" is mutable.
-var f = b -- type inferred as "&mut Person", because "b" is mutable.
-
-const g = shared Person::("Kevin") -- type inferred as "shared Person"
-const h = g -- type inferred as "shared Person"
-const i = &g -- type inferred as "&shared Person"
-
-const j = in b -- type inferred as "Person", ownership moved to "j".
-```
-
 ## Type
 
 Every local in Judith has a type, and only values of that type can be assigned to it
@@ -428,6 +231,7 @@ _See [Operations § Access operations § Null-conditional operations](#op-access
 
 ### Type narrowing:
 Type narrowing in Judith allows locals to be promoted to non-nullable versions of themselves:
+
 ```judith
 if person !== null then
     Console::log(person.name) -- valid, as 'person' inside this scope is not null.
@@ -435,24 +239,6 @@ end
 ```
 
 _See [Types § Type narrowing](#types-narrowing) for a full explanation of Type narrowing._
-
-## Const type
-Just like nullable types, const types are a version of the type that is always immutable. As such, const types can only be assigned to constant locals and fields:
-
-```judith
-var name: const String = "Kevin" -- ERROR: a variable can't be 'const String'.
-const name: const String = "Kevin" -- ok.
-```
-
-Const types allow passing references to members of a constant value without breaking immutability.
-
-```judith
-const player: Player = { username = "XxXx", person: { ... } }
-var person = player.person -- ERROR: this would allow mutating 'person', which is
-                           -- a member of constant 'player'.
-const person = player.person -- Valid. Because 'player' is constant, the type of
-                             -- its member 'person' becomes 'const Person'.
-```
 
 # <a name="primitives">Primitives</a>
 Primitives are the basic types of Judith. These types are not defined in the language itself, but implemented by the compiler and the VM.
@@ -517,8 +303,9 @@ When the format of a numeric value is relevant, developers can use specific nume
 * `Ui64`: 8-byte unsigned integer. Suffix: `u64`.
 
 ### Floating-point values:
-* `F32`: 4-byte floating-point value. Suffix: `f32`.
-* `F64`: 8-byte floating-point value. Suffix: `f64`
+* `F16`: 2-byte floating-point value (half). Suffix: `f16`.
+* `F32`: 4-byte floating-point value (single). Suffix: `f32`.
+* `F64`: 8-byte floating-point value (double). Suffix: `f64`
 
 ### Decimal
 A base-10 value suited for values that cannot afford to lose precision in calculation. Suffix: `m`.
@@ -790,6 +577,8 @@ json_obj?.[inquired_value] -- if "json_obj" is null or undefined, returns that.
 Note that `undefined` cannot be assigned to a value, so any expression that returns `undefined` will be transformed into `null` when assigned.
 
 # Control structures
+The condition inside a control structure cannot be (or contain) an assignment expression.
+
 ## If
 ```judith
 if element == 'Water' then
@@ -888,7 +677,7 @@ end
 ```
 
 ## Do
-Do is a simple block that executes one. While `do` itself doesn't add anything to a program, it can be used to define blocks with modifiers such as `unsafe` or `unchecked`. Like other control structures, `do` is an expression and can yield a result.
+Do is a simple block that executes one. It can be used to define blocks with modifiers such as `unsafe` or `unchecked`, or to `yield` a value.
 
 ```judith
 do
@@ -1470,12 +1259,12 @@ Console::log(person!.name) -- will panic.
 
 Unsafe casting operations should only be used when their failure justifies crashing the whole program.
 
-## <a name="types-narrowing">Type narrowing</a> WIP
+## <a name="types-narrowing">Type narrowing</a>
 Narrowing is the process of refining a broader type into a more specific one based on control flow. While traveling through a possible execution branch of a block of code, when a certain property of a value's type is asserted, that property remains true for the remainder of that branch.
 
-Type narrowing works by implicitly creating new variables of a more refined type (only when needed). This means that assertions made by type narrowing are always safe.
+Type narrowing takes the mutability of the object being inspected into account, and will only occur when the value being narrowed cannot change afterwards.
 
-### Type checking (`is`)
+### Type checking (`is` and `is not`)
 With the `is` keyword, a value can be asserted to be (or not to be) of a given type:
 
 ```judith
@@ -1488,7 +1277,6 @@ end
 ```
 
 Inside the `if` scope, the local `animal` of type `Animal` is asserted to be of type `Dog`, so it gets promoted to such type, which means calling `Dog.bark` becomes valid.
-
 
 ```judith
 if animal is not Dog
@@ -1521,10 +1309,15 @@ animal.eat() -- 'animal' here is promoted to 'Animal'.
 ### Discriminator member (`a.b == c`, `a.b != c`)
 When the value of a member in two different types doesn't admit the same types of values, testing the value contained in that member also helps discard types that wouldn't admit such value:
 
-
 ```judith
-typedef Circle kind: "circle", radius: Num end
-typedef Square kind: "square", side: Num end
+typedef struct Circle
+    kind: "circle"
+    radius: Num
+end
+typedef struct Square
+    kind: "square"
+    side: Num
+end
 
 func get_area (shape: Circle | Square)
     if shape.kind == "circle" then
@@ -1553,11 +1346,9 @@ end
 In this example, even though there's no "general" return statement, the compiler recognizes that it's impossible for the function not to have exited after the second return statement, so it doesn't require the developer to write a superfluous `return` afterwards.
 
 # Types
-Types in Judith are divided between value types and reference types. Value types are allocated on the stack, and locals contain the value itself. Reference types are allocated on the heap, and locals contain pointers to the actual value. The behavior of both kinds of types in Judith is mostly the same, as Judith abstracts away implementation details like memory management. However, they present some differences:
-* Only reference types can be compared by reference (`===` and `!==`).
 
 ## Primitive types
-_For a full explanation of primitive types, see [Primitives]_(#primitives).
+_For a full explanation of primitive types, see [Primitives](#primitives)._
 
 * `Bool`: A boolean value: true or false.
 * `Num`
@@ -1569,7 +1360,7 @@ _For a full explanation of primitive types, see [Primitives]_(#primitives).
 * `F32`, `F64`
 * `Decimal`
 
-_\* Type is a reference type._
+_\* Type is a pointer type._
 
 ## Function types
 Function types are types that define functions. The type of a function depends on its signature (type of each of its parameter and return type). Function types are expressed with the following syntax: `(<"!" if can return exceptions><parameter types separated by commas>) -> <return type>`. For example:
@@ -1587,7 +1378,7 @@ getter2 = get_person -- valid, as "(Num, Office) -> Person" can be assigned
 
 ```
 
-Values of a function type are _callable_, which mean that they can be used in call expressions: `<callable>(<arglist>)`. Function types are always reference types.
+Values of a function type are _callable_, which mean that they can be used in call expressions: `<callable>(<arglist>)`. Function types are always pointer types.
 
 ## <a name="types-array">Array type</a>
 An array type (not to be confused with the type `Array<_T>`) is a type that defines a group of values of specific types. Array types are similar to tuple types in other languages.
@@ -1970,7 +1761,7 @@ Console::log(person.name) -- valid
 person.name = "Steve" -- ERROR: 'person.name' is immutable.
 ```
 
-* Class fields can be hidden from the outside with the `hid` keyword. A hidden field cannot be accessed from the outside at all.
+* Class fields can be hidden from the outside with the `hid` keyword. A hidden field cannot be accessed from the outside at all. They can also be restricted to the current project with the `internal` keyword.
 
 ```judith
 typedef class Person
@@ -2005,8 +1796,6 @@ end
 ```
 
 * Class fields can be marked as "always immutable" with the `const` keyword. This acts in the opposite way as `var`: a `const` field can never be mutated, not even when the instance of the class is mutable. Semantically, always immutable members represent parts of the instance's state that are not controlled by the class. In the following example, although `company` is part of a `Person`'s state, the person itself cannot change the state of the company.
-
-Note that always immutable reference type fields (`company` in this case) can still mutate, if the instance it points to is also pointed to by a mutable variable somewhere else. This makes semantic sense, because a company can still change over time, and these changes can still affect the person's behavior; even if the person itself cannot mutate the company in any way.
 
 ```judith
 typedef class Person
@@ -2375,6 +2164,32 @@ In this example, `my_car` is initialized correctly, following this logic:
 
 If `Car` had an extra field `max_speed: Num`, then this initialization would be invalid, as `max_speed` would not be assigned any value in this construction.
 
+## Complex type declarations
+Judith features syntax to create new types that are derived from other types.
+
+### Partial&lt;T&gt;
+`Partial<T>` (where `T` is a struct type) represents a type that is equivalent to `T`, except all of its fields are optional (i.e. can be `undefined`).
+
+```judith
+typedef struct Person
+    name: String
+    age: Num
+    country?: Country
+end
+
+typedef PartialPerson = Partial<Person>
+```
+
+`Partial<Person>` in the snippet above is equivalent to this:
+
+```judith
+typedef struct PartialPerson
+    name?: String
+    age?: Num
+    country?: Country
+end
+```
+
 # Operator overloading
 Some operators in Judith can be overloaded. This is done with the `oper` keyword, which defines a function that acts as the overloaded operation. Most operators are defined as functions, but a few of them are defined as member methods. Binary operations can be made symmetric with the `#symmetric` directive. When an overloaded operator is marked as symmetric, it will automatically generate an identical overload where the operands are inversed. For example, an overload of `Vec2 + Quaternion` marked as symmetric will create a new function `Quaternion + Vec2` with the exact same body.
 
@@ -2501,8 +2316,8 @@ You can refine the kind of type parameter the template takes:
 ```judith
 template<_T: struct> -- _T has to be a struct
 template<_T: class> -- _T has to be a class
-template<_T: value> -- _T has to be a value type
-template<_T: reference> -- _T has to be a reference type
+template<_T: inline> -- _T has to be a inline type
+template<_T: ptr> -- _T has to be a pointer type
 ```
 
 ## Template rules
@@ -2938,7 +2753,430 @@ const people = [new Person(...), new Person(...)]
 var people_copy = [...people] -- ERROR - cannot assign const reference type to var.
 ```
 
+# Dynamic objects
+Judith features a special type of object called `Dynamic`. Dynamic objects work differently to others, as their members are late-bound (i.e. they are resolved at runtime). These objects are designed for interoperability with dynamic languages and services that don't follow type-friendly standards. They should not be used as a way to bypass the type system.
+
+Since these objects are late-bound, they are significantly less performant than a statically-typed object.
+
+The `Dynamic` type is special in that it is not allowed to have any extension methods, constructors or interfaces implemented into it.
+
+```judith
+const anything: String = "absolutely"
+const person = new Person("Kevin")
+
+const my_obj: Dynamic = {
+    [anything] = "can", -- at runtime, creates a field named "absolutely"
+    go = "here" -- 'go' acts as a string defining this field's key.
+    [7] = 31 -- any type of value can act as a key.
+    [person] = "even references" -- absurd but technically valid.
+}
+```
+
+Since their values are late-bound, they can only be accessed with the dynamic access operator (`.[]`).
+
+```judith
+my_obj.go -- error, "my_obj" doesn't have members.
+my_obj["go"] -- valid, returns "here"
+```
+
+# Inline and pointer types
+Types in Judith can be either inline types or pointer types, depending on whether the variable of that type contains the value itself, or a pointer to that value.
+
+## Inline types
+Inline types exist directly in the variable that contains them. As such, when assigning an inline type to another variable, the value is _copied_ into the receiving variable.
+
+```judith
+var a: Ivec2 = Ivec2::(5, 10) -- "Ivec2" is an inline type.
+var b: Ivec2 = a -- The value of "a" is copied into "b".
+a.x = 60 -- "a.x" is assigned a new value: 60.
+Console::log(b.x) -- prints "5", as "a" and "b" are different values.
+```
+
+The following types are inline types:
+
+* All numeric types, including `BigInt`.
+* `Bool`.
+* `Char` strings.
+* Arrays (their size is known at compile time).
+* Option types (option data may be a pointer type).
+* Inline structs and classes.
+* Literal types where the literal's type is an inline type.
+
+_Note that `BigInt` contains a pointer to the bytes that make up its value._
+
+All other types are pointer types.
+
+## Pointer types
+Pointer types contain pointers to values that are typically allocated on the managed heap. As such, multiple variables can point to the same instance in memory.
+
+```judith
+var a: List<Num> = [3, 5, 8]
+var b = a -- "b" now points to the same value as "a", only one list exists.
+
+a[0] = 50 -- we change the value of the list "a" AND "b" point to through "a".
+Console::log(b[0]) -- prints "50", as "a" and "b" are pointing to the same value.
+```
+
+The following types are pointer types:
+
+* `String`, `Regex`.
+* Function types (regardless of where they get their function from).
+* Object types.
+* Union types.
+* Struct types.
+* Interface types.
+* Class types.
+* Literal types where the literal's type is a pointer type.
+
+### Ownership
+In Judith, values have owners. Unlike in languages like Rust, ownership is not related to memory management, but instead describes which variable (if any) is allowed to mutate the value. 
+
+With inline types, ownership is usually irrelevant as regular assignments create new values that will be owned by whichever variable it was assigned to - thus, ownership for them only appears when explicitly using reference syntax. With pointer types, however, it is possible to have multiple variables point to the same value.
+
+When a variable creates a new value of a pointer type, it gains ownership of said value. That variable implicitly determines whether the value it owns is mutable or immutable, depending on whether it's a `const` or a `var`. Variables can be defined to reference values they don't own, by assigning _references_ to them.
+
+Assuming we have a struct `Person` with two fields (`name` and `age`), here we are creating two new people:
+
+```judith
+const a: Person = Person::("Kevin", 26)
+var b: Person = Person::("John", 35)
+```
+
+Here, `a` and `b` each own an instance of `Person` (Kevin and John, respectively). Since `a` is an immutable local, the value "Kevin" is an immutable value. `b`, however, is a mutable local, and thus "John" is a mutable value.
+
+#### References
+
+We cannot freely assign `a` and `b` to other variables, but we can create references to them. Using `&`, we specify that a variable contains a reference to an **immutable** value:
+
+```judith
+const c: &Person = a
+var d: &Person = a
+```
+
+Here, `c` and `d` reference (but don't own) the value `a` contains. It is important to realize that `&Person` is a reference to an immutable `Person` value, which means that `d` **CANNOT** mutate that `Person` even though `d` itself is mutable. **References cannot be mutated, even if the variable itself is mutable**. A mutable variable that contains a reference can be reassigned, but cannot mutate the reference.
+
+```judith
+d.name = "Isaac" -- ERROR: cannot mutate a value of type "&Person".
+```
+
+When a value is immutable, we do not have to distinguish between owner and reference, as both behave in exactly the same way:
+
+```judith
+const e: Person = a -- valid
+```
+
+Here, the assignment to `e` is valid because it's irrelevant who owns the value and who references it, since neither of them can mutate it. In practice, we'll always skip specifying reference semantics for immutable variables.
+
+---
+
+When we are dealing with mutable values, we have to use `&mut` to specify that a variable contains a reference to a **mutable** value.
+
+```judith
+--var f: &Person = b -- ERROR: 'b' is mutable, can't be assigned to '&Person'.
+var g: &mut Person = b -- valid
+```
+
+Here the assignment to `f` is invalid, as we are defining `f` as a reference to an immutable value, but `b` is mutable. The assignment to `g` is valid, since `g` is defined as a reference to a mutable value. `g` itself cannot mutate the reference, but the reference may be mutated by `b` at any point.
+
+We can assign immutable references to mutable ones, but not vice-versa.
+
+```judith
+var h: &mut Person = a -- Valid.
+```
+
+Here, `h` declares that it's reference is mutable. It's not true, as `a` owns an immutable value, but that doesn't alter `h`'s behavior in any way. We can treat mutable references as a wider type than immutable references.
+
+---
+
+Ideally, references should be seldom used, as the ideal model for an application would only use mutable values referenced by a single variable, and immutable values referenced by multiple variables. However, references allow us to work more comfortably with values without breaking immutability guarantees.
+
+#### Transferring ownership
+We can transfer ownership of a value from one variable to another using the `in` keyword. After transferring ownership, the original variable becomes a reference to the value. Generally, this is used to transfer values owned by `var` variables:
+
+```judith
+var p: Person = get_person()
+-- some statements that mutate p
+const p2: Person = in p -- here, the person's ownership is transferred to "p2".
+Console::log(p.name) -- Valid, "p" is now "&Person".
+p.name = "John" -- invalid, "p" no longer owns the person, "p2" is the new owner".
+Console::log(p2.name) -- Valid.
+```
+
+Transferring ownership from a `const` to another `const` is possible, but pointless.
+
+Transferring ownership from a `const` to a `var` is not allowed, as that would break every immutable reference obtained from the `const` variable.
+
+```judith
+const p: Person = get_person()
+--var p2: Person = in p -- ERROR: cannot transfer ownership from const to var.
+```
+
+The short-hand syntax `const <variable-name>`, where `<variable-name>` is the name of a variable that already exists, is short-hand for a new (shadowing) variable that takes ownership of the value held by the shadowed variable:
+
+```judith
+var p: Person = get_person()
+-- some modifications
+const p -- this is equivalent to "const p = in p".
+```
+
+Transferring the ownership of a value owned by an instance's field is valid, for as long as you own the instance AND the instance itself is mutable. This does not invalidate any previous references to that instance, but will make it impossible to transfer the ownership of the instance as said ownership is now split between two variables (the one that owns the instance, and the one that owns the value extracted from the field).
+
+```judith
+typedef struct Car
+    name: String
+    engine: Engine -- Each car owns its engine.
+end
+
+var car = Car::make_default()
+const e: Engine = in car.engine -- valid, ownership transferred to "e"
+
+Console::log(car.engine) -- Valid, 'car.engine' is now "&Engine".
+Console::log(car) -- Valid, because "Console::log" borrows immutably.
+--mutate_car(car) -- ERROR: "mutate_car" borrows mutably and
+                  -- "car" does not fully own its fields.
+Console::log(car.name) -- valid, 'car.name' is unaffected.
+
+--return car -- ERROR: cannot transfer partial ownership.
+```
+
+#### Ownership in functions
+Function parameters and return types are also bound by ownership semantics.
+
+```judith
+func do_0 (a: Person) -- borrows the person (gains temporary ownership).
+func do_1 (a: &Person) -- immutable reference to immutable value.
+func do_2 (a: &mut Person) -- immutable reference to a mutable value.
+func do_3 (var a: Person) -- borrows the person as a mutable value.
+func do_4 (var a: &Person) -- mutable reference to immutable value.
+func do_5 (var a: &mut Person) -- mutable reference to mutable value.
+func do_6 (in a: Person) -- permanently takes ownership as an immutable value.
+func do_7 (in var a: Person) -- permanently takes ownership as a mutable value.
+```
+
+Function parameters have the ability to "borrow" a value. This means that the function gains ownership of the value for its execution, but gives it back to its original owner when it returns.
+
+Function parameters, just like regular variables, can also seize ownership of a value permanently with the `in` keyword.
+
+```judith
+const p0: Person -- "p0" owns an immutable Person.
+do_0(p0) -- valid, do_0 gains ownership of "p0" but gives it back when it returns.
+do_1(p0) -- here, "p0" has regained ownership, and is now passing a reference.
+do_0(Person::("Kevin", 44)) -- valid.
+
+var p1: Person -- "p1" owns a mutable Person.
+do_2(p1) -- valid, do_2 receives a reference to "p1"'s mutable Person.
+do_3(p1) -- valid, d0_2 gains ownership of "p1" and gives it back at return.
+
+do_4(p2) -- Invalid, as we cannot guarantee "p2" is immutable.
+do_4(p0) -- valid, as p0 holds an immutable value.
+do_5(p2) -- valid
+do_5(p0) -- also valid
+
+do_6(in p2) -- valid, do_6 permanently takes ownership of the value in "p1".
+--do_7(in p2) -- invalid, "p2" no longer holds any value.
+
+var p2: Person -- "p1" no longer exists, so we'll need a new Person.
+do_7(in p2) -- valid, do_7 permanently takes ownership of the value in "p2".
+```
+
+When a value is borrowed, the function has control over that value, and can even lend it to other functions that also borrow values; but it CANNOT transfer its ownership, as it ultimately has to give it back to the original owner.
+
+```judith
+func rename_person (var person: Person) -- borrows "person" mutably.
+    person.name = "Kevin"
+end
+
+var p = get_person()
+rename_person(p) -- here, "rename_person" borrows the value of "p".
+-- here, "p" is given back the ownership of the value.
+Console::log(p.name) -- Valid, "p" regained ownership of the value.
+
+func do_stuff (var person: Person) -> Auto
+    --return person -- ERROR: Can't transfer ownership of borrowed value.
+    --var b = in person -- ERROR: Can't transfer ownership of borrowed value.
+
+    rename_person(person) -- Valid: "rename_person" is only borrowing and will
+                          -- give it back to "do_stuff".
+
+    return -- after the function returns, the value of "person" is given back
+           -- to the variable that owned it in the caller context.
+end
+```
+
+---
+
+Return types can specify whether they transfer ownership or just offer a reference. When they transfer ownership, they always do that _mutably_. This means that only mutable values can be returned as non-references by functions.
+
+Note that you cannot transfer ownership of a value you don't own. This means that functions cannot transfer the ownership of a value contained in an object's field, unless the function owns that object.
+
+```judith
+func get_person_0 () -> Person end -- here, we are transferring ownership.
+func get_person_1 () -> &Person end -- here, we get an immutable reference.
+func get_person_2 () -> &mut Person end -- returns a mutable reference.
+
+var p0: Person = get_person_0() -- valid, we now own Person.
+--var p1: Person = get_person_1() -- error, we are getting an immutable ref.
+var p1: &Person = get_person_1() -- ok
+var p2: &mut Person = get_person_2() -- ok
+```
+
+#### Ownership in fields
+Ownership in fields follow the same logic as ownership in locals:
+
+```judith
+typedef struct Company
+    boss: Person -- mutable field that owns the person.
+    boss: &Person -- mutable field containing a reference to immutable value.
+    const boss: Person -- immutable field (reference or owning, irrelevant).
+    boss: &mut Person -- contains a reference to a mutable value.
+end
+```
+
+#### Shared ownership
+Although this is highly discouraged, Judith allows the creation of values that are owned by multiple variables. To do this, we use a `^` before the name of the type.
+
+```judith
+var a: ^Person = get_person()
+const b: ^Person = a
+```
+
+In this snippet, both `a` and `b` own the same person value. A shared value is always mutable. As such, a reference to a shared value is always mutable.
+
+```judith
+var c: &mut ^Person = a -- here, the Person referenced by c may be mutated.
+```
+
+Since values can only be mutated by their owner, shared values are the only kind of values that can be mutated from multiple places. For this reason, shared values are always assumed to be mutable.
+
+#### Inferring ownership type
+When assigning the value of a variable to another variable, ownership can be inferred:
+
+```judith
+const a: Person
+var b: Person
+
+const c = a -- type inferred as "Person".
+var d = a -- type inferred as "&Person", because "d" is mutable.
+const e = b -- type inferred as "&mut Person", because "b" is mutable.
+var f = b -- type inferred as "&mut Person", because "b" is mutable.
+
+const g = shared Person::("Kevin") -- type inferred as "shared Person"
+const h = g -- type inferred as "shared Person"
+const i = &mut g -- type inferred as "&mut shared Person"
+
+const j = in b -- type inferred as "Person", ownership moved to "j".
+```
+
+#### Ownership and types
+Ownership syntax is part of the type itself. For example, `&Person` is a different type than `Person`, since the first represents references to `Person`s other variables own, while the second reference `Person`s owned by the variables themselves. This means that ownership syntax can be mixed in the declaration of a complex type:
+
+```judith
+const people: List<&mut Person> = []
+```
+
+Here, `people` owns a list, but that list is composed of `Person` elements that are not owned by the list, but rather references to mutable values owned somewhere else.
+
+```judith
+const people: List<^Person> = []
+```
+
+In this other example, `people` owns a list again and, this time, the list is composed of `Person`s whose ownership is shared. This makes the list one of their owners, but not the only one.
+
+```judith
+typedef struct Person
+    -- ...
+    company: &mut Company
+end
+```
+
+In this final example, a value of type `Person` will have a field `company` that contains a reference to a mutable `Company`, but that doesn't own the `Company`.
+
+Note that ownership syntax can exist even for a value of type `Any` (or any other supertype).
+
+```judith
+const person = get_person()
+--var something: Any = person -- ERROR.
+var something: &Any = person -- valid, we are getting a reference to `Any`.
+```
+
+#### Value lifetimes
+As explained above, ownership in Judith is unrelated to memory management. Pointer values in Judith are handled by the garbage collector, and a reference to a value will keep the value alive even if the owner of the value has already disappeared.
+
+```judith
+func get_car_ref () -> &Car -- <-- reference to an immutable Car
+    const car = Car::make_default()
+
+    return car -- returns a reference to "car".
+    -- here "car" (the owner) goes out of scope.
+end
+
+var my_car_ref: &Car = get_car_ref()
+-- here the variable that owns the car no longer exists anywhere.
+Console::log(my_car_ref.engine) -- Valid, "my_car_ref" is still alive in memory.
+```
+
+### Inline structs and classes
+Structs and classes can be marked as `inline`. Doing this will make the type inlined by default.
+
+```judith
+typedef struct inline Vec2
+    x: F64
+    y: F64
+end
+
+var a = Vec2::(5, 2)
+var b = a -- here, the fields of "a" are copied into "b".
+
+b.x = 50 -- here, we are changing "b", but not "a".
+Console::log(b.a) -- outputs "5"
+```
+
+Inline structs cannot contain pointer types in their fields, as they are non-copyable.
+
+### Inlined variables
+Values of pointer types can inline their value. Doing so will make that value behave as an inline struct / class.
+
+```judith
+inline const p = Person::("Kevin", 71) -- this variable is inlined.
+
+typedef struct Player
+    inline person: Person -- this field is inlined.
+    max_score: Num
+end
+```
+
+Note that the compiler usually inlines variables of pointer types when it makes sense. Using `inline` serves mainly to enforce the rules that make a variable allowed to be inlined.
+
+## References to inline types
+You can create references to mutable inline types:
+
+```judith
+var a: Num = 5
+const b = &mut a -- 'b' is of type &mut Num
+a = 10
+Console::log(b) -- outputs "10", because "b" is referencing whatever value "a" has.
+```
+
+You cannot create a reference to an immutable inline value. You should simply copy the value instead.
+
+```judith
+const a: Bool = true
+--const b: &Bool = a -- ERROR: Simply make "b" another immutable Bool instead.
+const b: Bool = a -- Ok.
+```
+
+# Allocations (stack and heap)
+TODO - This describes the contracts of each type and how the JuVM leverages that to decide between stack and heap allocation.
+
+# Concurrency and multithreading, coroutines
+TODO
+
+# Unsafe Judith
+For performance reasons, Judith offers a set of lower-level features to deal with memory manually. However, most of these features can only be used in `unsafe` contexts.
+
 # Reflection
+TODO: Add restrictions that guarantee immutability is not broken.
+
 Judith supports reflection natively when compiled to certain targets (notably JASM). Although Judith is statically-typed and doesn't use source names in regular execution, these names are still stored as metadata, which allows for their resolution at runtime.
 
 Let's assume this definition:
@@ -3080,71 +3318,12 @@ const type_data = typeof(Employee) -- the TypeMetadata of 'Employee'.
 
 Note that extension methods, constructors and interfaces will not be returned by these operations, as they aren't actually bound to their types.
 
-# Dynamic objects
-Judith features a special type of object called `Dynamic`. Dynamic objects work differently to others, as their members are late-bound (i.e. they are resolved at runtime). These objects are designed for interoperability with dynamic languages and services that don't follow type-friendly standards. They should not be used as a way to bypass the type system.
+# Visibility modifiers (`hid` and `internal`)
+Judith features two keywords that affect the visibility of an item: `hid` and `internal`.
 
-Since these objects are late-bound, they are significantly less performant than a statically-typed object.
+With `hid`, the visibility of the item is confined to either the file (if used in a top-level item) or the namespace or class the item belongs to (if used in an item that is part of a namespace or class).
 
-The `Dynamic` type is special in that it is not allowed to have any extension methods, constructors or interfaces implemented into it.
-
-```judith
-const anything: String = "absolutely"
-const person = new Person("Kevin")
-
-const my_obj: Dynamic = {
-    [anything] = "can", -- at runtime, creates a field named "absolutely"
-    go = "here" -- 'go' acts as a string defining this field's key.
-    [7] = 31 -- any type of value can act as a key.
-    [person] = "even references" -- absurd but technically valid.
-}
-```
-
-Since their values are late-bound, they can only be accessed with the dynamic access operator (`.[]`).
-
-```judith
-my_obj.go -- error, "my_obj" doesn't have members.
-my_obj["go"] -- valid, returns "here"
-```
-
-# Inline and pointer types
-TODO: Rewrite value/reference as inline/pointer.
-
-Types in Judith can be either value types or reference types. A variable of a value type contains an instance of the type, while a variable of a reference type contains a reference (pointer) to the instance.
-
-## Inline types
-Value types exist directly in the variable that contains them. As such, when assigning a value type to another variable, the value is _copied_ into the receiving variable.
-
-```judith
-var a: Ivec2 = Ivec2::(5, 10) -- "Ivec2" is a value type.
-var b: Ivec2 = a -- The value of "a" is copied into "b".
-a.x = 60 -- "a.x" is assigned a new value: 60.
-Console::log(b.x) -- prints "5", as "a" and "b" are different values.
-```
-
-The following types are value types:
-
-* All numeric types, including `BigInt`.
-* `Bool`.
-* `Char` strings.
-* Arrays.
-* Inline structs and classes.
-
-All other types are reference types.
-
-## Pointer types
-Reference types contain pointers to values that are allocated on the managed heap. As such, multiple variables can point to the same instance in memory, and thus changing one of them changes all of them.
-
-# Allocations (stack and heap)
-TODO - This describes the contracts of each type and how the JuVM leverages that to decide between stack and heap allocation.
-
-# Concurrency and multithreading, coroutines
-TODO
-
-# Unsafe Judith
-For performance reasons, Judith offers a set of lower-level features to deal with memory manually. However, most of these features can only be used in `unsafe` contexts.
-
-# Hidden elements (`hid`)
-The keyword `hid` allows developers to restrict the visibility of an object. When used inside a class, as mentioned above, makes the member invisible to the outside. The same applies to namespace members. When used on a top-level item (such as a function, a symbol or a typedef), it confines that definition to the file in which it is defined.
+`internal`, on the other hand, restricts the visibility of an item to the project in which the item appears.
 
 # FFI
 TODO
