@@ -15,6 +15,10 @@ Judith is a high-level, statically typed, compiled, general-purpose language. Ju
 - **[Ergonomic I promise] ownership semantics**: not related to memory management, but instead to who is allowed to mutate a value.
 - **Nullable types**: Clear distinction between non-nullabe `Int` and nullable `Int?`
 - **Error handling**: exceptions are not `thrown`, but returned as regular values. Exception syntax, however, makes error handling extremely concise: with just a couple of characters, you can pass down the exception, deal with it, coalesce it to `null` or pretty promise there is no error.
+- **Rich and flexible type system**: When all you have is Java, everything looks like a class. Judith avoids awkwardly turning everything into classes by providing structs, unions, tuples, option sets, and much more!
+- **Composition over inheritance**: Truly. Not just a buzzword. Judith is designed so you compose types.
+- **Templates, not generics**: The power of C++ templates with the sanity of non-C++ templates. Turns out the only thing C++ templates need is not to allow you to do whatever you want.
+- **A new take on classes**: Classes are way simpler, basically glorified structs that encapsulate their fields. Ideal for modelling states, without all the chaos classes usually bring.
 - **Compiled into assembly and into JavaScript** _(during early development, assembly compilation will be done by targeting C)_.
 - **Safe**: no memory leaks, no unexpected nulls, no data races.
 - **Batteries included**: Judith's design features everything you'd expect from a modern language.
