@@ -1,33 +1,36 @@
-# About Judith
+**`DISCLAIMER`** Judith is a WIP started very recently. It's not even in pre-alpha. It doesn't even exist in a meaningful way. This project was started in February 2025. For the time being, all you'll find in this repo is an exhaustive description of the language, and some messy source code that can compile a very small subset of the language.
 
-Judith is a WIP statically-typed high-level programming language that compiles to JASM (Judith Assembly). JASM is interpreted by the JuVM (Judith Virtual Machine).
+<div align="center">
+  <h1>Judith Programming Language</h1>
+</div>
 
-Judith is a personal project started in February 2024, and is a work in progress.
+## About Judith
+Judith is a high-level, statically typed, compiled, general-purpose language. Judith is designed with the goal of writing maintainable, correct code, learning from the mistakes made by older languages. Judith's design has been carefully crafted to create a language that is pleasant, easy and intuitive to write. Judith makes no attempt to be a small language: quite the opposite, its syntax is purposefully extensive as to ensure that everything can be done in a streamlined and concise way.
 
-A (very) informal specification of the language can be found in [.info/spec.md](.info/spec.md).
+## Judith's main features
 
-# What is Judith?
-Nothing, as I've literally just started it.
+- **Managed language**: By default, Judith is a garbage-collected language. You can, however, manage memory manually.
+- **Written with ergonomics in mind**: every feature is designed to require as little boilerplate at possible, and usually the best way to do things is also the one that requires the least typing!
+- **Mutability syntax**: Variables explicitly state whether they hold mutable or immutable values. Mutability is absolute, meaning that inner values contained in fields are also guaranteed not to change.
+- **[Ergonomic I promise] ownership semantics**: not related to memory management, but instead to who is allowed to mutate a value.
+- **Nullable types**: Clear distinction between non-nullabe `Int` and nullable `Int?`
+- **Error handling**: exceptions are not `thrown`, but returned as regular values. Exception syntax, however, makes error handling extremely concise: with just a couple of characters, you can pass down the exception, deal with it, coalesce it to `null` or pretty promise there is no error.
+- **Compiled into assembly and into JavaScript** _(during early development, assembly compilation will be done by targeting C)_.
+- **Safe**: no memory leaks, no unexpected nulls, no data races.
+- **Batteries included**: Judith's design features everything you'd expect from a modern language.
+- **Convention over configuration**: Judith tries to have a "default" way to do everything, not bothering developers with inane choices they don't really care about.
+- **Highly opinionated**: because reading code is way easier when everyone is writing it in the same way.
+- **Built-in JavaScript and TypeScript compatibility when compiling into JavaScript**.
+- **Unsafe Judith**: for when you really need to tell the CPU how to deal with each byte.
+- **Preprocessor directives**: not like C 🤮, but like C# 🥰.
+- **Almost-zero-overhead abstractions**: clean, ergonomic code is prioritized over performance, but that doesn't mean Judith compiles high-level constructs in a naïve way! High-level constructs have been carefully designed to easily map to low-level constructs while introducing as little overhead as possible.
+- **~G~coroutines!** WARNING: May or may not be inspired by Go.
 
-That aside, Judith is a high-level, statically-typed programming language that draws inspiration from Rust, TypeScript, Lua and C#.
+## Comprehensive explanation
+You can read the entire informal specification [here](.info/spec.md). Note that, while the design of the language is in a very advanced stage, it's still subject to big changes, and inconsistencies in this document may appear as a result of it, which are eventually removed when as I periodically revise the entire document. The informal specification is not a tutorial, but rather a detailed explanation of each feature. The informal specification is not concerned with the implementation details of the features.
 
-Judith takes a big inspiration from the exhaustive and flexible type systems in Rust and TypeScript, that allow developers to use composition effectively in place of inheritance. Judith includes type aliases, TS-like union types, structs as POD types, Interface as functionality-only types and classes for encapsulated machine states. Judith takes a new approach to classes by stripping inheritance out of it (that is, classes cannot have parent classes) and greatly simplifying other aspects of it.
-
-Judith takes inspiration from Lua's simplicity, conciseness and syntax. While Judith is very rich in features and syntactic sugar (which is quite the contrary to what Lua offers), these features are not redundant: they've been carefully selected to maximize expressiveness and minimize boilerplate, while not becoming rendundant. Judith has been designed with the ideal that everything should have one obvious correct way to be done. Developers should take decisions about their algorithms, not about how to represent them in the language.
-
-Judith takes inspiration from C#'s philosophy of making your life easier. You should be able to simply state what you want and have it work. Want a POD type holding first name, last name and age? Then all you should need to write is these three names and their type. Nothing more, nothing less.
-
-Judith takes inspiration from C++'s and Rust's mutability, and that's why locals (as variables are called in Judith) are explicitly divided into `const` (immutable) and `var` (mutable), and member functions are divided into pure and impure (`impure`). In Judith, mutability is opt-in, allowing developers to express intent.
-
-Judith takes inspiration from C#'s nullability and extends it by making nullability part of a type's definition. `Person?` is not just a hint, it's a completely separate type from `Person`. Of course, you can transform `Person?`s into `Person`s, but you do it explicitly and, if you decide to ignore the possibility of `Person?` being null... well, now you can't say you didn't expect it.
-
-Finally, Judith aims to do away with some of the legacy features most programming languages have inherited from their ancestors. Here are some of my worst enemies in this regard:
-
-- Why does C# have a `switch` statement that looks and works exactly like C's? You are not writing C. C's `switch` is a very thin abstraction over assembly. Even C# devs think that isn't right for their language, which is why they made it a compile-error not to `break` from non-empty sections of the bloc... well, at this point, why have a C-like `switch` at all?
-- `goto`? No high-level programmer should ever need to use that.
-- Allowing `null` everyone? Nope! If you want `null` to be a valid value, then you explicitly state so in the local's type.
-- Casts and implicit conversions? I've never seen a worse design in modern languages. "Cast" can mean anything from transforming a child class into its parent type to transforming one class into another because someone decided that it makes sense. Well, we don't do that here. Judith features a syntax for upcasting (when you transform a child type into a parent type) and downcasting (when you try to transform a parent type into a child type). The rest is done explicitly via constructors, because that's what casting between two unrelated types is. As a bonus, I got rid of the ugly `((IPerson)employee).get_birthday()` C-like syntax every other language chose to keep and replaced it with a far more concise `employee:IPerson.get_birthday()`. No need to use two (!) set of parentheses when you aren't even grouping anything.
-- Testing exists (yes, really!). This isn't 1985, we write tests for the code we write. Judith aims to explicitly integrate features that facilitate testing into the language.
+## How to get
+You don't. Development of the project just started.
 
 # Judith's design philosophy.
 Read [.info/design-philosophy.jud](.info/design-philosophy.md) for a very long and boring look into my views on programming languages and how these shape Judith's design.
