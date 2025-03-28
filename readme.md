@@ -1,4 +1,4 @@
-**`DISCLAIMER`** Judith is a WIP started very recently. It's not even in pre-alpha. It doesn't even exist in a meaningful way. This project was started in February 2025. For the time being, all you'll find in this repo is an exhaustive description of the language, and some messy source code that can compile a very small subset of the language.
+**`DISCLAIMER`** Judith is a WIP started very recently. It's not even in pre-alpha. It doesn't even exist in a meaningful way. This project was started in February 2025. For the time being, all you'll find in this repo is an exhaustive description of the language, and some messy source code that can compile a very small subset of the language. You can read an informal specification [here](.info/spec.md).
 
 <div align="center">
   <h1>Judith Programming Language</h1>
