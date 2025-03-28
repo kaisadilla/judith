@@ -25,6 +25,8 @@ Judith is a high-level, statically typed, compiled, general-purpose language. Ju
 - **Convention over configuration**: Judith tries to have a "default" way to do everything, not bothering developers with inane choices they don't really care about.
 - **Highly opinionated**: because reading code is way easier when everyone is writing it in the same way.
 - **Built-in JavaScript and TypeScript compatibility when compiling into JavaScript**.
+- **Incredible `match` and `for`**: These two control structures are designed to cover all of your pattern-matching or iterating needs with minimal boilerplate.
+- **Expression structures**: `if`, `while`, `match`, `for`... they evaluate to a value!
 - **Unsafe Judith**: for when you really need to tell the CPU how to deal with each byte.
 - **Preprocessor directives**: not like C 🤮, but like C# 🥰.
 - **Almost-zero-overhead abstractions**: clean, ergonomic code is prioritized over performance, but that doesn't mean Judith compiles high-level constructs in a naïve way! High-level constructs have been carefully designed to easily map to low-level constructs while introducing as little overhead as possible.
