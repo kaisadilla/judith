@@ -141,7 +141,7 @@ impl<'a> Lexer<'a> {
 
         match c {
             ',' => self.make_token(TokenKind::Comma),
-            ':' => match self.match_next(':') {
+            ':' => match self.try_match(':') {
                 true => self.make_token(TokenKind::DoubleColon), // ::
                 false => self.make_token(TokenKind::Colon), // :
             },
@@ -153,10 +153,10 @@ impl<'a> Lexer<'a> {
             ']' => self.make_token(TokenKind::RightSquareBracket), // ]
             '+' => self.make_token(TokenKind::Plus), // +
             '-' => {
-                if self.match_next('-') {
+                if self.try_match('-') {
                     panic!("Comments should've been caught as trivia!");
                 }
-                if self.match_next('>') {
+                if self.try_match('>') {
                     return self.make_token(TokenKind::MinusArrow) // ->
                 }
 
@@ -170,28 +170,28 @@ impl<'a> Lexer<'a> {
             },
             '*' => self.make_token(TokenKind::Asterisk),
             '/' => self.make_token(TokenKind::Slash),
-            '=' => match self.match_next('=') {
-                true => match self.match_next('=') {
+            '=' => match self.try_match('=') {
+                true => match self.try_match('=') {
                     true => self.make_token(TokenKind::EqualEqualEqual), // ===
                     false => self.make_token(TokenKind::EqualEqual), // ==
                 },
-                false => match self.match_next('>') {
+                false => match self.try_match('>') {
                     true => self.make_token(TokenKind::EqualArrow), // =>
                     false => self.make_token(TokenKind::Equal), // =
                 }
             }
-            '!' => match self.match_next('=') {
-                true => match self.match_next('=') {
+            '!' => match self.try_match('=') {
+                true => match self.try_match('=') {
                     true => self.make_token(TokenKind::BangEqualEqual), // !==
                     false => self.make_token(TokenKind::BangEqual), // !=
                 },
                 false => self.make_token(TokenKind::Bang), // !
             },
-            '?' => match self.match_next('?') {
+            '?' => match self.try_match('?') {
                 true => self.make_token(TokenKind::DoubleQuestionMark), // ??
                 false => self.make_token(TokenKind::QuestionMark), // ?
             },
-            '~' => match self.match_next('=') {
+            '~' => match self.try_match('=') {
                 true => self.make_token(TokenKind::TildeEqual),
                 false => self.make_token(TokenKind::Tilde),
             },
@@ -205,11 +205,11 @@ impl<'a> Lexer<'a> {
 
                 self.make_token(TokenKind::Dot)
             }
-            '<' => match self.match_next('=') {
+            '<' => match self.try_match('=') {
                 true => self.make_token(TokenKind::LessEqual),
                 false => self.make_token(TokenKind::Less),
             },
-            '>' => match self.match_next('=') {
+            '>' => match self.try_match('=') {
                 true => self.make_token(TokenKind::GreaterEqual),
                 false => self.make_token(TokenKind::Greater),
             },
@@ -601,7 +601,7 @@ impl<'a> Lexer<'a> {
 
     /// Checks the character the cursor is at. If it matches the character given, moves the cursor
     /// forward. returns true when the character given was successfully matched.
-    fn match_next (&mut self, expected: char) -> bool {
+    fn try_match(&mut self, expected: char) -> bool {
         if self.is_at_end() {
             return false;
         }
@@ -714,6 +714,43 @@ pub fn tokenize(src: &str) -> Vec<Token>  {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_helper_fns() {
+        println!("Testing helper functions.");
+
+        let mut lexer = Lexer::new("do end while if");
+        let peek = lexer.peek();
+        let cursor = lexer.cursor();
+
+        assert_eq!(peek, Some('d'), "When we start, we should be able to peek() the first character.");
+        assert_eq!(cursor, 0);
+
+        let advance = lexer.advance();
+        assert_eq!(advance, peek, "Value returned by advance() should be what we peek()ed before.");
+
+        let peek = lexer.peek();
+        let cursor = lexer.cursor();
+
+        assert_eq!(peek, Some('o'));
+        assert_eq!(cursor, 1);
+
+        let try_match = lexer.try_match('!'); // This shouldn't match.
+        let peek = lexer.peek();
+        let cursor = lexer.cursor();
+
+        assert_eq!(try_match, false);
+        assert_eq!(peek, Some('o')); // same as before.
+        assert_eq!(cursor, 1);
+
+        let try_match = lexer.try_match('o'); // This should match.
+        let peek = lexer.peek();
+        let cursor = lexer.cursor();
+
+        assert_eq!(try_match, true);
+        assert_eq!(peek, Some(' ')); // same as before.
+        assert_eq!(cursor, 2);
+    }
 
     #[test]
     /// Test
