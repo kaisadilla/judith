@@ -380,7 +380,7 @@ public class Lexer {
         // character in the lexeme.
         bool underscoreAllowed = IsDigit(firstChar);
 
-        char c = Peek();
+        char c = Peek(); // TODO: We may've reached the end of the file.
         char c2 = PeekNext();
 
         // Consume leading base prefixes ("0x", "0b" and "0o").

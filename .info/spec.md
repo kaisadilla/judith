@@ -67,9 +67,9 @@ import awesome_game
 
 typedef struct Game end
 
-const game = new Game() -- error, as Game here is referring to the Game struct we
+const game = Game::() -- error, as Game here is referring to the Game struct we
                         -- just defined, which doesn't have a constructor.
-const game = new awesome_game::Game() -- Fine, it's referring to the correct type.
+const game = awesome_game::Game::() -- Fine, it's referring to the correct type.
 ```
 
 ## Name resolution
@@ -902,22 +902,28 @@ end
 ```
 
 ## Constructor parameters
-Function can have constructor parameters. A constructor parameter expands to any valid set of parameters that can construct an object:
+Functions can have constructor parameters. These parameters hold all the arguments needed to call a constructor for a given type, and can be passed to any other function that accepts constructor parameters (which, of course, includes any constructor for that type). As we cannot determine which constructor is being used by the caller, we cannot do any other operation with the value of said parameter.
 
 ```judith
-func build_person (person_ctor: new Person)
-    const p = new Person(person_ctor)
-    -- statements
+func build_person (args: ctor Person) -> Person
+    const p = Person::(args) -- valid way to construct a person.
+    return p
 end
+
+const p: Person = build_person("Kevin", 29) -- using Person::(String, Num)
+const p2: Person = build_kevin() -- using Person::make_kevin()
 ```
 
-Named constructors can also be used:
+If two constructors share the same parameters, you must desambiguate between constructors. Imagining that `Person::make_weird(String, Num)` exists, we would have to do this:
 
 ```judith
-func build_person (person_ctor: new Person::make_kevin)
-    const kevin = new Person::make_kevin(person_ctor)
-    -- statements
-end
+-- Here we use Person::make_weird(String, Num): Note that we use the keyword
+-- "ctor" to indicate that we are passing the arguments and not actually calling
+-- the constructor here:
+const p = build_person(ctor Person::make_weird("John", 40))
+
+-- Here we use Person::(String, Num)
+const p2 = build_person(ctor Person::("Kevin", 29))
 ```
 
 ## In parameters
@@ -932,7 +938,7 @@ end
 The `in` keyword must be used on the call expression, too, to make it clear that whatever is being passed as an argument cannot be accessed anymore
 
 ```judith
-var world = new World("test", world_settings)
+var world = World::("test", world_settings)
 set_world(in world)
 world.start() -- ERROR local 'world' is no longer accessible.
 ```
@@ -1180,7 +1186,7 @@ Type casting in Judith is restricted to operations that change types between com
 Upcasting allows a value of a subtype B to be casted to a supertype A. As B is guaranteed to be also of type A, this cast is performed at compile time at no cost.
 
 ```judith
-const dog = new Dog()
+const dog = Dog::()
 const animal: Animal = dog:Animal -- valid cast, as 'Dog' is always an 'Animal'.
 ```
 
@@ -1191,7 +1197,7 @@ Downcasting allows a value of a supertype A to be casted to a subtype B. Since a
 With the safe downcasting operator, the cast will return `null` when it fails, avoiding errors. However, due to this, this expression evaluates to a nullable type, even when used on a non-nullable one:
 
 ```judith
-const animal = new Cat()
+const animal = Cat::()
 const dog: Dog? = animal:?Dog -- will be null, as animal's type is 'Cat'.
 ```
 
@@ -1608,7 +1614,7 @@ end
 Structs implicitly define a constructor that contains all of its fields in order:
 
 ```judith
-const p = new Person("Kevin", 28, 'Germany', 103_000d)
+const p = Person::("Kevin", 28, 'Germany', 103_000d)
 ```
 
 Structs can extend other structs:
@@ -1917,7 +1923,7 @@ The class we created above can be used like this:
 
 ```judith
 const company = Company::get_by_name("Ajax")
-var kevin = new Person("Kevin", 1975, 'Germany', company)
+var kevin = Person::("Kevin", 1975, 'Germany', company)
 
 Console::log(kevin.name) -- valid, as "name" is visible from the outside.
 kevin.name == "George" -- invalid, as "name" is constant to the outside.
@@ -2045,7 +2051,7 @@ const normalized = p.normal() -- "p" becomes the argument for the "self" paramet
 ```
 
 ### Extension constructors
-Although constructors cannot be top-level items outside classes by themselves (as they need somethign to construct), they can be defined as associated items. A constructor is always a function (never a generator), and always return an instance of the type they are implemented for. Unlike methods, constructors do not take a `self` parameter. Instead, `self` is implicitly created at the start of the constructor, with uninitialized fields. Unlike regular methods, constructors can have no name at all.
+Although constructors cannot be top-level items outside classes by themselves (as they need somethign to construct), they can be defined as associated items. A constructor is always a function (never a generator), and always returns an instance of the type they are implemented for. Unlike methods, constructors do not take a `self` parameter. Instead, `self` is implicitly created at the start of the constructor, with uninitialized fields. Unlike regular methods, constructors can have no name at all. Constructors are associated functions and, as such, cannot share names with other associated functions (i.e. if there's a regular associated function for `Vec2` called `origin`, you cannot define a constructor that's also called `origin`).
 
 ```judith
 ctor Vec2 (x, y: Num)
@@ -2083,6 +2089,8 @@ ctor Num::parse (str: String)
     self = result -- this will make "result" the value 'constructed' by this ctor.
 end
 ```
+
+_**`TODO`**: This breaks the rule that constructors are agnostic to the way the object is being allocated._
 
 If the type the constructor belongs to can only be instantiated with a constructor method (as it's commonly the case with classes), `self` will not be created implicitly, and thus will be unavailable until a value is assigned to it:
 
@@ -2213,7 +2221,7 @@ end
 
 ```judith
 oper - (a: Vec3)
-    return new Vec3(-a.x, -a.y, -a.z)
+    return Vec3::(-a.x, -a.y, -a.z)
 end
 ```
 
@@ -2749,7 +2757,7 @@ The spread operator is useful to create shallow copies of collections and object
 const europe = ['Germany', 'France', 'Italy']
 var europe_copy = [...europe] -- valid, as everything copied is a value type.
 
-const people = [new Person(...), new Person(...)]
+const people = [Person::(...), Person::(...)]
 var people_copy = [...people] -- ERROR - cannot assign const reference type to var.
 ```
 
@@ -2762,7 +2770,7 @@ The `Dynamic` type is special in that it is not allowed to have any extension me
 
 ```judith
 const anything: String = "absolutely"
-const person = new Person("Kevin")
+const person = Person::("Kevin")
 
 const my_obj: Dynamic = {
     [anything] = "can", -- at runtime, creates a field named "absolutely"
@@ -3470,9 +3478,7 @@ var p: Person* = nullptr
 ```
 
 ### Building unmanaged objects
-There are several ways to get unmanaged objects:
-
-1. Define constructors and functions that return unmanaged pointers, rather than regular objects. These constructors are always unsafe:
+1. Define constructors and functions that return unmanaged pointers, rather than regular objects. These constructors are always unsafe. Since `self` inside an unmanaged pointer's constructor is, well, an unmanaged pointer, all fields can be accessed freely even when defining a constructor for a class.
 
 ```judith
 unsafe ctor Person* ()
@@ -3492,7 +3498,20 @@ p->age = 41
 Console::log(p->name) -- now it's safe to do this.
 ```
 
-3. Get an unmanaged pointer from a managed value. Doing this will NOT make the value unmanaged, and thus managing its memory manually can result in unexpected behavior. The garbage collector will respect the unumanaged pointer and not collect or move the value while an unmanaged pointer to it exists. Be aware that there's no way for this pointer to know it's pointing to a managed object and thus, pointer arithmetic and other features will not work properly on it.
+3. Use `Usf::make<T>(ptr T*, args: ctor T)`, which builds the object at the address given by using the constructor given.
+
+```judith
+var p: Person* = Usf::mem_alloc<Person>()
+Usf::make(p, "Kevin", 35)
+```
+
+4. Create the object as an unmanaged object directly by using `&ptr` in its constructor expression, which will make Judith return `T*` rather than a garbage-collected `T`.
+
+```judith
+var p: Person* = &ptr Person::("Kevin", 35)
+```
+
+5. Get an unmanaged pointer from a managed value. Doing this will NOT make the value unmanaged, and thus managing its memory manually can result in unexpected behavior. The garbage collector will respect the unumanaged pointer and not collect or move the value while an unmanaged pointer to it exists. Be aware that there's no way for this pointer to know it's pointing to a managed object and thus, pointer arithmetic and other features will not work properly on it.
 
 ```judith
 const p = Person::("John")
@@ -3568,6 +3587,8 @@ Usf::mem_compare(arr, arr_3, 10)
 
 7. `Usf::stack_alloc<T>(length: Int = 1)`: Similar to `Usf::mem_alloc`, but allocates the memory on the stack. This operation may not be supported in some systems.
 
+8. `Usf::make<T>(ptr T*, args: ctor T)`: Builds an object of type T at the address given, by running the constructor given.
+
 _Note: as always, template parameters are inferred from usage when possible. They are explicitly written in the examples above to make the examples more clear._
 
 ## Memory unions
@@ -3610,6 +3631,26 @@ typedef struct Person
 end
 ```
 
+## A note on Judith pointer types
+Judith's safe syntax is agnostic to the method used to create the value held by a variable of a pointer type. When you encounter `const p: Person = get_person()`, `p` is agnostic to who is handling the memory for `p`. Normally, that will be Judith's garbage collector, but it's perfectly possible to use unsafe features to create a non-gc instance of `Person`. This same logic also applies to `self` in a constructor, which is what makes it possible to use constructors to build non-gc objects.
+
+```judith
+func make_person (name: String, age: Num) -> Person
+    unsafe
+        var p: Person* = Usf::mem_alloc<Person>()
+        p->name = name
+        p->age = age
+
+        return *p -- this dereferences "p" as "Person" (an owned value)
+    end
+end
+
+const p: Person = make_person("John", 51) -- <-- This is a normal person, and "p"
+                                          --     owns it normally.
+```
+
+Note that due dilligence is required to ensure that, through the use of our unsafe superpowers, we don't accidentally give ownership of the same value to multiple variables, or mutate the pointed object after we gave someone else its ownership.
+
 # Reflection
 TODO: Add restrictions that guarantee immutability is not broken.
 
@@ -3628,7 +3669,7 @@ end
 The dynamic index operator `.[]` can be used on any object to try to retrieve the value of the given member.
 
 ```judith
-const p = new Person("Kevin", 36) -- the struct type defined above.
+const p = Person::("Kevin", 36) -- the struct type defined above.
 p.["age"] -- access field "age" via reflection at runtime, returns '36'.
 ```
 
@@ -3722,7 +3763,7 @@ end
 Use `membersof()` to retrieve a list of all members of the given instance or type:
 
 ```judith
-const p = new Person()
+const p = person::()
 
 membersof(p) -- returns ["name", "last_name", "age", "country", "print_age"]
 membersof(Person) -- returns ["count", "print_count"]
@@ -3741,7 +3782,7 @@ You can use `typeof()` to receive a `TypeMetadata` object that contains informat
 
 ```judith
 typedef Employee = Person | String
-const employee: Employee = new Person()
+const employee: Employee = Person::()
 typeof(employee) -- returns the TypeMetadata of 'Person', not 'Employee'.
 membersof(employee) -- returns its members as 'Person', not as 'Employee'.
 ```
@@ -3869,7 +3910,7 @@ impl func Employee::str ()
     return "A very good employee"
 end
 
-const emp = new Employee()
+const emp = Employee::()
 Console::log(emp.str()) -- outputs "A very good employee".
 ```
 
