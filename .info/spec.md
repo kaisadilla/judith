@@ -343,35 +343,40 @@ Judith features some pseudo-types. These types represent concepts relating to ty
 # Literals
 ## <a name="literals-numbers"></a> Numbers
 Number literals are a chain of numbers:
+
 ```judith
 1512 -- normal number.
 ```
 
 Underscores can be used to make numbers more readable. Underscores don't have any meaning and are ignored during compilation. Underscores cannot appear at the start of a number (as it would turn it into an identifier) or following a decimal point or another underscore:
+
 ```judith
 1_512 -- same as '1512'.
 ```
 
 Numbers can be expressed as decimal, hexadecimal, binary and octal:
+
 * `1512`: 1512 in decimal, base-10. No prefix needed.
 * `0x5e8`: 1512 in hexadecimal, base-16. Prefix `0x`.
 * `0b0101_1110_1000`: 1512 in binary, base-2. Prefix `0b`.
 * `0o2750`: 1512 in octal, base-8. Prefix `0o`.
 
 Decimals can be expressed with a decimal point:
+
 ```judith
 5.53 -- Number with a decimal point.
 .315 -- Numbers can be led with a decimal point.
-661. -- ERROR: Numbers cannot end in a decimal point, as it would become the
-     -- member access token.
+--661. -- ERROR: Numbers cannot end in a decimal point, 
+       -- as it would become the member access token.
 ```
 
 Numbers can be expressed in scientific notation.
+
 ```judith
 8.21e73
 ```
 
-By default, a number literal will be of type `I64`, unless it contains a decimal point or is expressed in scientific notation, in which case it will be of type `F64`. While number types cannot be implicitly converted between each other, numeric literals will be reinterpreted into their intended usage for as long as that conversion makes sense:
+By default, a number literal's type will be `I64`, unless it contains a decimal point or is expressed in scientific notation, in which case it will be of type `F64`. While number types cannot be implicitly converted between each other, numeric literals will be reinterpreted into their intended usage for as long as that conversion makes sense:
 
 ```judith
 const score: Int = 42 -- Here "42" is interpreted as an `Int` (i.e. `I64`).
@@ -384,12 +389,13 @@ In practice, this means that developers don't need to worry about the implicit t
 
 While numeric literals themselves will be reinterpreted as needed, values of a numeric type cannot always be implicitly converted.
 
-_For a full explanation of number conversion, see [Type casting § Number conversion](#casting-numbers)._
+<quote>_For a full explanation of number conversion, see [Type casting § Number conversion](#casting-numbers)._</quote>
 
 ## <a name="literals-strings"></a> Strings
 String literals can be defined with either double quotes or backticks:
+
 ```judith
-var valid_string: String = "This is valid."
+let mut valid_string: String = "This is valid."
 valid_string = `This is also valid.`
 ```
 
@@ -397,25 +403,28 @@ By convention, double quotes are preferred, while backticks are used for strings
 
 String interpolation can be achieved with the flag `f` and `{}`:
 ```judith
-const score_str = f"Your score is {player.score}!"
+let score_str = f"Your score is {player.score}!"
 ```
 
 Escaped strings (verbatim) can be achieved with the flag `e`. In verbatim strings, the backslash (`/`) doesn't escape characters. In this case, escape sequences are interpreted literally, and the only escaped characters are `"` (represented by `""`) and, in the case of interpolated strings, `{` and `}` (represented by `{{` and `}}`).
+
 ```judith
-const path: String = e"C:\repos\judith\my_proj\main.jud"
+let path: String = e"C:\repos\judith\my_proj\main.jud"
 ```
 
 You can escape line breaks inside strings with `\`. This will ignore the line break and all the spaces in the next line before the first non-space character:
+
 ```judith
-const not_broken: String = "This string is \
-                            not broken." -- Equals "This string is not broken."
+let not_broken: String = "This string is \
+                          not broken." -- Equals "This string is not broken."
 ```
 
 ### Raw strings
 Raw strings are delimited by, at least, three double quotes / backticks on each end. The content inside these quotes must be in new lines, and that content must be indented one level deeper than the closing quotes. Indentation inside the raw string is not part of the string.
-Raw strings don't need to escape double quotes / backticks that are part of the string, but have no way to represent more of these characters than the ones that form the delimiter (i.e. a raw string delimited by `"""` cannot contain `"""` inside, as there's no way to escpae that sequence).
+Raw strings don't need to escape double quotes / backticks that are part of the string, but have no way to represent more of these characters than the ones that form the delimiter (i.e. a raw string delimited by `"""` cannot contain `"""` inside, as there's no way to escape that sequence).
+
 ```judith
-const json_content: String = """
+let json_content: String = """
     {
         "type": "Text",
         "id": 6
@@ -429,22 +438,20 @@ const json_content: String = """
 These operations are defined for numbers and return other numbers of the same type. These operators can be overloaded for other types.
 
 * `5 + 2`: Addition.
-* `5 - 2`: Substraction.
+* `5 - 2`: Subtraction.
 * `5 * 2`: Multiplication.
 * `5 / 2`: Division.
 * `5 %i 2`: Floor division.
 * `5 %m 2`: Modulo: returns 5 mod 2.
 * `5 %r 2`: Remainder: returns the remainder of 5 / 2, corresponds to % in C.
 
-By default, arithmetic operations are unchecked in Judith, and may overflow or underflow. The default debug configuration makes them checked and makes them panic when overflows or underflows occur.
+By default, arithmetic operations are unchecked in Judith, and may overflow or underflow. The default debug configuration makes them checked and makes them panic when overflows occur.
 
-Inside a checked context (using `checked()`), arithmetic operations will be checked and return exceptions when overflow or underflows occur (_see [Exceptions](#exceptions)_).
-
-By default, arithmetic operations are checked and will throw NumberOverflowException when an underflow or overflow would occur. If done inside an `unchecked` context (using `unchecked()` expression or `unchecked` block modifier), then the underflow or overflow will be allowed to occur.
+Inside a checked context (using `checked()` or `checked do ... end`), arithmetic operations will be checked and return exceptions when overflows occur (_see [Exceptions](#exceptions)_).
 
 ```judith
-const a: Int = Int::MAX + 1 -- throws NumberOverflowException.
-const a: Int = unchecked(Int::MAX + 1) -- equals -2,147,483,648.
+let a: Int = Int::MAX + 1 -- crashes on debug, equals -2,147,483,648 on production.
+let a: Int = checked(Int::MAX + 1) -- returns 'number_overflow' exception.
 ```
 
 ## Bitwise operations
@@ -484,13 +491,14 @@ These operations evaluate to either `true` or `false`. Most of these operators c
 
 ## Null-coalescing operator
 The null-coalescing operator returns the value at the left if it isn't `null` or `undefined`, and the value at the right otherwise. Just like logical `and` and `or`, this operation short-circuits, meaning that the right-hand side expression won't be evaluated if the left-hand side expression is returned.
+
 ```judith
-const designated_boss: Person? = null
+let designated_boss: Person? = null
 
-const boss = designated_boss ?? get_new_boss() -- Will evaluate to "get_new_boss()"
+let boss = designated_boss ?? get_new_boss() -- Will evaluate to 'get_new_boss()'.
 
-var score: Num? = null
-score ??= 0 -- Since "score" is null, it'll be assigned 0.
+let mut score: Num? = null
+score ??= 0 -- Since 'score' is null, it'll be assigned 0.
 score ??= -10 -- Nothing will happen, as "score" is not null.
 json_obj?.[fld_name] ?? "unknown value" -- If json_obj?.[inquired_value] doesn't
                                         -- exist, that'll evaluate to "undefined"
@@ -503,6 +511,7 @@ json_obj?.[fld_name] ?? "unknown value" -- If json_obj?.[inquired_value] doesn't
 
 ## Compound assignment operations
 Most binary operators in Judith support compound assignment:
+
 ```judith
 i += 3 -- equivalent to i = i + 3
 i *= 5 -- equivalent to i = i * 5
@@ -517,14 +526,16 @@ i and= "some string" -- equivalent to i = i and "some string"
 Access operations are used to access a member of a value of any type:
 
 ### Member access operator: `.`
-This operation accesses an instance member on an instance value, such as an instance field inside a struct:
+This operation accesses fields and methods on specific variables.
+
 ```judith
-const p = Person { name = "Kevin", age = 40 }
+let p = Person { name = "Kevin", age = 40 }
 person.age -- accesses field "age" inside "p".
 ```
 
 ### Scope resolution operator: `::`
 This operation accesses the member of a type, module, namespace or other construct.
+
 ```judith
 Camera::main -- Accesses static member field "main" that belongs to class "Camera".
 game::physics::RigidBody -- Accesses "physics" module inside "game" module, and
@@ -533,35 +544,41 @@ game::physics::RigidBody -- Accesses "physics" module inside "game" module, and
 
 ### Indexing operator: `[]`
 This operator can be implemented by types that allow accessing values via indexing. The amount of arguments taken by this operator and the type it returns are defined by the object itself:
+
 ```judith
 const people: List<String> = ["John", "Kevin", "Tali"]
-people[1] - returns "Kevin", because List<_T> defines [i: Int] => _T.
+people[1] - returns "Kevin", because List<_T> defines [i: Int] -> _T.
 ```
 
-### Unwrap operator: `->`
-This operator can be implemented by types that wrap a value, to give raw access to that value:
+### Unwrap operators: `->` and unary `*`
+These operator can be implemented by types that wrap a value, to give raw access to that value:
+
 ```judith
-const boxed_num = new Box<Num>(5)
+let boxed_num = new Box<Num>(5)
 boxed_num->str() -- accesses Num.str()
 boxed_num.str() -- accesses Box<Num>.str()
+let num2 = boxed_num -- 'num' is referencing the same Box<Num> as 'boxed_num'.
+let num2 = *boxed_num -- 'num' is a 'Num' with value 5.
 ```
 
 ### Call operator: `()`
 Calls a callable value, generally a function.
+
 ```judith
 init() -- calls the function "init".
 (() => Console::log("e"))() -- calls the lambda function defined at the left.
 
-const init: (c: Num) => Void = null
-const crash: (c: Num) => Void = c => System::exit()
+let init: (c: Num) -> Void = null
+let crash: (c: Num) -> Void = c => System::exit()
 (init ?? crash)(12) -- dynamically calls whatever this expression resolves to.
 ```
 
 ### Dynamic access operator: `.[]`
-_See [Reflection § Dynamic access operator](#reflection-dao)._
+<quote>_See [Reflection § Dynamic access operator](#reflection-dao)._</quote>
 
 ### <a name="op-access-nullable">Null-conditional operations</a>
 Each of the access operators have a null-conditional counterpart (except for the scope resolution operator). The null-conditional version of an operators will return the value being accessed if that value is `null` or `undefined`. Otherwise, it will access the value as normal. These operators are `?.`, `?[]`, `?->`, `?()` and `?.[]`.
+
 ```judith
 person?.name -- if "person" is null or undefined, returns that. Else returns the
              -- value of its "name" field.
@@ -570,7 +587,7 @@ person?.name -- if "person" is null or undefined, returns that. Else returns the
 my_list?[5] -- if "my_list" is null or undefined, returns that. Else returns the
             -- value at index 5.
 
--- Null-conditional unwrapper operator (?->)
+-- Null-conditional unwrap operator (?->)
 boxed_val?->name -- If "boxed_val" is null or undefined, returns that. Else
                  -- returns the value of its wrapped value's "name" field.
 
@@ -590,9 +607,9 @@ The condition inside a control structure cannot be (or contain) an assignment ex
 
 ## If
 ```judith
-if element == 'Water' then
+if element == 'water' then
     -- statements
-elsif element == 'Earth' then
+elsif element == 'earth' then
     -- statements
 else
     -- statements
@@ -608,8 +625,25 @@ else => my_other_func()
 
 Arrow and block bodies cannot be combined.
 
+An `if`'s (or `while`'s) condition can include a cast between compatible types:
+
+```judith
+if animal is Dog dog then
+    dog.bark()
+end
+```
+
+The condition can also match an [option](#types-user-option) variant:
+
+```judith
+if message is 'move'(pos) then
+    move_to(pos.x, pos.y)
+end
+```
+
 ## Match
-Match is a powerful structure that can be used for pattern matching. Match is exhaustive, meaning that every possibility must be explicitly handled for a match expression to be correct.
+Match is a powerful structure that can be used for pattern matching. `match` is exhaustive, meaning that every possibility must be explicitly handled for a match expression to be correct.
+
 ```judith
 match country do
     'Germany' then -- when country equals 'Germany'.
@@ -628,12 +662,13 @@ match country do
 ```
 
 Match can also match types:
+
 ```judith
 match animal do
-    is Dog then -- When 'animal' is of type 'Dog'.
-        animal.bark() -- Here, 'animal' is narrowed to 'Dog'.
+    is Dog dog then -- When 'animal' is of type 'Dog'.
+        dog.bark() -- Inside this scope, 'dog' exists with type 'Dog'.
     end
-    is Cat then
+    is Cat then -- We can also take advantage of type narrowing.
         animal.meow() -- Here, 'animal' is narrowed to 'Cat'.
     end
     is Rabbit, is Squirrel, is Rat then -- When animal is any of these types.
@@ -645,33 +680,26 @@ match animal do
 ```
 
 Match can match expressions:
+
 ```judith
 match score do
+    -- this evaluates "score < 5"
     < 5 => Console::log("Terrible score.")
     -- If the number is < 5, it will match the previous statement and won't reach
     -- this part:
     < 10 => Console::log("Decent score!")
     else => Console::log("AWESOME SCORE!!)
-```
-
-Match can match destructured objects:
-```judith
-const values = [3, 0]
-
-match score do
-    [0, y] => Console::log("first value is zero and the second is " + y)
-    [x, 0] => Console::log("second value is zero and the first is " + y)
-    else => Console::log("Contains no zeroes!")
 end
 ```
 
-Match clauses can have guards:
+Match can match destructured objects:
+
 ```judith
-const values = [3, 0]
+let values = [3, 0]
 
 match score do
     [0, y] => Console::log("first value is zero and the second is " + y)
-    [x, 0] => Console::log("second value is zero and the first is " + y)
+    [_, 0] => Console::log("second value is zero.") -- we discard the first value.
     else => Console::log("Contains no zeroes!")
 end
 ```
@@ -704,6 +732,7 @@ end
 ```
 
 ## While
+Defines a loop that is repeated while the given condition is true. The condition is checked before each loop, meaning that the loop will be executed once for each time the condition is resolved to `true`. `while` conditions work in the same way as `if` conditions.
 
 ```judith
 while i < 32 do
@@ -712,10 +741,21 @@ end
 ```
 
 ## Foreach
-Foreach loops execute once for each item in a collection. The part before "in" is an initialization, not an assignment, it will always initialize a new local even if you omit "const".
+Foreach loops execute once for each item in a collection. The part before "in" is an initialization, not an assignment, it will always initialize a new local.
+
 ```judith
 for item in array do
     -- statements
+end
+```
+
+The local initialized will be immutable by default, even when the variable we are iterating is immutable. We can use `mut` in the variable to borrow the value mutably, if the iterated variable allows that:
+
+```judith
+let mut people = get_people()
+
+for mut p in people do
+    p.name = "Kevin"
 end
 ```
 
@@ -723,20 +763,20 @@ end
 Ranges are a special syntax designed to work well with foreach loops. Ranges are lists that contain a set of numbers.
 
 ```judith
-const range = Range(0, 10) -- 'start' is inclusive, 'end' is exclusive.
+let range = Range(0, 10) -- 'start' is inclusive, 'end' is exclusive.
 ```
 
 Ranges have a custom syntax built into the language:
 
 ```judith
-const range = 0..10 -- same as Range(0, 10)
+let range = 0..10 -- same as Range(0, 10)
 ```
 
 Range can have a step:
 
 ```judith
-const range = Range(9, -1, -1) -- third argument is the step (-1).
-const range = 9..-1 step -1 -- same as above.
+let range = Range(9, -1, -1) -- third argument is the step (-1).
+let range = 9..-1 step -1 -- same as above.
 ```
 
 Loop through a range form A to B:
@@ -768,8 +808,9 @@ All structures can use arrow bodies anywhere where a block body is valid.
 
 ## Control structures as expressions
 Control structures in Judith are expressions, not statements. This means that they evaluate to a value that can be then assigned. This is determined by the `yield` keyword, which works in the same way as `return` does inside a function. Just like functions, control structures may not `yield` any value, in which case they evaluate to the type `Void` which cannot be assigned.
+
 ```judith
-const msg = if score > 10 then
+let msg = if score > 10 then
     yield "Congratulations! You beat the game!"
 else
     yield "Sorry, try again."
@@ -777,24 +818,36 @@ end
 ```
 
 When using arrow bodies, the expression that makes up the body is considered the yield value:
+
 ```judith
 const msg = if score > 10 => "Congratulations! You beat the game!"
     else => "Sorry, try again."
 ```
+
+### Abbreviated if expression (ternary operator)
+Simple if expressions that return a value can be expressed with the `cond ?> <when true>, <when false>` syntax, which matches `cond ? <when true> : <when false>` in languages like C:
+
+```judith
+let person.has_name() ?> person.name, "unknown person"
+```
+
 ## Statement structures
 Judith features a few control structures that are statements rather than expressions:
 
 ## When
 `when` is the short-form version of `if`.
+
 ```judith
 return when result === null
 ```
+
 When statements only execute when the condition given is met. Unlike `if`, When  statements can't have alternates.
 
 When statements are statements, not expressions, and as such they don't evaluate to anything nor they can be used in places where an expression is expected.
 
 ## Jumptable
 Jumptables are the equivalent to C's `switch`.
+
 ```judith
 jumptable name do -- the jumptable "do" forms a single, shared scope.
     case "Christian": -- each case is the entry point for a given value
@@ -822,17 +875,26 @@ Jumptables are not named `switch` to discourage developers coming from languages
 Static variables are variables that exist outside functions, shared globally by all parts of the program. Static variables are declared with the `static`.
 
 ```judith
-module game;
+module game
 
-static const player_name = "Kevin"
-static var max_score = 0
+static player_name = "Kevin"
+```
+
+Mutable static variables are unsafe, and thus must be declared with `unsafe static mut` and can only be altered in `unsafe` contexts.
+
+```judith
+unsafe static mut score = 0
+
+unsafe do
+    score += 100
+end
 ```
 
 # Functions
 Functions are defined by the keyword `func`:
 
 ```judith
-func get_value_plus_10 (const value: Num) -> Num
+func get_value_plus_10 (value: Num) -> Num
     return value + 10
 end
 ```
@@ -840,25 +902,12 @@ end
 Functions may return a value, or no value at all. In this case, their return type is `Void`.
 
 ```judith
-func hello_world () -> Void
+func hello_world () -> Void -- can be omitted.
     Console::log("Hello world")
 end
 ```
 
-Functions can return `const` values. These values cannot be assigned to mutable locals or fields:
-
-```judith
-func get_immutable_person (id: String) -> const Person
-    -- statements
-    return person
-end
-
-var p = get_immutable_person("kevin") -- ERROR: 'const String' cannot be assigned
-                                      -- to a variable.
-const p: const Person = get_immutable_person("kevin") -- ok.
-```
-
-If a function's return type is ommited, it is assumed to be `Void`.
+If a function's return type is omitted, it is assumed to be `Void`.
 
 ```judith
 func add (a, b: Num)
@@ -869,21 +918,25 @@ end
 To infer the return type of a function, an explicit 'Auto' must be used.
 
 ```judith
-func add (a, b: Num) -> Auto -- inferred to be 'Num'
+
+func add (a, b: Num) -> Auto -- inferred to be 'String | Num'
+    return "You didn't do anything." when a == 0 or b == 0
     return a + b
 end
 ```
+
+<quote>_See [Ownership § Functions](#ownership-functions) to read about how ownership interacts with parameters and return values._</quote>
 
 ## Function overloading
 Judith does not allow function overloading.
 
 ## Variadic functions
-Variadic functions can take any number of arguments. To define a variadic function, its last parameter has to use the spread operator, and the type of said parameter has to be a type that can be initialized as a list (i.e. any type that can be initialized with [a, b, c] syntax).
+Variadic functions can take any number of arguments. To define a variadic function, its last parameter has to use the spread operator (`...`), and the type of said parameter has to be a type that can be initialized as a list (i.e. any type that can be initialized with [a, b, c] syntax).
 
 ```judith
 func add_many_numbers (...nums: List<Num>) -> Num
-    var sum = 0
-    for n in nums do sum += n end
+    let mut sum = 0
+    for n in nums => sum += n
     return sum
 end
 ```
@@ -891,23 +944,14 @@ end
 You can call a variadic function by passing each value as a parameter:
 
 ```judith
-const sum = add_many_numbers(3, 5, 2, 4, -7, 9, 4, 11)
+let sum = add_many_numbers(3, 5, 2, 4, -7, 9, 4, 11)
 ```
 
 Or you can ignore that it's a variadic function and pass it a collection compatible with its variadic parameter, as if it was a normal parameter (in this case, List<Num>):
 
-
 ```judith
-const my_list: List<Num> = [1, -2, 5, 6.6, 0.4, 2]
-const sum = add_many_numbers(my_list)
-```
-
-Functions can omit the `const` keyword in their parameters, but not their type annotation. Functions can also omit the return type annotation:
-
-```judith
-func add (a, b: Num) -- 'a' and 'b' are implicitly 'const'.
-    return a + b -- add(a, b) infers that it returns 'Num' from here.
-end
+let my_list: List<Num> = [1, -2, 5, 6.6, 0.4, 2]
+let sum = add_many_numbers(my_list)
 ```
 
 ## Constructor parameters
@@ -915,41 +959,27 @@ Functions can have constructor parameters. These parameters hold all the argumen
 
 ```judith
 func build_person (args: ctor Person) -> Person
-    const p = Person::(args) -- valid way to construct a person.
+    let mut p = Person::(args) -- valid way to construct a person.
     return p
 end
 
-const p: Person = build_person("Kevin", 29) -- using Person::(String, Num)
-const p2: Person = build_kevin() -- using Person::make_kevin()
+let p: Person = build_person("Isaac", 29) -- using Person::(String, Num)
+let p2: Person = build_person(50) -- using Person::make_kevin(Num)
 ```
 
-If two constructors share the same parameters, you must desambiguate between constructors. Imagining that `Person::make_weird(String, Num)` exists, we would have to do this:
+If two constructors share the same parameters, you must disambiguate between constructors. Imagining that `Person::make_weird(String, Num)` exists, we would have to do this:
 
 ```judith
 -- Here we use Person::make_weird(String, Num): Note that we use the keyword
 -- "ctor" to indicate that we are passing the arguments and not actually calling
 -- the constructor here:
-const p = build_person(ctor Person::make_weird("John", 40))
+let p = build_person(ctor Person::make_weird("John", 40))
 
 -- Here we use Person::(String, Num)
-const p2 = build_person(ctor Person::("Kevin", 29))
-```
+let p2 = build_person(ctor Person::("Isaac", 29))
 
-## In parameters
-`in` parameters take ownership of the reference they are given, meaning that once a reference is passed as an in parameter, the local holding that value (if any) cannot be used anymore. This allows functions to guarantee that a reference they get will not be accessed or mutated from the outside afterwards.
-
-```judith
-func set_world (in var world: World)
-    -- statements
-end
-```
-
-The `in` keyword must be used on the call expression, too, to make it clear that whatever is being passed as an argument cannot be accessed anymore
-
-```judith
-var world = World::("test", world_settings)
-set_world(in world)
-world.start() -- ERROR local 'world' is no longer accessible.
+-- And here we use Person::make_kevin(Num), which is not ambiguous:
+let p3 = build_person(31)
 ```
 
 ## Return type `Never`
@@ -973,9 +1003,9 @@ generator get_single_digit_numbers () -> Num -- return type: IEnumerable<Num>
     end
 end
 
-const gen: IEnumerable<Num> = get_single_digit_numbers()
-const a = gen.next() -- equals 0
-const b = gen.next() -- equals 1
+let mut gen: IEnumerable<Num> = get_single_digit_numbers()
+let a = gen.next() -- equals 0
+let b = gen.next() -- equals 1
 
 for i in gen do -- equals 2, then 3, 4, 5, 6, 7, 8, 9
     -- statements
@@ -1003,12 +1033,12 @@ func negate (a: Num) -> Num
 end
 ```
 
-These types are expressed like `(param types) => return type`
+These types are expressed like `(param types) -> return type`
 
 ```judith
-var binary_op: (Num, Num) => Num = add -- valid assignment
+let mut binary_op: (Num, Num) -> Num = add -- valid assignment
 binary_op = multiply -- valid, as multiple matches the signature used as type.
-binary_op = negate -- ERROR - negate's signature is '(Num) => Num'.
+binary_op = negate -- ERROR - negate's signature is '(Num) -> Num'.
 ```
 
 You can call a value of a function type as if it was a function:
@@ -1017,22 +1047,26 @@ You can call a value of a function type as if it was a function:
 binary_op(5, 8) -- Returns '40', as "binary_op" points to "multiply()".
 ```
 
-## Lambda functions
-Functions can be defined with lambda syntax. Functions defined as lambda syntax are expressions and evaluate to the function itself.
+## Closures and lambda functions
+Functions can be defined with lambda syntax. Functions defined as lambda syntax are expressions that evaluate to the function itself.
 
 ```judith
-const add = (a: Num, b: Num) -> Num
+let add = (a: Num, b: Num) -> Num
     return a + b
 end
 ```
 
-In this example, we can see every feature of a lambda function, although most of them can be omitted. The type annotation in the parameters are only necessary when the type of said parameters cannot be inferred from context. Return type can also be omitted - unlike regular function syntax, return type `Void` is not implied, but instead the return type is inferred from usage. Finally, the body of the function can be replaced with an arrow expression. In this case, the value of the expression will become the return type of the lambda function.
+In this example, we can see every feature of lambda syntax, although most of them can be omitted. The type annotation in the parameters are only necessary when the type of said parameters cannot be inferred from context. Return type can also be omitted - unlike regular function syntax, return type `Void` is not implied, but instead the return type is inferred from usage. Finally, the body of the function can be replaced with an arrow expression. In this case, the value of the expression will become the return type of the lambda function.
 
 With all of these features, this is the shortest way to write a lambda function:
 
 ```judith
-const add: (Num, Num) => Num = (a, b) => a + b
+let add: (Num, Num) -> Num = (a, b) => a + b
 ```
+
+Note that lambda syntax define closures, and "lambda functions" are just a special case of closures that do not capture any values and thus act as regular (anonymous) functions.
+
+<quote>_See [Closures](#closures) for a full explanation of closures._</quote>
 
 ## Function composition
 
@@ -1040,10 +1074,14 @@ const add: (Num, Num) => Num = (a, b) => a + b
 Functions can be combined with the `.and_then` method. This method returns a new function that calls the function followed by a new function with the same signature:
 
 ```judith
-func increase_by_2 (x: Num) -> Num return x + 2 end
-func multiply_by_3 (x: Num) -> Num return x * 3 end
+func increase_by_2 (x: Num) -> Num 
+    return x + 2
+end
+func multiply_by_3 (x: Num) -> Num
+    return x * 3
+end
 
-const increase_and_multiply = increase_by_2.and_then(multiply_by_3)
+let increase_and_multiply = increase_by_2.and_then(multiply_by_3)
 
 Console::log(increase_and_multiply(10)) -- prints 36 (result of (10 + 2) * 3).
 ```
@@ -1054,7 +1092,7 @@ Functions can be partially resolved by providing it some of its parameters, but 
 ```judith
 func add (x: Num, y: Num) -> Num return x + y end
 
-const add_2 = add(?, 2) -- add_2's type is '(Num) => Num'.
+let add_2 = add(?, 2) -- add_2's type is '(Num) => Num'.
 
 Console::log(add_2(5)) -- prints 7.
 ```
@@ -1062,84 +1100,90 @@ Console::log(add_2(5)) -- prints 7.
 This can be combined with function chaining:
 
 ```judith
-const increase_and_multiply = add_2(?, 2).and_then(mult(?, 3))
+let increase_and_multiply = add_2(?, 2).and_then(mult(?, 3))
 Console::log(increase_and_multiply(10)) -- prints 36 (same as above).
 ```
 
 Under the hood, partial call syntax is just syntactic sugar for lambda functions. This:
 
 ```judith
-const add_2 = add(?, 2)
+let add_2 = add(?, 2)
 ```
 
 is equivalent to this:
 
 ```judith
-const add_2 = (x: Int) => add(x, 2)
+let add_2 = (x: Int) => add(x, 2)
 ```
 
 # Local shadowing
-Judith allows local fields to be shadowed:
+Judith allows local variables to be shadowed:
 
 ```judith
-var score: Num = 6
+let mut score: Num = 6
 score = 8
-const score: String = score.str() -- starting here, "score" will refer to this
-                                  -- new String local.
+let score: String = score.str() -- starting here, "score" will refer to this
+                                -- new String variable.
 
 score = 8 ERROR: Score is constant and its type is 'String'.
 ```
 
-This special case
+This special case:
 
 ```judith
-var score: Num = 6
+let mut score: Num = 6
 score = 8
-const score = score
+let score = in score
 ```
 Can be simplified to:
 
 ```judith
-var score: Num = 6
+let mut score: Num = 6
 score = 8
-const score -- skipping initialization assumes it's initialized with the value
-            -- of the local that it's being shadowed.
+let score -- skipping initialization assumes it's initialized with the value
+          -- of the variable that is being shadowed.
 ```
 
-Shadowing a constant with a variable is allowed, but results in a compiler warning.
+# Collections
+Collections are a group of types, provided by Judith's `std` library, that expand on the functionality of arrays.
 
-# Arrays and collections
+<quote>_See [User-defined types § Array type](#types-array) for native arrays, who can be inlined and whose size is known at compile time._</quote>
+
 ## List
 Lists are the most basic collection in Judith. They are a dynamically sized collection of values of a given type.
 
 ```judith
-const scores: List<Num> = [3, 5, 9, 15]
+let scores: List<Num> = [3, 5, 9, 15]
+let scores = List<Num>::[3, 5, 9, 15] -- explicitly indicating [] syntax's type.
 
 -- List indices start at 0:
 scores[0] -- Returns 3.
 scores[4] -- Returns 'undefined', as only indices 0 through 3 exist in the list.
 scores[^1] -- Returns the first value from the end, that is the value at
            -- index 3: 15.
-scores[1..3] -- Returns the values in the range given, that is values at 1 and
-             -- 2: [5, 9].
+scores[1..3] -- Returns a slice with the values in the range given: that is
+             -- values at 1 and 2: [5, 9].
 scores[1..^1] -- Same as 1..3
 ```
 
-## Array
-While `List<_T>` is recommended for most cases, the type `Array<_T, _count>` provides a fixed-size array, equivalent to C# arrays or C++ `std::array<T, c>`.
+Accessing a collection through the indexing operator will ensure the access is valid, and return an exception if it isn't.
+
+## Slice
+`Slice<_T>` provides a fixed-size array, equivalent to C# arrays. Slices can be used to create array-like structures whose size is determined at runtime, or to get views from parts of other collections.
 
 ```judith
-const scores: Array<Int, 4> = [3, 5, 9, 15]
+let values: Slice<Num> = [600, 700, 800] -- creates a Slice of length 3.
+let values = Slice<Num>::(get_number_count()) -- creates a Slice of the size
+                                              -- determined by the function.
+let some_scores = scores[1..3] -- Gets a view of some of the values in the list.
+let some_scores = scores[1..3].clone() -- Get a new copy instead.
 ```
-
-## Array types
-_See [User-defined types § Array type](#types-array)._
 
 ## Dictionary
 Dictionaries are the basic collection of key-value pairs.
 
 ```judith
-const scores: Dictionary<String, Num> = [
+let scores: Dictionary<String, Num> = [
     "Kevin" = 7,
     "Ryan" = 5,
     "Steve" = 11,
@@ -1523,7 +1567,7 @@ const integer: Int = id -- ERROR: cannot assign 'UniqueId' to 'Int'.
 const integer: Int = id:Int -- valid, explicit cast is allowed.
 ```
 
-### Option
+### <a name="types-user-option">Option</a>
 An option type is defined as a group of string literals. Literals used in an option are not strings, and so use single quotes rather than double quotes.
 
 ```judith
@@ -2925,7 +2969,7 @@ end
 
 Note that the compiler usually inlines variables of pointer types when it makes sense. Using `inline` serves mainly to enforce the rules that make a variable allowed to be inlined.
 
-# Ownership
+# <a name="ownership">Ownership</a>
 _This section only covers ownership in a single-threaded, context. See [Concurrency](#concurrency) for additional explanation of how ownership behaves in a multi-threaded context. See [Closures](#closures) for an explanation of how ownership is transferred to closures._
 
 In Judith, ownership is a concept tied to the mutability of values at runtime. Unlike other languages, Judith's ownership is not concerned with memory management, just ensuring that the mutability of a value is known at any point.
@@ -2937,6 +2981,7 @@ For immutable pointed variables, the same phenomenon occurs: as the value they r
 * `let`: points to an immutable value. These values are always thread-safe.
 * `let mut`: points to a mutable value. This variable is the owner of the mutable value, and as such it can mutate the value, lend it and transfer it.
 * `let shared`: points to a mutable value. That value is owned by an unknown number of variables, including this one. As such, this variable can mutate the value, and can lend it, but cannot transfer it.
+* `let ref`: points to a value with unknown mutability, owned by someone else. A `ref` can be read, but cannot be shared in any way other than into `ref` parameters. When creating a `ref` variable from a `mut` one, the `mut` one is lending the value to the `ref` variable and, as such, the `mut` one cannot transfer ownership of it until the `ref` variable has gone out of scope. If the `mut` value escapes the function (e.g. when you are getting it from a value outside the function, or assigning it to one), then passing a `ref` to another thread will force the function to await the thread before it returns.
 
 From this definition, some interesting properties arise:
 * `let` is inherently thread-safe.
@@ -2951,6 +2996,8 @@ From this definition, some interesting properties arise:
 * In single-thread context, you never have to worry that a value can change mid-function, as only one fragment of code may be executing at the same time. This means that the main reason `let shared` is distinguished from `let mut` is to know whether they can be safely shared with other coroutines or not.
 * `let shared` is a superset of `let mut`: any `let mut` can become `let shared`.
 * `let shared` effectively bypasses ownership and behaves like regular variables in languages that don't have immutability semantics, such as C# or Java.
+* `let ref` may be pointing to a `let`, `let mut` or `let shared` value. As we do not have any information, our options with it are limited to reading it or passing it to functions.
+* It doesn't usually make much sense to create a `let ref` variable for a value we can access directly, but it may still be needed when doing actions like retrieving a value from a list.
 
 ## Ownership in locals
 Assuming we have a struct `Person` with two fields (`name` and `age`), we'll create locals referring to `Person`s:
@@ -3038,7 +3085,7 @@ Console::log(car.name) -- valid, 'car.name' is unaffected.
 
 Note that, if needed, it's possible to use `std::mem::swap` or `std::mem::replace` to safely take ownership of a value inside a struct's field, while giving it another value to leave it valid.
 
-## Ownership in functions
+## <a name="ownership-functions">Ownership in functions</a>
 Function parameters and return types are also bound by ownership semantics. Their behavior, though, is adapted to their role in the flow of the program.
 
 Function parameters may borrow or take ownership of the values passed to them. When a parameter takes ownership, standard transfer rules apply (only `let mut` can do it, and must be done explicitly with `in`). However, parameters that borrow ownership are a lot more flexible: in a single-thread context, anyone can lend them ownership of the value, regardless of whether they are the original owner or not.

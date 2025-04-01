@@ -1,6 +1,14 @@
 {
     "cSpell.words": [
         "goroutines",
-        "inlines"
+        "inlines",
+        "Iulius",
+        "Jumptable",
+        "Jumptables",
+        "mult",
+        "Pseudotypes"
+    ],
+    "cSpell.ignoreWords": [
+        "nums"
     ]
 }

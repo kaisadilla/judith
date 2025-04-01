@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::iter::{Enumerate, Peekable};
+use std::str::Chars;
 use once_cell::sync::Lazy;
 use crate::judith::lexical::token::{RegularToken, StringLiteralKind, StringToken, Token, TokenKind, Trivia, TriviaKind};
 use crate::SourceSpan;
@@ -60,7 +62,7 @@ impl KeywordMap {
 
 pub struct Lexer<'a> {
     src: &'a str,
-    chars: std::iter::Peekable<std::iter::Enumerate<std::str::Chars<'a>>>,
+    chars: Peekable<Enumerate<Chars<'a>>>,
     start: usize,
     line: usize,
     column: usize,
