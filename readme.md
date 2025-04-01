@@ -10,6 +10,7 @@ Judith is a high-level, statically typed, compiled, general-purpose language. Ju
 ## Judith's main features
 
 - **Managed language**: By default, Judith is a garbage-collected language. You can, however, manage memory manually.
+- **Thread-safe by default**: Judith is designed from the ground-up for safe asynchronous programming.
 - **Written with ergonomics in mind**: every feature is designed to require as little boilerplate at possible, and usually the best way to do things is also the one that requires the least typing!
 - **Mutability syntax**: Variables explicitly state whether they hold mutable or immutable values. Mutability is absolute, meaning that inner values contained in fields are also guaranteed not to change.
 - **[Ergonomic I promise] ownership semantics**: not related to memory management, but instead to who is allowed to mutate a value.
