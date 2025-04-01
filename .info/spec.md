@@ -57,19 +57,20 @@ import std::collections
 ```
 
 Members of a module can also be accessed explicitly, using their fully qualified name:
+
 ```judith
-const game = new awesome_game::Game()
+let game = new awesome_game::Game()
 ```
 
 Explicitly accessing members like this may be necessary to resolve name conflicts:
+
 ```judith
 import awesome_game
 
 typedef struct Game end
 
-const game = Game::() -- error, as Game here is referring to the Game struct we
-                        -- just defined, which doesn't have a constructor.
-const game = awesome_game::Game::() -- Fine, it's referring to the correct type.
+let game = Game::() -- here we are referring to the struct we just defined.
+let game = awesome_game::Game::() -- here, we are not.
 ```
 
 ## Name resolution
@@ -81,13 +82,14 @@ When referencing a name that doesn't exist in the local scope, Judith tries to r
 3. All of the imported modules. No imported module has any precedence over any other, so if more than one imported module contains the name, then the reference is ambiguous and, thus, invalid.
 
 ## Namespaces
-Namespaces are similar to modules, but they cannot be imported explicitly. They can be thought of as static classes in other languages when they are used as method containers (i.e. they do not have state):
+Namespaces are used to explicitly group top-level items together. They play a role similar to static classes in other languages.
+
 ```judith
 namespace Math
     symbol PI = 3.1415
 
     func pow (a, b: Num) -> Num
-        var r = a
+        let mut r = a
         for i in 1..b do
             r *= a
         end
@@ -99,30 +101,34 @@ end
 
 You can access members of a namespace like this:
 ```judith
-    const tau = Math::PI * 2
-    const tau_squared = Math::pow(tau, 2)
+    let tau = Math::PI * 2
+    let tau_squared = Math::pow(tau, 2)
 ```
 
-# Symbol
-Symbols are aliases for literals. As such, symbols do not have any associated type, and at compile time any use of them is directly replaced by the literal they represent
+# Constants
+Constants are aliases for literals. As such, constants do not have any associated type, and at compile time any use of them is directly replaced by the literal they represent. They are created with the keyword `const`:
+
 ```judith
-symbol PI = 3.1415
+const PI = 3.1415
 ```
 
-Now, we have a symbol named "PI" that the compiler will understand as `3.1415` whenever encountered.
+Now, we have a constant named `PI` that the compiler will understand as `3.1415` whenever encountered.
+
 ```judith
-const radius = 5.5
-const circumference = 2 * PI * radius -- equivalent to 2 * 3.1415 * radius.
+let radius = 5.5
+let circumference = 2 * PI * radius -- equivalent to 2 * 3.1415 * radius.
 ```
 
-Symbols are not macros. Any expression that can be evaluated at compile-time can be used as a symbol, and it's evaluated value will be used as the meaning of said symbol:
+Constants are not macros. Constants contain either a literal, or an expression that can be resolved at compile time.
+
 ```judith
-symbol SIZE = 5 + 3
+const SIZE = 5 + 3
 const size = SIZE * 2 -- this is evaluated to 8 * 2 (= 16), not 5 + 3 * 2 (= 11).
 ```
 
 ## Enumerate
-Enumerate is a feature used to generate integer symbols automatically. These symbols will be part of the scope in which the enumerate is defined:
+Enumerate is a feature used to generate integer constants automatically. These constants will be part of the scope in which the enumerate is defined:
+
 ```judith
 enumerate
     STATUS_CONTINUE = 100 -- you can specify where enumerate starts counting
@@ -137,12 +143,14 @@ enumerate
 end
 ```
 
-These symbols would now be in the global scope:
+These constants would now be in the global scope:
+
 ```judith
 const status: Num = STATUS_OK -- equals 200.
 ```
 
-You can encapsulate the symbols defined by enumerate into its own scope, by naming the enumerate:
+You can encapsulate the constants defined by enumerate into its own namespace, by naming the enumerate:
+
 ```judith
 enumerate Direction
     NORTH
@@ -154,138 +162,135 @@ end
 const direction: Num = Direction::WEST
 ```
 
-Note that enumerates are not types, they are simply syntactic sugar to declare multiple symbols that form a succession of integers, without having to explicit assign each of them a value. The above enumerate would compile to:
+Note that enumerates are not types, they are simply syntactic sugar to declare multiple constants that form a succession of integers, without having to explicit assign each of them a value. The enumerate above is exactly the same as:
+
 ```judith
 namespace Direction
-    symbol NORTH = 0
-    symbol EAST = 1
-    symbol SOUTH = 2
-    symbol WEST = 3
+    const NORTH = 0
+    const EAST = 1
+    const SOUTH = 2
+    const WEST = 3
 end
 ```
 
 # Variables, values and types
-A value in Judith is a blob of data in memory. A variable is a name that refers to that data. The variable has a type, that describes the kind of data that may be associated to that variable.
+A value in Judith is a blob of data in memory. A variable is a name that refers to that data. The variable has a type, which describes the data contained by the value the variable refers to.
 
-A variable can be a local (a variable contained in a function's body) or a field (a variable contained inside an instance of a struct or class).
+A variable can be a local (a variable contained in a function's body), a field (a variable contained inside an instance of a struct or class) or a global (a variable reachable from every part of the program).
 
 ## Mutability and ownership
 In Judith, values can be mutable or immutable. A mutable value can change its content, while an immutable one is guaranteed not to change. Whether a value is mutable or immutable is decided by the variable(s) that **own** them.
 
+To be able to determine the mutability of a value at compile time, Judith has a full-fledged ownership system. The ownership system in Judith is concerned, exclusively, with the mutability of each value in memory, and follows a basic principle: a value can have  TWO of these three properties: mutable, shared between many variables, and accessible from multiple threads. This principle makes values in Judith inherently thread-safe, as it's only when a value has all these 3 properties at the same time, that data races can occur.
+
 Judith has an ownership system, which means that values are not shared by all variables equally. Instead, some variables own the value, and some others don't. Unlike Rust's ownership, Judith's ownership is not concerned about memory or lifetime (that is controlled by the garbage collector) - ownership in Judith is only concerned about who has control over a value's mutability.
 
-### Mutability
-Variables in Judith are divided in immutable (declared with `const`) and mutable (declared with `var`). Immutable variables cannot be reassigned nor mutate the value they contain, while mutable variables can do both.
+The ownership system is mainly concerned with complex types, so a more detailed explanation is left for a later section of this documentation.
 
-```judith
-const name = "Kevin" -- immutable local, cannot be mutated.
-name = "Steve" -- ERROR: cannot assign to 'name' after initialization.
-
-var name = "Alyce" -- mutable local, can be mutated.
-name = "Kevin" -- ok.
-```
+<quote>_See [Ownership](#ownership) for a full explanation of ownership and mutability._</quote>
 
 ## Type
+Every variable in Judith has a type, and only values of that type can be assigned to it:
 
-Every local in Judith has a type, and only values of that type can be assigned to it
 ```judith
-const name: String = "Kevin" -- local of type String.
-name = 3 -- ERROR: Num cannot be assigned to local of type String.
+let mut name: String = "Kevin" -- variable of type 'String'.
+--name = 3 -- ERROR: Num cannot be assigned to variable of type 'String'.
 ```
 
-Even though locals always have a type in Judith, that type may be inferred from context:
+In many occasions, the type of a variable can be inferred from context. In these cases, the type can be skipped, but that doesn't mean the variable doesn't have a type.
+
 ```judith
-var score = 12 -- "score" is of type Num, as inferred from its initialization.
-var score = "Alyce" -- ERROR: String cannot be assigned to local of type Num.
+let mut score = 12 -- 'score' is of type 'Num', as inferred from its initialization.
+--score = "Alyce" -- ERROR: 'String' cannot be assigned to variable of type 'Num'.
 ```
+
+## Indirection
+Judith manages memory for the user, and this means that types do not generally express how values are actually allocated in memory. In general, Judith abstracts most of this behavior away as an implementation detail, but a small part of it is still exposed to the developer.
+
+The part that is exposed to the developer divides types in Judith in two kinds: inline types and pointed types.
+
+<quote>_See [Inline and pointer types](#indirection) for a full explanation of this topic._</quote>
 
 ## Nullability
-Types are not nullable by default, meaning that the value `null` cannot be assigned to them:
+Judith uses `null` as a sentinel value that indicates the explicit lack of a value. By default, variables in Judith do not accept `null` as a possible value:
+
 ```judith
-const score: Num = null -- ERROR: 'score' can't be null.
-var person: Person = null -- ERROR: 'person' can't be null.
+--let score: Num = null -- ERROR: 'score' can't be null.
+--let mut person: Person = null -- ERROR: 'person' can't be null.
 ```
 
-Types can be made nullable with the `?` symbol:
+To define a type that _can_ accept `null` as a possible value, the `?` token is used in the type:
+
 ```judith
-const score: Num? = null -- ok.
-var person: Person? = null -- ok.
-var name = null -- ERROR: Can't infer the type of 'name' from context.
+let score: Num? = null -- ok.
+let mut person: Person? = null -- ok.
+--let mut name = null -- ERROR: Can't infer the type of 'name' from context.
+let name = null:String? -- valid, although uncommon.
 ```
 
-Nullable types cannot be used without explicitly handling the possibility of null:
+When a value is of a nullable type, the possibility of it being `null` cannot be ignored:
+
 ```judith
-const person: Person? = null
+let person: Person? = null
 Console::log(person.name) -- ERROR: 'null' doesn't have field 'name'.
 ```
 
-Judith has two features that make working with nullable types easy: null-conditional operators and type narrowing:
-### Null-conditional operators:
-Null-conditional operators are a variant of access operators that allow safe access to nullable values, returning `null` if that access is not possible:
+Judith has dedicated syntax to work with nullable types ergonomically, such as [null-conditional operators](#op-access-nullable) or [type narrowing](#types-narrowing):
 
 ```judith
 Console::log(person?.name) -- valid, will print either the name, or `null`.
-```
 
-_See [Operations § Access operations § Null-conditional operations](#op-access-nullable) for a full explanation of these operators._
-
-### Type narrowing:
-Type narrowing in Judith allows locals to be promoted to non-nullable versions of themselves:
-
-```judith
 if person !== null then
     Console::log(person.name) -- valid, as 'person' inside this scope is not null.
 end
 ```
 
-_See [Types § Type narrowing](#types-narrowing) for a full explanation of Type narrowing._
-
 # <a name="primitives">Primitives</a>
-Primitives are the basic types of Judith. These types are not defined in the language itself, but implemented by the compiler and the VM.
+Primitives are the basic types in Judith. These types are provided by the compiler itself.
 
 ## Basic primitives
 ### Bool
-Either `true` or `false`.
+Either `true` or `false`. `Bool` in Judith is highly compatible with numeric types.
 
 ```judith
-const is_enabled: Bool = true
+let is_enabled: Bool = true
 ```
 
 ### Num
 By default, a 64-bit IEEE 754 floating point number.
 
 ```judith
-const score: Num = 36.8
+let score: Num = 36.8
 ```
 
-_For a full explanation of number literals, see [Literals § Numbers]_(#literals-numbers).
+<quote>_For a full explanation of numeric literals, see [Literals § Numbers](#literals-numbers)._</quote>
 
 ### String
-A string of characters.
+A string of any number of UTF-8 characters.
 
 ```judith
-const name: String = "Iulius"
+let name: String = "Iulius"
 ```
 
-_For a full explanation of string literals, see [Literals § Strings]_(#literals-strings).
+<quote>_For a full explanation of string literals, see [Literals § Strings](#literals-strings)._</quote>
 
 ### Char
-A string containing exactly one character.
+A single UTF-8 character. Note that this may correspond to more than one UTF-8 scalar value.
 
 ```judith
-const separator: Char = ","
+let separator: Char = ","
 ```
 
-_For a full explanation of the type `Char`, see [Appendix § Char](#appendix-char)._
+<quote>_For a full explanation of the type `Char`, see [Appendix § Char](#appendix-char)._</quote>
 
 ### Regex
 A regular expression:
 
 ```judith
-const regex: Regex = /[0-9]{9}/g
+let regex: Regex = /[0-9]{9}/g
 ```
 
-_For a full explanation of the type `Regex`, see [Appendix § Regex](#appendix-regex)._
+<quote>_For a full explanation of the type `Regex`, see [Appendix § Regex](#appendix-regex)._</quote>
 
 ## Numeric types
 When the format of a numeric value is relevant, developers can use specific numeric types.
@@ -307,19 +312,23 @@ When the format of a numeric value is relevant, developers can use specific nume
 * `F32`: 4-byte floating-point value (single). Suffix: `f32`.
 * `F64`: 8-byte floating-point value (double). Suffix: `f64`
 
-### Decimal
-A base-10 value suited for values that cannot afford to lose precision in calculation. Suffix: `m`.
-
-### BigInt
-An arbitrarily large integer. Judith considers it as a signed integer of infinite size. Suffix: `ib`.
+### Other numeric types:
+* `Decimal`: A base-10 value suited for values that cannot afford to lose precision in calculation. Suffix: `m`.
+* `BigInt`: An arbitrarily large integer. Judith considers it as a signed integer of infinite size. Suffix: `ib`.
 
 ### Aliased numeric types
 * `Byte`: An alias for the size of a byte, by default `Ui8`.
 * `Int`: An alias for an int of the native size in the platform, usually `I64`. Suffix: `i` (can be omitted).
+* `Uint`: An alias for an unsigned int of the native size in the platform, usually `Ui64`. Suffix: `u`.
 * `Float`: An alias for a float of the native size in the platform, usually `F64`. Suffix: `f` (can be omitted).
 
 ### Num
-`Num` is a special type. It represents an `F64` and gets compiled to just that, but it isn't an alias. Instead, `Num` has its own set of rules around number conversion that allows it to be used in certain places where a more refined number type is expected.
+`Num` is a special type. It represents an `F64` and gets compiled to just that, but it isn't an alias. Instead, `Num` has its own set of rules around number conversion that allows it to be used in certain places where a more refined number type is expected. For example, you can assign a `Num` to a variable of type `I64` without requiring an explicit cast.
+
+## Advanced types
+Aside from the types mentioned in this section, Judith features additional primitive types for more specialized cases, such a C-like strings, atomic primitives, and more.
+
+<quote>_For a full explanation of advanced primitive types, see [Operations § Logical operations](#advanced-primitives)._</quote>
 
 ## Pseudotypes
 Judith features some pseudo-types. These types represent concepts relating to types that aren't directly types and, as such, their usage varies:
@@ -2811,11 +2820,11 @@ my_obj.go -- error, "my_obj" doesn't have members.
 my_obj["go"] -- valid, returns "here"
 ```
 
-# Inline and pointer types
+# <a name="indirection">Inline and pointer types</a>
 Types in Judith can be either inline types or pointer types, depending on whether the variable of that type contains the value itself, or a pointer to that value.
 
 ## Inline types
-Inline types exist directly in the variable that contains them. As such, when assigning an inline type to another variable, the value is _copied_ into the receiving variable.
+Inline types exist directly in the variable that contains them. As such, when assigning an inline type to another variable, the value is _copied_</i>_ into the receiving variable.
 
 ```judith
 var a: Ivec2 = Ivec2::(5, 10) -- "Ivec2" is an inline type.
@@ -3017,8 +3026,8 @@ typedef struct Car
     engine: Engine -- Each car owns its engine.
 end
 
-var car = Car::make_default()
-const e: Engine = in car.engine -- valid, ownership of Engine transferred to "e"
+let mut car = Car::make_default()
+let e: Engine = in car.engine -- valid, ownership of Engine transferred to "e"
 
 --Console::log(car.engine) -- ERROR - "car.engine" is now void.
 --Console::log(car) -- ERROR, because "Console::log" borrows immutably.
@@ -3038,15 +3047,15 @@ Borrowed values are not owned by the function, and will be  given back automatic
 
 This is how ownership specifiers work in function parameters:
 
-* `const`: equivalent to `let`. It only accepts immutable values, as it may create new immutable aliases for these values.
+* `final`: equivalent to `let`. It only accepts immutable values, as it may create new immutable aliases for these values.
 * `mut`: equivalent to `let mut`. It borrows values of any kind, may create references to the values and may mutate the value.
 * `shared`: equivalent to `let shared`. It borrows values of any kind, and may create new owners for that value.
 * `in`: similar to `let mut`, but this kind of parameter takes ownership of the value permanently.
-* `ref`: this type of parameter accepts values of any kind (const, mut, shared or even in). It treats the value as immutable, but won't assume that it's actually immutable and thus won't create new `const` aliases for it. As such, the only variables that can receive `ref` values are other `ref` parameters. When no specifier is used, `ref` is assumed by default.
+* `ref`: this type of parameter accepts values of any kind (final, mut, shared or even in). It treats the value as immutable, but won't assume that it's actually immutable and thus won't create new `final` aliases for it. As such, the only variables that can receive `ref` values are other `ref` parameters. When no specifier is used, `ref` is assumed by default.
 
 ```judith
 func do_0 (a: Person) -- equivalent to "ref a: Person".
-func do_1 (const a: Person)
+func do_1 (final a: Person)
 func do_2 (mut a: Person)
 func do_3 (shared a: Person)
 func do_4 (in a: Person)
@@ -3062,7 +3071,7 @@ do_0(p1) -- valid, "p1" is safe because it will be returned.
 do_0(p2) -- valid, "p2" is safe because it won't be transferred.
 -- All of these rules would be the same for "do_5".
 
--- "const" parameter
+-- "final" parameter
 do_1(p0) -- valid, "p0" won't be mutated.
 --do_1(p1) -- ERROR, "do_1" requires a value that will always be immutable.
 --do_1(p2) -- ERROR, for the same reason as "p1".
@@ -3112,14 +3121,14 @@ end
 
 Just like parameters, the value returned by a function is subject to ownership rules. In this case, the ownership rule is annotated in front of the type returned.
 
-* `const`: Indicates that the returned value is an immutable value.
+* `final`: Indicates that the returned value is an immutable value.
 * `mut`: Indicates that the returned value is a mutable value whose ownership is being transferred to the caller. When no specifier is used, `mut` is assumed by default.
 * `shared`: Indicates that the returned value is shared with others.
 
 ```judith
 func get_0 () -> Person end
 func get_1 () -> mut Person end -- same as above
-func get_2 () -> const Person end
+func get_2 () -> final Person end
 func get_3 () -> shared Person end
 
 -- receiving ownership (T or mut T):
@@ -3128,7 +3137,7 @@ let mut p1 = get_0() -- valid, "p1" now owns the value.
 let shared p2 = get_0() -- valid, "p2" receives ownership and makes it shared.
 -- All of these rules would be the same for "get_1".
 
--- receiving an immutable value (const T):
+-- receiving an immutable value (final T):
 let p0 = get_2() -- valid
 --let mut p1 = get_2() -- ERROR, get_2() doesn't transfer ownership.
 --let shared p2 = get_2() -- ERROR, same as above.
@@ -3147,40 +3156,11 @@ typedef struct Company
     boss: Person -- the value held by "boss" is immutable.
     boss: mut Person -- the value held by "boss" can be mutated.
     boss: shared Person -- the value held by "boss" is shared.
-    boss: ref Person -- the value held by "boss" is a reference to a mutable one.
 end
-```
-
-## References to inline types
-We can create references to inline types. These references can be used to watch the values held by the inline variable as if it was a pointed value. These references behave just like any other reference. To do this, `&` must be explicitly used to prevent the copy.
-
-```judith
-let mut a: Num = 5
-let ref b = &a -- 'b' is a reference to a Num.
-a = 10
-Console::log(b) -- outputs "10", because "b" is referencing whatever value "a" has.
---b = 20 -- ERROR: 'b' is a reference and cannot mutate the value. 
-```
-
-## Value lifetimes
-As explained above, ownership in Judith is unrelated to memory management. Pointer values in Judith are handled by the garbage collector, and a reference to a value will keep the value alive even if the owner of the value has already disappeared.
-
-```judith
-func get_car_ref () -> ref Car -- <-- reference to a mutable Car
-    let mut car = Car::make_default()
-
-    return car -- returns a reference to "car".
-    -- here "car" (the owner) goes out of scope.
-end
-
-let ref my_car_ref = get_car_ref()
--- here the variable that owns the car no longer exists anywhere.
-Console::log(my_car_ref.engine) -- Valid, "my_car_ref" is still alive in memory.
--- here, "my_car_ref" goes out of scope and the GC frees the memory.
 ```
 
 # Allocations (stack and heap)
-TODO - This describes the contracts of each type and how the JuVM leverages that to decide between stack and heap allocation.
+
 
 # <a name="concurrency">Concurrency</a>
 
@@ -3918,10 +3898,17 @@ TODO: `test`, which can be used to skip visibility rules from classes.
 # Garbage collector
 TODO: Garbage collector can be disabled, but then you'll have to write your own memory management strategy.
 
+# <a name="advanced-primitives">Advanced primitive types</a>
+Judith features a few advanced primitive types to allow for writing optimized code, interoperability or obscure requirements:
+
+* `CString`: Represents a C-style string: an array of bytes terminated by `\0`. Commonly used with byte string literals (`b""`) that produce arrays of `Byte`.
+
+TODO: `UtfScalar`, atomic primitives, etc...
+
 # Appendix
 
 ## Condition evaluation
-Structures that evaluate a condition (such as `if` or `while`) use truthy and falsey values, as defined in [Operations § Logical operations](operations-logical).
+Structures that evaluate a condition (such as `if` or `while`) use truthy and falsey values, as defined in [Operations § Logical operations](#operations-logical).
 
 ```judith
 const zero: Num = 0

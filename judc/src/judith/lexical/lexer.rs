@@ -546,7 +546,7 @@ impl<'a> Lexer<'a> {
     // region Helper functions
     /// Moves the character forwards
     fn move_chars_forwards (&mut self) -> Option<char> {
-        if let Some((index, char)) = self.chars.next() {
+        if let Some((_, char)) = self.chars.next() {
             self.column += 1;
 
             return Some(char);
