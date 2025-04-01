@@ -1,6 +1,8 @@
 use judc::judith::lexical::lexer::{tokenize, Lexer};
 
 fn main () {
-    let mut lexer = Lexer::new("- !");
-    lexer.next_token();
+    let tokens = tokenize("5eeu2");
+    for t in tokens {
+        println!("{}, {:?}", t.base().lexeme, t.kind());
+    }
 }

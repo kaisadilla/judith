@@ -297,11 +297,10 @@ impl<'a> Lexer<'a> {
         let mut underscore_allowed = Self::is_digit(first);
 
         let mut c = self.peek();
-        let mut c2 = self.peek_next();
 
         // Numeric literals can have prefixes, in the form of "0x", "0b" or "0o".
-        if c2.is_none() == false && c == Some('0') {
-            match c2.unwrap() {
+        if c.is_none() == false && first == '0' {
+            match c.unwrap() {
                 'x' | 'b' | 'o' => {
                     self.advance();
                     self.advance();
@@ -330,7 +329,7 @@ impl<'a> Lexer<'a> {
                     // We need to check the character after the dot to determine if it's acting as
                     // a decimal point. It's only acting as such if the next character is a number
                     // between 0 and 9. A through F is not allowed here.
-                    c2 = self.peek_next();
+                    let c2 = self.peek_next();
                     if c2.is_none() || Self::is_digit(c2.unwrap()) == false {
                         break;
                     }
@@ -339,13 +338,13 @@ impl<'a> Lexer<'a> {
                 },
                 'e' => {
                     if e_found {
-                        break;
+                        // TODO: Invalid number.
                     }
                     e_found = true;
                 }
                 '_' => {
                     if underscore_allowed == false {
-                        break;
+                        // TODO: Invalid number.
                     }
 
                     // Can't chain two underscores together, so the next character cannot be an
@@ -375,7 +374,7 @@ impl<'a> Lexer<'a> {
 
             // We keep consuming characters until we find something that isn't a letter or number.
             // This will consume prefixes like "f32".
-            while Self::is_letter(c.unwrap()) || Self::is_digit(c.unwrap()) {
+            while c.is_none() == false && (Self::is_letter(c.unwrap()) || Self::is_digit(c.unwrap())) {
                 self.advance();
                 c = self.peek();
             }
@@ -774,7 +773,7 @@ mod tests {
     }
 
     #[test]
-    fn test_simple_tokens () {
+    fn test_simple_tokens() {
         println!("Testing simple tokens.");
 
         println!("Testing '+'");
@@ -808,6 +807,77 @@ mod tests {
         println!("{:?}", res[0].kind());
         assert_eq!(res.len(), 2);
         assert_eq!(res[0].kind(), TokenKind::EqualArrow);
+    }
+
+    #[test]
+    fn test_correct_numeric_literals() {
+        let cases = vec![
+            ("42", "42"),
+            ("5", "5"),
+            ("05", "05"),
+            ("005", "005"),
+            ("500", "500"),
+            ("-42", "-42"),
+            ("-042", "-042"),
+            ("0_5", "0_5"),
+            ("0_50_", "0_50_"),
+            ("0.5", "0.5"),
+            (".5", ".5"),
+            ("369_", "369_"),
+            ("100_i32", "100_i32"),
+            ("0x0123456789abcDEf", "0x0123456789abcDEf"),
+            ("0x0ffu8", "0x0ffu8"),
+            ("0b01101", "0b01101"),
+            ("0o03245", "0o03245"),
+            ("0_.2", "0_.2"),
+            ("4.1e11", "4.1e11"),
+            ("0", "0"),
+            ("0.0", "0.0"),
+            ("0e0", "0e0"),
+            ("1u8", "1u8"),
+            ("1.0e0", "1.0e0"),
+            ("0x1", "0x1"),
+            ("1_000_000.999_999_999e9_999f64", "1_000_000.999_999_999e9_999f64"),
+            ("0xA_B_C_D_1_2_3.0p10", "0xA_B_C_D_1_2_3.0p10"),
+            ("0b1_0_1_1_1_0_1_0_0_1_1_0_0_1_u64", "0b1_0_1_1_1_0_1_0_0_1_1_0_0_1_u64"),
+            ("0o7_7_7_7_7_7_7_7_u128", "0o7_7_7_7_7_7_7_7_u128"),
+        ];
+
+        for (input, expected) in cases {
+            println!("Testing '{}'.", input);
+
+            let res = tokenize(input);
+            assert_eq!(res.len(), 2); // Should contain [keyword, EOF].
+            assert_eq!(res[0].kind(), TokenKind::Number);
+            assert_eq!(res[0].base().lexeme, expected);
+        }
+    }
+    #[test]
+    fn test_numeric_literal_special_cases() {
+        println!("Testing '_123");
+
+        let res = tokenize("_123");
+        assert_eq!(res.len(), 2);
+        assert_eq!(res[0].kind(), TokenKind::Identifier);
+        assert_eq!(res[0].base().lexeme, "_123");
+
+        //println!("Testing '1__2"); // TODO: when compiler messages are added.
+        //println!("Testing '1_.23"); // TODO: same.
+        //println!("Testing '0x"); // TODO: same.
+        //println!("Testing '0ou8"); // TODO: same.
+        //println!("Testing '5eu8"); // TODO: same.
+        //println!("Testing '5ee"); // TODO: same.
+        //println!("Testing '5ee5"); // TODO: same.
+        //println!("Testing '5.3.2"); // TODO: same.
+
+        println!("Testing '1.");
+
+        let res = tokenize("1.");
+        assert_eq!(res.len(), 3);
+        assert_eq!(res[0].kind(), TokenKind::Number);
+        assert_eq!(res[0].base().lexeme, "1");
+        assert_eq!(res[1].kind(), TokenKind::Dot);
+        assert_eq!(res[1].base().lexeme, ".");
     }
 
     #[test]

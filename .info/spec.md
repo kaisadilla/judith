@@ -489,7 +489,7 @@ These operations evaluate to either `true` or `false`. Most of these operators c
 * `a <= b`: Less than or equal to.
 * `a < b < c`: Chained comparison: `b` is greater than `a` and less than `c`.
 
-## Null-coalescing operator
+## Null-coalescing operator (`??`)
 The null-coalescing operator returns the value at the left if it isn't `null` or `undefined`, and the value at the right otherwise. Just like logical `and` and `or`, this operation short-circuits, meaning that the right-hand side expression won't be evaluated if the left-hand side expression is returned.
 
 ```judith
@@ -507,6 +507,17 @@ json_obj?.[fld_name] ?? "unknown value" -- If json_obj?.[inquired_value] doesn't
 
 20 ?? Console::log("Unknown") -- Nothing will be logged, as this expression returns
                               -- 20 and discards the right-hand side expression.
+```
+
+## Exception-coalescing operator (`!?`)
+Similar to the null-coalescing operator, the exception-coalescing operator returns the value at the left if it isn't an `Exception`, or the value at the right otherwise.
+
+```judith
+-- a function that can (and will) return exceptions.
+func !get_name () -> Person return Exception::'unknown' end
+
+let name = get_name() !? "Kevin" -- the exception from get_name gets coalesced
+                                 -- into "Kevin".
 ```
 
 ## Compound assignment operations
@@ -1201,31 +1212,34 @@ scores["Regina"] -- returns 'undefined'.
 The collection initializer expression `[ ... ]` is used to initialize any type that implements the necessary indexers:
 
 ### List initializer expression
-A collection initializer expression behaves as a list when it contains values separated by commas (e.g. `[5, 7, 9, 11]`). In this case, this expression translates to a nameless constructor that takes a List<_T> as its only parameter.
+A collection initializer expression behaves as a list when it contains values separated by commas (e.g. `[5, 7, 9, 11]`). In this case, this expression translates to a nameless constructor that takes a compile-time array or collection as its only parameter.
+
+This line:
 
 ```judith
-const some_type: MyType<int> = [5, 7, 9]
+let some_type: MyType<int> = [5, 7, 9]
 ```
 
-Is equivalent to
+Is equivalent to:
 
 ```judith
-const some_type = new SomeType<int>([5, 7, 9])
+let some_type: MyType<int> = MyType<int>::([5, 7, 9])
 ```
 
 ### Dictionary initializer expression
-If the collection initializer expression contains key-value pairs (defined as `key_expr = value_expr`), then this expression is translated to repeated calls to the `set [T]` operator.
+If the collection initializer expression contains key-value pairs (defined as `key_expr = value_expr`), then this expression translates to a nameless constructor that takes a compile-time array or collection of key-value pair tuples:
 
 ```judith
-const my_dict = ["Kevin" = 7, "Ryan" = 5]
+let my_dict = ["Kevin" = 7, "Ryan" = 5]
 ```
 
 Is equivalent to
 
 ```judith
-const my_dict = new Dictionary<String, Num>()
-my_dict["Kevin"] = 7
-my_dict["Ryan"] = 5
+let my_dict = Dictionary<String, Num>::([
+    ["Kevin", 7],
+    ["Ryan", 5],
+])
 ```
 
 ## Collections, enumerables, iterators and more
@@ -1236,82 +1250,77 @@ TODO
 Type casting in Judith is restricted to operations that change types between compatible types. There's various types of casting:
 
 ### Upcasting (`:`)
-Upcasting allows a value of a subtype B to be casted to a supertype A. As B is guaranteed to be also of type A, this cast is performed at compile time at no cost.
+Upcasting allows a value of a subtype B to be casted to a supertype A. As B is guaranteed to also be of type A, this cast is performed at compile time at no cost.
 
 ```judith
-const dog = Dog::()
-const animal: Animal = dog:Animal -- valid cast, as 'Dog' is always an 'Animal'.
+let dog = Dog::()
+let animal: Animal = dog:Animal -- valid cast, as 'Dog' is always an 'Animal'.
 ```
 
 ### Downcasting (`:?`, `:!`)
-Downcasting allows a value of a supertype A to be casted to a subtype B. Since a value of type A is not guaranteed to be also of type B, this cast is performed at runtime. The way invalid casts are handled depends on the operator used:
+Downcasting allows a value of a supertype A to be casted to a subtype B. Since a value of type A is not guaranteed to be of type B, this cast is performed at runtime. The way invalid casts are handled depends on the operator used:
 
 #### Safe downcasting operator (`:?`)
-With the safe downcasting operator, the cast will return `null` when it fails, avoiding errors. However, due to this, this expression evaluates to a nullable type, even when used on a non-nullable one:
+With the safe downcasting operator, the cast will return `null` when it fails, avoiding errors.
 
 ```judith
-const animal = Cat::()
-const dog: Dog? = animal:?Dog -- will be null, as animal's type is 'Cat'.
+let animal = Cat::()
+let dog = animal:?Dog -- 'dog''s type is 'Dog?'.
+```
+
+#### Exception-returning downcasting operator (`:!?`)
+This cast will return the `invalid_type` exception when it fails, avoiding errors.
+
+```judith
+let animal = Cat::()
+let dog = animal:!?Dog -- 'dog''s type is 'Dog | Exception'.
 ```
 
 #### Unsafe downcasting operator (`:!`)
-With the unsafe downcasting operator, the cast will panic when it fails. This expression preserves the nullability of the original type:
+With the unsafe downcasting operator, the cast will panic when it fails. This cast will return the type requested.
 
 ```judith
-const dog: Dog = animal:!Dog -- will panic, as animal's type is 'Cat'.
+let dog: Dog = animal:!Dog -- 'dog''s type is 'Dog', but will panic if 'animal'
+                           -- is not actually a dog.
 ```
 
 ### <a name="casting-numbers">Number conversion</a>
-Some number formats can be implicitly converted into others, while others require explicit casting. The rule of thumb is that a number can only be promoted (that is, casted into a wider format):
+Some number formats can be implicitly converted into others, while others require explicit conversion. The rule of thumb is that a number can only be promoted (that is, casted into a wider format):
 
 * Numbers can be implicitly converted into a bigger size of the same kind of number (e.g. `I16` into `I32`, `Ui8` into `Ui64` or `F32` into `F64`). Signed integers can be converted into `BigInt`.
 * Signed and unsigned integers can be converted into floats (e.g. `I32` into `F32` or `Ui16` into `F64`). This conversion can actually be lossy, but that's considered a loss of precision rather than a meaningless conversion.
-* Alias types (`Byte`, `Int` and `Float`) follow the rules of the type they are aliasing.
+* Alias types (`Byte`, `Int`, `Uint`, and `Float`) follow the rules of the type they are aliasing.
 * It is not possible to implicitly convert a `Decimal` into any other format, or vice versa.
+* `Num` follows different rules to `F64`. It can always be implicitly converted to any other format, and any other format can be implicitly converted into it. It will panic if the conversion is not possible. It can still be converted explicitly with the conversion operators to transform risky conversions into exception-returning ones instead.
 
-When a number cannot be implicitly converted into another format, a explicit casting can be used. This type of casting uses the same operators as upcasting and downcasting (`:`, `:?`, `:!`).
+When a number cannot be implicitly converted into another format, a explicit conversion can be used. This type of conversion uses the same operators as upcasting and downcasting (`:`, `:?`, `:!?`, `:!`).
 
-Number casting always occurs at runtime, but each casting operator offers the same guarantees as it does with other types.
+Number conversion always occurs at runtime, even with `:`. `:` is used for the unchecked number conversion, which will never fail but it may produce unexpected returns when the cast doesn't make sense (e.g. converting `-42i64` to `Ui64` will produce `4294967254`, which is the `Ui64` that matches `-42i64`'s bit representation). The other three operators are used for checked number conversion, which guarantee they will fail (in different ways) if the conversion is invalid.
 
-```judith
-const float: Float = 13
-const integer: Int? = num:?Int -- cast fails if float is too big for Int.
-const float2: Float = integer:Float -- Errors cannot occur, every Int can be a Float.
-```
+The following rules dictate which conversions are always safe and which ones require checked operators to be safe. In case two rules contradict each other, checked operators prevail over unchecked ones:
 
-Keep in mind that, in the example above, it is possible for an integer type casted to a floating-point type to lose precision, which is considered acceptable and not an error when transforming an integer into a float.
-
-When casting is done in an unchecked context, every numeric cast uses `:`, as every cast in this context is a valid cast, even if the results make no mathematical sense.
-
-When casting is done in a checked context, then the need to use `:` or `:?` / `:!` is determined by the following rules. In case two rules contradict each other, downcasting operators prevail over upcasting ones:
-
-| Cast                                               | Operator     |
-|------                                              |--------------|
-| Smaller size to bigger size*                       | `:`          |
-| Bigger* size to smaller size                       | `:?` or `:!` |
-| Signed integer to unsigned integer, and vice versa | `:?` or `:!` |
-| Integer to float                                   | `:`          |
-| Integer to decimal                                 | `:`          |
-| Float to integer                                   | `:?` or `:!` |
-| Float to decimal                                   | `:`          |
-| Decimal to integer                                 | `:?` or `:!` |
-| Decimal to float                                   | `:`          |
+| Cast                                               | Operator            |
+|------                                              |---------------------|
+| Smaller size to bigger size*                       | `:`                 |
+| Bigger* size to smaller size                       | `!?:`, `:?` or `:!` |
+| Signed integer to unsigned integer, and vice versa | `!?:`, `:?` or `:!` |
+| Integer to float                                   | `:`                 |
+| Integer to decimal                                 | `:`                 |
+| Float to integer                                   | `!?:`, `:?` or `:!` |
+| Float to decimal                                   | `:`                 |
+| Decimal to integer                                 | `!?:`, `:?` or `:!` |
+| Decimal to float                                   | `:`                 |
 
 \* BigInt is considered an integer of infinite size, so it's always bigger than any other integer type.
 
 Keep in mind that most casts done with `:` in a checked context are ones that could be done with an implicit conversion, so these cast will be redundant.
 
-#### Num
-
-`Num` follows a special set of rules:
-* `Num` can always be implicitly transformed into any other type, and any type can be transformed into `Num`.
-
 ### Null-forgiving casting
 Nullable types can be casted into their non-nullable counterparts by appending the null-forgiving operator `!` at their end. Casting a `null` value in this way will panic.
 
 ```judith
-const person: Person? = null
-const person_2: Person = person! -- will panic, as 'person' is null.
+let person: Person? = null
+let person_2: Person = person! -- will panic, as 'person' is null.
 
 Console::log(person!.name) -- will panic.
 ```
@@ -1321,16 +1330,16 @@ Unsafe casting operations should only be used when their failure justifies crash
 ## <a name="types-narrowing">Type narrowing</a>
 Narrowing is the process of refining a broader type into a more specific one based on control flow. While traveling through a possible execution branch of a block of code, when a certain property of a value's type is asserted, that property remains true for the remainder of that branch.
 
-Type narrowing takes the mutability of the object being inspected into account, and will only occur when the value being narrowed cannot change afterwards.
+This narrowing is always safe, as Judith's ownership semantics guarantee the value cannot be mutated from anywhere else while the relevant function is being executed.
 
 ### Type checking (`is` and `is not`)
 With the `is` keyword, a value can be asserted to be (or not to be) of a given type:
 
 ```judith
 type Animal = Dog | Cat | Rabbit | Mouse
-const animal = get_animal()
+let animal = get_animal()
 
-if animal is Dog
+if animal is Dog then
     animal.bark() -- 'animal' is of type 'Dog' here.
 end
 ```
@@ -1338,8 +1347,8 @@ end
 Inside the `if` scope, the local `animal` of type `Animal` is asserted to be of type `Dog`, so it gets promoted to such type, which means calling `Dog.bark` becomes valid.
 
 ```judith
-if animal is not Dog
-    animal:?Dog?.bark() -- ERROR: 'animal' is of type Cat | Rabbit | Mouse here.
+if animal is not Dog then
+    --animal:?Dog?.bark() -- ERROR: 'animal' is of type Cat | Rabbit | Mouse here.
 end
 ```
 
@@ -1349,7 +1358,7 @@ Similarly, inside this `if` scope, we have asserted that `animal` is not of type
 With the `has` keyword, a value can be asserted to have (or not to have) access to a given member. In the following example, `Animal` is defined as `Dog | Cat | Rabbit | Kangaroo | Mouse | Tiger`. Among these types, only `Rabbit` and `Kangaroo` contain the `jump` member method:
 
 ```judith
-if animal has "jump"
+if animal has "jump" then
     animal.jump(3) -- 'animal' here is 'Rabbit | Kangaroo', as they are the only
                    -- possible types that have a "jump" member.
 end
@@ -1359,7 +1368,7 @@ end
 Checking for `null` values also contributes to type narrowing:
 
 ```judith
-const animal: Animal? = get_animal()
+let animal: Animal? = get_animal()
 return when animal === null
 
 animal.eat() -- 'animal' here is promoted to 'Animal'.
@@ -1422,53 +1431,59 @@ _For a full explanation of primitive types, see [Primitives](#primitives)._
 _\* Type is a pointer type._
 
 ## Function types
-Function types are types that define functions. The type of a function depends on its signature (type of each of its parameter and return type). Function types are expressed with the following syntax: `(<"!" if can return exceptions><parameter types separated by commas>) -> <return type>`. For example:
+Function types are types that define functions and closures. The type of a function depends on its signature (type of each of its parameter, return type, closure kind and ISend / ISync status). Function types are expressed with the following syntax: `<'s' if is ISend><'S' if is ISync><'!' if can return exceptions> <'Fn' (optional), 'FnMut' or 'FnOnce'>(<parameter types separated by commas>) -> <return type>`. For example:
 
 ```judith
 func get_person (id: Num, office: Office) -> Person end
 func !get_person_2 (id: Num, office: Office) -> Person end
 
-var getter: (Num, Office) -> Person = get_person -- valid
+let mut getter: (Num, Office) -> Person = get_person -- valid
 getter = get_person_2 -- invalid, as signatures don't match.
 
-var getter2: !(Num, Office) -> Person = get_person_2 -- valid, because it has "!".
+let mut getter2: !(Num, Office) -> Person = get_person_2 -- valid, because it has "!".
 getter2 = get_person -- valid, as "(Num, Office) -> Person" can be assigned
                      -- to "!(Num, Office) -> Person".
-
 ```
+
+Function types follow these rules:
+* No-`s` functions are a superset of `s` functions. The same applies with `S` and No-`S`.
+* `FnOnce` is a superset of `FnMut`, and `FnMut` is a superset of `Fn`.
+* `!` functions are a superset of no-`!` functions.
+* For parameter and return types, you can use any type that is compatible with the signature. For example, `() => String` is compatible with `() => String | Number`, but not vice versa.
 
 Values of a function type are _callable_, which mean that they can be used in call expressions: `<callable>(<arglist>)`. Function types are always pointer types.
 
 ## <a name="types-array">Array type</a>
-An array type (not to be confused with the type `Array<_T>`) is a type that defines a group of values of specific types. Array types are similar to tuple types in other languages.
+An array type is a type that defines a group of values of specific types. Array types are similar to tuple types in other languages.
 
 ```judith
-const info: [String, Num] = ["Kevin", 36]
+let info: [String, Num] = ["Kevin", 36]
 info[0] -- inferred to be of type "String".
 info[1] -- inferred to be of type "Num".
 info[2] -- inferred to be "undefined".
 
-const n = get_num()
+let n = get_num()
 info[n] -- inferred to be of type "String | Num | undefined".
 ```
 
 When all of the members of an array share the same type, it can be defined with the following syntax:
 
 ```judith
-const five_names: String[5] = ["Kevin", "Alyce", "Grant", "Ruby", "Annie"]
+let five_names: String[5] = ["Kevin", "Alyce", "Grant", "Ruby", "Annie"]
 ```
 
 We may want to initialize many indices to the same value. This can be achieved by using the `;` token and defining the value that will fill the rest:
+
 ```judith
-const ten_numbers: Num[10] = [3, 5; 9] -- produces [3, 5, 9, 9, 9, 9, 9, 9, 9, 9].
-const ten_42s: Num[10] = [; 42] -- produces [42, 42, 42, 42, 42, 42, 42, 42, 42, 42].
+let ten_numbers: Num[10] = [3, 5; 9] -- produces [3, 5, 9, 9, 9, 9, 9, 9, 9, 9].
+let ten_42s: Num[10] = [; 42] -- produces [42, 42, 42, 42, 42, 42, 42, 42, 42, 42].
 ```
 
 Note that the length of an array type is always known at compile time, so this syntax cannot be used dynamically:
 
 ```judith
-const amount = get_amount()
-const nums: Num[amount] = [; 42] -- ERROR: array length must be known at compile time.
+let amount = get_amount()
+let nums: Num[amount] = [; 42] -- ERROR: array length must be known at compile time.
 ```
 
 ## Object type
@@ -2981,7 +2996,7 @@ For immutable pointed variables, the same phenomenon occurs: as the value they r
 * `let`: points to an immutable value. These values are always thread-safe.
 * `let mut`: points to a mutable value. This variable is the owner of the mutable value, and as such it can mutate the value, lend it and transfer it.
 * `let shared`: points to a mutable value. That value is owned by an unknown number of variables, including this one. As such, this variable can mutate the value, and can lend it, but cannot transfer it.
-* `let ref`: points to a value with unknown mutability, owned by someone else. A `ref` can be read, but cannot be shared in any way other than into `ref` parameters. When creating a `ref` variable from a `mut` one, the `mut` one is lending the value to the `ref` variable and, as such, the `mut` one cannot transfer ownership of it until the `ref` variable has gone out of scope. If the `mut` value escapes the function (e.g. when you are getting it from a value outside the function, or assigning it to one), then passing a `ref` to another thread will force the function to await the thread before it returns.
+* `let ref`: points to a value with unknown mutability, owned by someone else. A `ref` can be read, but cannot be shared in any way other than into `ref` parameters. When creating a `ref` variable from a `mut` one, the `mut` one is lending the value to the `ref` variable and, as such, the `mut` one becomes invalid until the `ref` variable has gone out of scope. If the `mut` value escapes the function (e.g. when you are getting it from a value outside the function, or assigning it to one), then passing a `ref` to another thread will force the function to await the thread before it returns.
 
 From this definition, some interesting properties arise:
 * `let` is inherently thread-safe.
@@ -3013,6 +3028,10 @@ let mut b: Person = Person::("John", 35)
 -- "c" refers to a mutable value in memory that it, and others, own. Alyce may
 -- change at any time.
 let shared c: Person = Person::("Alyce", 50)
+
+-- "d" refers to a mutable value in memory borrowed from someone else (in this
+-- case, a "people" variable that is a List that owns Person objects).
+let ref d: Person = try! people[0] -- List<mut Person>[] returns 'ref Person'
 ```
 
 From this base, we can now explore the interactions when we assign already-existing values to variables of each kind.
@@ -3023,6 +3042,7 @@ From this base, we can now explore the interactions when we assign already-exist
 let var_0 = a -- ok, "var_0" is a new alias for the immutable value "a" holds.
 --let mut var_1 = a -- ERROR: let mut variables have to own their value.
 --let shared var_2 = a -- ERROR: let shared variables have to own their value.
+let ref var_3 = a -- ok, "var_3" can borrow from anyone.
 ```
 
 2. Assigning `let mut` variables to someone else. Unlike others, `let mut` can use `in` to transfer its value to another variable:
@@ -3034,6 +3054,8 @@ let var_0 = in b -- ok, "b" transfers ownership to "var_0", which makes it immut
 let mut var_1 = in b -- ok, "b" transfers ownership to "var_1".
 --let shared var_2 = b -- ERROR: "b" cannot be assigned to other values.
 let shared var_2 = in b -- ok, "b" transfers ownership to "var_2", who makes it shared.
+let ref var_3 = b -- ok, "var_3" can borrow from anyone.
+let ref var_3 = in b -- ok, but you'll permanently lose ownership of the value.
 ```
 
 3. Assigning `let shared` variables to someone else: 
@@ -3042,10 +3064,20 @@ let shared var_2 = in b -- ok, "b" transfers ownership to "var_2", who makes it 
 --let var_0 = c -- ERROR: "var_0" cannot receive values owned by someone else.
 --let mut var_1 = c -- ERROR: let mut variables do not share ownership.
 let shared var_2 = c -- ok, "var_2" and "c" now share ownership.
+let ref var_3 = c -- ok, "var_3" can borrow from anyone.
+```
+
+4. Assigning `let ref` variables to someone else:
+
+```judith
+--let var_0 = c -- ERROR: "var_0" must be immutable.
+--let mut var_1 = c -- ERROR: let mut variables must take ownership.
+--let shared var_2 = c -- ERROR: let shared variables must share ownership.
+let ref var_3 = c -- ok, "var_3" can borrow from anyone.
 ```
 
 ## Transferring ownership
-Note that `let mut` variables can transfer the ownership of their value with the keyword `in`. When we do this, the original `let mut` variable becomes voided and thus can no longer be used. If we want to access the value after the transfer, we'll have to refer to it through its new owner.
+`let mut` variables can transfer the ownership of their value with the keyword `in`, for as long as they are not voided. When we do this, the original `let mut` variable becomes voided and thus can no longer be used. If we want to access the value after the transfer, we'll have to refer to it through its new owner.
 
 ```judith
 let mut p: Person = get_person()
@@ -3065,7 +3097,7 @@ let mut p: Person = get_person()
 let p -- this is equivalent to "let p = in p".
 ```
 
-Transferring the ownership of a value owned by an instance's field is valid, for as long as you own the instance AND the instance itself is mutable. This does not invalidate any previous references to that instance, but will make it impossible to transfer the ownership of the instance as said ownership is now split between two variables (the one that owns the instance, and the one that owns the value extracted from the field).
+Borrowing or transferring the ownership of a value owned by an instance's field is valid, but will void the whole instance until the value is returned to its original owner.
 
 ```judith
 typedef struct Car
@@ -3078,12 +3110,12 @@ let e: Engine = in car.engine -- valid, ownership of Engine transferred to "e"
 
 --Console::log(car.engine) -- ERROR - "car.engine" is now void.
 --Console::log(car) -- ERROR, because "Console::log" borrows immutably.
-Console::log(car.name) -- valid, 'car.name' is unaffected.
+--Console::log(car.name) -- ERROR - "car" is now void.
 
---return car -- ERROR: cannot transfer partial ownership.
+--return car -- ERROR: cannot transfer value in voided variable.
 ```
 
-Note that, if needed, it's possible to use `std::mem::swap` or `std::mem::replace` to safely take ownership of a value inside a struct's field, while giving it another value to leave it valid.
+Note that, if needed, it's possible to use `std::mem::swap` or `std::mem::replace` to safely take ownership of a value inside a struct's field, while giving it another value to leave it in a valid state.
 
 ## <a name="ownership-functions">Ownership in functions</a>
 Function parameters and return types are also bound by ownership semantics. Their behavior, though, is adapted to their role in the flow of the program.
@@ -3098,7 +3130,7 @@ This is how ownership specifiers work in function parameters:
 * `mut`: equivalent to `let mut`. It borrows values of any kind, may create references to the values and may mutate the value.
 * `shared`: equivalent to `let shared`. It borrows values of any kind, and may create new owners for that value.
 * `in`: similar to `let mut`, but this kind of parameter takes ownership of the value permanently.
-* `ref`: this type of parameter accepts values of any kind (final, mut, shared or even in). It treats the value as immutable, but won't assume that it's actually immutable and thus won't create new `final` aliases for it. As such, the only variables that can receive `ref` values are other `ref` parameters. When no specifier is used, `ref` is assumed by default.
+* `ref`: equivalent to `let ref`. Accepts values of any kind (final, mut, shared or even in). It treats the value as immutable, but won't assume that it's actually immutable and thus won't create new `final` aliases for it. As such, the only variables that can receive `ref` values are other `ref` parameters. When no specifier is used, `ref` is assumed by default.
 
 ```judith
 func do_0 (a: Person) -- equivalent to "ref a: Person".
