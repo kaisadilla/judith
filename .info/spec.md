@@ -1172,19 +1172,19 @@ scores[0] -- Returns 3.
 scores[4] -- Returns 'undefined', as only indices 0 through 3 exist in the list.
 scores[^1] -- Returns the first value from the end, that is the value at
            -- index 3: 15.
-scores[1..3] -- Returns a slice with the values in the range given: that is
+scores[1..3] -- Returns a span with the values in the range given: that is
              -- values at 1 and 2: [5, 9].
 scores[1..^1] -- Same as 1..3
 ```
 
 Accessing a collection through the indexing operator will ensure the access is valid, and return an exception if it isn't.
 
-## Slice
-`Slice<_T>` provides a fixed-size array, equivalent to C# arrays. Slices can be used to create array-like structures whose size is determined at runtime, or to get views from parts of other collections.
+## Span
+`Span<_T>` provides a fixed-size array, equivalent to C# arrays. Spans can be used to create array-like structures whose size is determined at runtime, or to get views from parts of other collections.
 
 ```judith
-let values: Slice<Num> = [600, 700, 800] -- creates a Slice of length 3.
-let values = Slice<Num>::(get_number_count()) -- creates a Slice of the size
+let values: Span<Num> = [600, 700, 800] -- creates a Span of length 3.
+let values = Span<Num>::(get_number_count()) -- creates a Span of the size
                                               -- determined by the function.
 let some_scores = scores[1..3] -- Gets a view of some of the values in the list.
 let some_scores = scores[1..3].clone() -- Get a new copy instead.
@@ -1487,18 +1487,26 @@ let nums: Num[amount] = [; 42] -- ERROR: array length must be known at compile t
 ```
 
 ## Object type
-TODO: Explain that object types are dictionaries of key-value pairs with constraints. Explain that object types can be used as structural types.
-
-An object type is a struct-like type defined by its member fields:
+An object type is just an anonymous struct.
 
 ```judith
-const anon = {
+let anon = {
     username = "x__the_best__x",
     score = 500_000_000,
-} -- type is inferred as "{username: String, score: Num}"
+} -- type is inferred as "{ username: String, score: Num }"
 
 anon.username -- valid, evaluates to a String.
 anon.id -- invalid, 'anon' doesn't contain field 'id'.
+```
+
+``*EXPERIMENTAL*`` TODO: Remapping fields.
+
+```judith
+-- here, 'anon' is converted to 'b''s type by reordering its fields.
+let b: { score: Num, username: String } = anon
+
+-- here, 'anon' is converted to 'c''s type by discarding any unneeded fields.
+let c: { username: String } = anon
 ```
 
 ## Literal type
@@ -4117,9 +4125,9 @@ end
 **_`EXPERIMENTAL`_** When initializing a value whose type is known, `Auto` represents the type of said field or local. This can be used to call constructors of said type:
 
 ```judith
-var vals: Array<Num, 5>;
+var vals: Span<Num, 5>;
 
-vals = Array<Num, 5>::fill(0) -- long form
+vals = Span<Num, 5>::fill(0) -- long form
 vals = Auto::fill(0) -- inferred to be Array<Num, 5>.
 ```
 
