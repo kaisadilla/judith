@@ -105,6 +105,20 @@ You can access members of a namespace like this:
     let tau_squared = Math::pow(tau, 2)
 ```
 
+## `export` and `hid`.
+By default, top-level items in Judith are visible from anywhere in their project, but not from the outside. To change this, two visibility modifiers exist:
+
+* `export` makes the item visible to any project that adds this one as a dependency. This is used to expose the public API of a project.
+* `hid` makes the item visible only inside the file where the item is defined.
+
+```judith
+-- This struct will be visible from other projects.
+export typedef struct Person --! ... -- end
+
+-- This function won't be visible from anywhere other than this file.
+hid func pad_name (var p: Person) ... end
+```
+
 # Constants
 Constants are aliases for literals. As such, constants do not have any associated type, and at compile time any use of them is directly replaced by the literal they represent. They are created with the keyword `const`:
 
@@ -335,7 +349,7 @@ Judith features some pseudo-types. These types represent concepts relating to ty
 
 * `Void`: Used to represent the absence of a type where a type has to be referenced. For example, the signature of a function that doesn't return any value needs `Void` to indicate its return type: `(Int, Int) => Void`.
 * `Any`: Denotes the type of a value whose type is not known. A value of type `Any` does not allow any operation on it, other than operations that are always available regarding of type (such as testing its type with `is`, or the `str()` method). `Any` can be used normally as the type of a local.
-* `Never`: Denotes a type that cannot exist. This type can appear when narrowing down a type until no type is left. For example, after exhausting all possible types of a union type, in the next test the value will be of type `Never`, as it can never reach that test. `Never` cannot be used as the type of a value.
+* `Never`: Denotes a type that cannot exist. This type can appear when narrowing down a type until no type is left. For example, after exhausting all possible types of a sum type, in the next test the value will be of type `Never`, as it can never reach that test. `Never` cannot be used as the type of a value.
 * `Auto`: Denotes a type that is inferred from context in places where a type cannot be omitted. This is used for a few syntactic features where the decision to infer type is opt-in rather than opt-out (notably return types in functions).
 * `Null`: A type whose only possible value is `null`.
 * `<error-type>`: This type appears when something that is not a type is used as a type. In general, developers will see this type when trying to reference types that don't exist.
@@ -1008,13 +1022,13 @@ end
 Generators are a special type of function that uses `yield return` statements to return values, one by one, when iterated.
 
 ```judith
-generator get_single_digit_numbers () -> Num -- return type: IEnumerable<Num>
+generator get_single_digit_numbers () -> Num -- return type: IEnumerate<Num>
     for i in 0..10 do
         yield return i
     end
 end
 
-let mut gen: IEnumerable<Num> = get_single_digit_numbers()
+let mut gen: IEnumerate<Num> = get_single_digit_numbers()
 let a = gen.next() -- equals 0
 let b = gen.next() -- equals 1
 
@@ -1352,7 +1366,7 @@ if animal is not Dog then
 end
 ```
 
-Similarly, inside this `if` scope, we have asserted that `animal` is not of type `Dog`. While we don't know its exact type yet, we know it's not a `Dog` type and, as such, it gets promoted to a union type of the remaining possibilities. `Dog` is a subtype of `Animal`, but not of this union type (that explicitly excludes it), so `animal` inside this scope cannot be downcasted to `Dog`.
+Similarly, inside this `if` scope, we have asserted that `animal` is not of type `Dog`. While we don't know its exact type yet, we know it's not a `Dog` type and, as such, it gets promoted to a sum type of the remaining possibilities. `Dog` is a subtype of `Animal`, but not of this sum type (that explicitly excludes it), so `animal` inside this scope cannot be downcasted to `Dog`.
 
 ### Member checking (`has`)
 With the `has` keyword, a value can be asserted to have (or not to have) access to a given member. In the following example, `Animal` is defined as `Dog | Cat | Rabbit | Kangaroo | Mouse | Tiger`. Among these types, only `Rabbit` and `Kangaroo` contain the `jump` member method:
@@ -1499,7 +1513,7 @@ anon.username -- valid, evaluates to a String.
 anon.id -- invalid, 'anon' doesn't contain field 'id'.
 ```
 
-``*EXPERIMENTAL*`` TODO: Remapping fields.
+***`EXPERIMENTAL`*** TODO: Remapping fields.
 
 ```judith
 -- here, 'anon' is converted to 'b''s type by reordering its fields.
@@ -1513,54 +1527,51 @@ let c: { username: String } = anon
 A literal type is just a literal used as a type
 
 ```judith
-var country: "Germany" = "Germany" -- This value can only equal "Germany"
+let mut country: "Germany" = "Germany" -- This value can only equal "Germany"
 country = "France" -- error, String is not assignable to "Germany".
 ```
 
-## Union type
-A union type defines a type that is one of several types. As such, a relationship is established between the Union type and the types it's derived from, where all of the derived types are also the Union type, and the Union type could be any of the derived types.
+## Sum type
+A sum type defines a type that contains a value belonging to, at least, one of a set of types. As such, a relationship is established between the sum type and the types it's composed from: a value of one of its member types is also a value of the sum type, and a value of the sum type _must_ be of the type of, at least, one of the member types.
 
 ```judith
-var id: Num | String = 36 -- valid, as "Num" is a member of "Num | String".
+let id: Num | String = 36 -- valid, as "Num" is a member of "Num | String".
 id = "string_id" -- valid, as "String" is also a "Num | String".
 ```
 
-We can downcast a union into any of its conforming types:
+We can downcast a sum into any of its member types:
 
 ```judith
-const num: Num = id:?Num
+let num: Num = id:?Num
 ```
 
-Unions of string literals will raise a warning, as a set is preferred:
+Sums of string literals will raise a warning, as a set is preferred:
 
 ```judith
 typedef Countries = "Germany" | "Sweden" | "UK" -- WARNING: define a set instead.
 ```
 
-Unions with literal `null` will raise a warning, as it would make them inferior versions of a nullable type:
+Sums with literal `null` will raise a warning, as they act as nullable types while being not nullable, which is confusing:
 
 ```judith
-typedef Animal = Dog | Cat | null -- WARNING: Don't include 'null'.
+typedef Animal = Dog | Cat | null -- WARNING: Don't include 'null' in a sum type.
 ```
 
 ## Product type
-A product type defines a type that belongs to all types in a list. This definition is the inverse of a union type: in this case, a value of the product type is a subtype of each of the members of the product.
+A product type defines a type that belongs to all types in a given set. This makes the product type kind of the "opposite" of the sum type. 
 
 ```judith
--- assuming structs Person {name, age} and Player {name, score, age} exist.
-
-let player: Person & Player = {
-    name = "Kevin", -- the field Person.name
-    age = 25, -- the field Person.age AND the field Player.age
-    username = "__kevin__", -- the field Player.username
-    score = 18_000, -- the field Player.score
+-- since Person implements both ISend and ISync, it's a valid "ISend & ISync" type.
+let player: ISend & ISync = Person {
+    name = "Kevin",
+    age = 25,
 }
 ```
 
 A common use case of product types is to force a value of a given type to implement an interface:
 
 ```judith
-let callback: (() => Void) & ISendable -- this only accepts functions that are ISendable.
+let callback: (() => Void) & ISend -- this only accepts functions that are ISend.
 ```
 
 ## User-defined types
@@ -1574,20 +1585,20 @@ Implicit aliases allow the defined type to be used as if it was the original typ
 
 ```judith
 typedef UniqueId = Int
-const id: UniqueId = 32 -- valid, as UniqueId is Int.
-const integer: Int = id -- valid, as UniqueId can be used as an Int.
+let id: UniqueId = 32 -- valid, as UniqueId is Int.
+let integer: Int = id -- valid, as UniqueId can be used as an Int.
 ```
 
 The compiler in this example sees `UniqueId` as `Int`.
 
 #### Explicit alias
-Explicit aliases are equivalent to the type they are derived from, but a value whose type is the alias type cannot be used as if it was the original type.
+Explicit aliases are equivalent to the type they are derived from, but a value whose type is the alias type cannot be used as if it was the original type. Explicit alias implicitly define an explicit upcast to the type they are derived from (as well as any other equivalent).
 
 ```judith
 typedef expl UniqueId = Int
-const id: UniqueId = 32 -- valid, as UniqueId is initialized like Int.
-const integer: Int = id -- ERROR: cannot assign 'UniqueId' to 'Int'.
-const integer: Int = id:Int -- valid, explicit cast is allowed.
+let id: UniqueId = 32 -- valid, as UniqueId is initialized like Int.
+--let integer: Int = id -- ERROR: cannot assign 'UniqueId' to 'Int'.
+let integer: Int = id:Int -- valid, explicit cast is allowed.
 ```
 
 ### <a name="types-user-option">Option</a>
@@ -1603,14 +1614,14 @@ typedef option Country
     'Other' default -- You can optionally mark one value as default.
 end
 
-var country: Country = 'Germany'
+let mut country: Country = 'Germany'
 country = 'Great Britain' -- invalid, as 'Great Britain' is not part of the option.
 ```
 
 Option types cannot be used as a `String`, but can be upcasted into one:
 
 ```judith
-const country_name: String = country:String
+let country_name: String = country:String
 ```
 
 Each option can include additional data as an array or object type:
@@ -1621,9 +1632,9 @@ typedef option IpAddress
     'V6'[String]
 end
 
-const home: IpAddress = 'V4' -- ERROR: Missing additional data.
-const home: IpAddress = 'V4'[127, 0, 0, 1] -- correct
-const loopback: IpAddress = 'V6'["::1"] -- correct
+--let home: IpAddress = 'V4' -- ERROR: Missing additional data.
+let home: IpAddress = 'V4'[127, 0, 0, 1] -- correct
+let loopback: IpAddress = 'V6'["::1"] -- correct
 ```
 
 You can combine variants with different kinds of types:
@@ -1663,12 +1674,13 @@ match message do
 end
 ```
 
-Options are designed to be efficient, compiling to as little as it can. An option set without additional data becomes a single `Int`, while ones with data become an `Int` and a pointer.
+Options are efficient by design. When none of the variants contain any additional data, options are as efficient as `Int`.
 
 Usually the type of an option's variant can be inferred from usage. However, for cases where this isn't true, the variant can be qualified:
 
 ```judith
-const country = Country::'Germany' -- 'country' is inferred to be of type 'Country'.
+let country = Country::'Germany' -- 'country' is inferred to be of type 'Country'.
+let country2: Country = 'Germany' -- Here, 'Germany' is inferred to be 'Country::Germany'.
 ```
 
 ### Struct
@@ -1683,10 +1695,10 @@ typedef struct Person
 end
 ```
 
-Structs are then constructed like objects
+Structs are then constructed like objects:
 
 ```judith
-const person = Person {
+let person = Person {
     name = "Kevin",
     age = 28,
     country = 'Germany',
@@ -1702,15 +1714,15 @@ typedef struct Person
     country: Country = 'Other' -- optional field that, if not assigned, will
                                -- be initialized to the value 'Other'.
     age?: Num -- optional field. This field may or may not exist in a given
-              -- instance. When it doesn't exist, its value is "undefined".
-    salary: Decimal? -- regular, mandatory field of nullable type "Decimal?".
+              -- instance. When it doesn't exist, its value is 'undefined'.
+    salary: Decimal? -- regular, mandatory field of nullable type 'Decimal?'.
 end
 ```
 
 Structs implicitly define a constructor that contains all of its fields in order:
 
 ```judith
-const p = Person::("Kevin", 28, 'Germany', 103_000d)
+let p = Person::("Kevin", 28, undefined, 103_000d)
 ```
 
 Structs can extend other structs:
@@ -1735,27 +1747,30 @@ employee:Person.salary -- We can still cast employee to person to access
 ### Interface
 If structs hold data, interfaces define behavior. Objects cannot be of an interface type, but instead interfaces are implemented into types to give them new functionalities.
 
-**Important note**: Judith interfaces follow the orphan rule, meaning that you can only implement an interface for a type if your project defines either the interface or the type. This, combined with the lack of circular references between dependencies, guarantees that only a single implementation of a specific interface for a specific type can exist in a given project. You can work around the orphan rule by defining an alias for the type you don't own.
+_**Important note**: Judith interfaces follow the orphan rule, meaning that you can only implement an interface for a type if your project defines either the interface or the type. This, combined with the lack of circular references between dependencies, guarantees that only a single implementation of a specific interface for a specific type can exist in a given project. You can work around the orphan rule by defining an alias for the type you don't own._
+
+_***`EXPERIMENTAL`***: implementations that aren't exported outside the library can ignore the orphan rule, as it won't cause conflicts._
 
 ```judith
--- By convention, interfaces are prefixed with the letter "I".
-typedef interface ISummarizable
+-- By convention, interfaces are prefixed with the letter "I" and use either a
+-- noun (like structs and classes) or a verb.
+typedef interface ISummarize
     -- Abstract methods: methods declared by the interface that must be
     -- implemented by the type.
-    func summary () -> Void
+    func summary (self) -> Void
     
-    -- As any other method, these methods may be pure or impure.
-    impure func mark_as_read () -> Void
+    -- As any other method, they specify how they borrow 'self'.
+    func mark_as_read (var self) -> Void
 
     -- As interfaces cannot have member fields, any member data that wants to
     -- be guaranteed must be exposed through a getter method:
-    func is_read () -> Bool
+    func is_read (self) -> Bool
 
     -- Concrete methods: methods provided by the interface. These methods are
     -- inherited by the types that implement the interface, so there's no need
     -- to cast them back to the interface type to use them (unless they collide
     -- with members of that type).
-    func extended_summary () -> Bool
+    func extended_summary (self) -> Bool
         -- Note that the interface still has access to a "self". This "self" is
         -- the object this method is being called off, casted to the interface
         -- type.
@@ -1784,29 +1799,29 @@ typedef struct Post
     is_read: Bool
 end
 
--- Now, we'll implement ISummarizable for both types:
-impl ISummarizable for Article
-    func summary ()
-        -- Here we are implementing ISummarizable methods for instances of
+-- Now, we'll implement ISummarize for both types:
+impl ISummarize for Article
+    func summary (self)
+        -- Here we are implementing ISummarize methods for instances of
         -- Article specifically, so "self" is of type Article. Thus, .content
-        -- refers to Article.content, not ISummarizable.content (which doesn't
+        -- refers to Article.content, not ISummarize.content (which doesn't
         -- exist).
         return .content.substr(100) + "..."
     end
 
-    func get_is_read ()
+    func get_is_read (self)
         return .is_read
     end
 
-    impure func mark_as_read ()
+    impure func mark_as_read (var self)
         .is_read = true
     end
 
     -- Note that extended_summary cannot be implemented, as that's a method
-    -- owned and implemented by ISummarizable.
+    -- owned and implemented by ISummarize.
 end
 
-impl ISummarizable for Post
+impl ISummarize for Post
     -- ...
 end
 ```
@@ -1814,25 +1829,25 @@ end
 Interfaces are used like this:
 
 ```judith
-const article: Article = --{}
-const post: Post = --{}
+let article: Article = --{}
+let post: Post = --{}
 
-Console::log(article.summary()) -- valid, we are calling ISummarizable.summary()
-Console::log(post.summary()) -- valid, we are calling ISummarizable.summary()
+Console::log(article.summary()) -- valid, we are calling ISummarize.summary()
+Console::log(post.summary()) -- valid, we are calling ISummarize.summary()
 ```
 
 Interface types become the supertype of any type that implements them, and can be casted as such:
 
 ```judith
-const summarizable: ISummarizable = article -- valid, article is ISummarizable
-article:ISummarizable -- upcast at compile time.
+let summarizable: ISummarize = article -- valid, article is ISummarize
+article:ISummarize -- upcast at compile time.
 summarizable:?Article -- downcast at runtime, fails if summarizable is a Post.
 ```
 
 If member identifier collisions occur between two interfaces implemented by a specific type (e.g. Post implements two different interfaces that define "summary()"), then that ambiguity is resolved by upcasting the object:
 
 ```judith
-post:ISummarizable.summary() -- calling ISummarizable.summary()
+post:ISummarize.summary() -- calling ISummarize.summary()
 post:IOther.summary() -- calling IOther.summary()
 ```
 
@@ -1840,80 +1855,44 @@ If the collision occurs between the type itself and an interface, then the type 
 
 ```judith
 post.summary() -- calling Post.summary()
-post:ISummarizable.summary() -- calling ISummarizable.summary()
+post:ISummarize.summary() -- calling ISummarize.summary()
 ```
 
-Note that, as interfaces are open-ended by design, it is not possible to exhaustively test an interface type, because nothing guarantees that new subtypes of the interface will be created by other libraries or at runtime.
+Note that, as interfaces are open-ended by design, it is not possible to exhaustively test an interface type if that interface is exported, because nothing guarantees that new subtypes of the interface won't be created by other libraries or at runtime.
 
 ### Class
-TODO: Small redesign where private is the default and you decide when to make a field public immutable or public mutable.
 
 Classes are the most complex type in Judith. They represent state machines, whose behavior is encapsulated and controlled by the class. For this purpose, classes feature privacy rules and methods. While structs represent containers for data, classes represent black boxes that do operations and produce results without necessarily exposing the implementation behind it.
 
 #### Fields
 Just like structs, classes contain fields. However, class fields behave in a different way:
 
-* By default, a member field is considered **mutable** when used inside the class, but **immutable** when used outside.
+* By default, a member field is not visible from the _outside_.
+* The ability to read and to mutate a field are separate. A field can be made readable from the outside with `pub get`. A field can be made writeable from the outside with `pub set`. We can restrict write permission to the class's initialization with `pub init`.
+* From _inside_ the class, fields are fully accessible as normal.
 
 ```judith
 typedef class Person
-    name: String
+    name: String (pub get) -- this is readable from the outside
+    birth_year: Num? -- this is not accessible from the outside
+    country: (pub get, pub set) -- this is readable and writeable from the outside.
 end
 
-var person: Person = get_person()
-Console::log(person.name) -- valid
-person.name = "Steve" -- ERROR: 'person.name' is immutable.
+let mut person: Person = get_person()
+
+Console::log(person.name) -- valid, 'person.name' is exposed as readable.
+--person.name = "Steve" -- ERROR: 'person.name' is immutable.
+
+--Console::log(person.birth_year) -- ERROR: 'person.birth_year' is not public.
+
+Console::log(person.country) -- valid
+person.country = 'France' -- valid
 ```
-
-* Class fields can be hidden from the outside with the `hid` keyword. A hidden field cannot be accessed from the outside at all. They can also be restricted to the current project with the `internal` keyword.
-
-```judith
-typedef class Person
-    -- ...
-    hid birth_year: Num?
-end
-
-Console::log(person.birth_year) -- ERROR: 'person.birth_year' is not accessible
-                                -- from outside the class.
-```
-
-* Class fields can be exposed as mutable variables with the keyword `pub`.
-
-```judith
-typedef class Person
-    -- ...
-    pub country: Country
-end
-
-person.country = 'Italy' -- valid, 'person.country' is mutable.
-```
-
-* Class fields can be marked as "always mutable" with the `var` keyword. A mutable field can be mutated even when the instance is constant. Semantically, always mutable members represent values that are not part of the instance's state.
-
-Note that mutable fields are still exposed as constants to the outside, unless explicitly marked as `pub`.
-
-```judith
-typedef class Person
-    -- ...
-    var times_age_was_read: Num = 0 -- Default initializer.
-end
-```
-
-* Class fields can be marked as "always immutable" with the `const` keyword. This acts in the opposite way as `var`: a `const` field can never be mutated, not even when the instance of the class is mutable. Semantically, always immutable members represent parts of the instance's state that are not controlled by the class. In the following example, although `company` is part of a `Person`'s state, the person itself cannot change the state of the company.
-
-```judith
-typedef class Person
-    -- ...
-    const company: Company
-end
-```
-
-Note that `const` is not compatible with `pub`, as `pub` wouldn't have any effect.
 
 #### Member methods
-Classes can define member methods. Member methods are nearly identical to extension methods, with the exception that, because they are defined inside the class, they interact differently with the class's fields, as explained in the previous section.
+Classes can define member methods. Member methods are nearly identical to extension methods, with the exception that, because they are defined inside the class, they have full access to the class's fields. Unlike fields, member methods are visible from the outside by default.
 
-_See [Types § Associated items § Extension methods](#types-associated-extmethods) for a full explanation of methods._
+<quote>_See [Types § Associated items § Extension methods](#types-associated-extmethods) for a full explanation of methods._</quote>
 
 ```judith
 typedef class Person
@@ -1926,9 +1905,6 @@ typedef class Person
         -- Methods defined inside the class can access hidden members.
         const age = .calc_age()
 
-        -- Mutable fields can be mutated even when 'self' is immutable.
-        .times_age_was_read += 1
-
         return age
     end
 
@@ -1940,7 +1916,7 @@ typedef class Person
 end
 ```
 
-Member methods can be hidden with the `hid` keyword, just like member fields.
+Member methods can be hidden from the outside with the `hid` keyword.
 
 ```judith
 typedef class Person
@@ -1967,79 +1943,21 @@ Unlike structs, classes don't implement the empty constructor by default. This m
 
 Classes cannot be constructed like objects, but must instead call a constructor to be initialized. However, this constructor can be then accompanied by an object initializer to initialize any fields that haven't been initialized yet.
 
-**Important note:** if a field doesn't have a default value, nor a value assigned to it in a constructor, then that field can be assigned a value from the outside during initialization. This applies even to hidden fields. For example, given this constructor:
+**Important note:** if a field doesn't have a default value, nor a value assigned to it in a constructor, then that field must be `pub set` or `pub init`, or it'll be a compile error as it'd render the class unusable.
 
 ```judith
-    ctor (name: String)
+    ctor (name: String, birth_year: Num)
         .name = name
+        .birth_year = birth_year
     end
 ```
 
 This construction is valid:
 
 ```judith
-const p = Person::("Kevin") {
-    birth_year = 1970, -- valid even though 'birth_year' is hidden.
+let p = Person::("Kevin") {
     country = 'Germany',
-    company = get_company(), -- valid even though 'company' is not public.
 }
-```
-
-This special behavior occurs _only_ during construction. i.e. assigning a value to `p.company` afterwards would be a compile error.
-
-#### Member static variables
-Static variables can be defined directly inside a class. They still work in the same away as any other static variable, with the difference that they are exposed as **immutable** to the outside.
-
-```judith
-typedef class Person
-    -- ...
-
-    static people_created: Num = 0
-
-    ctor ()
-        -- ...
-        people_created += 1 -- valid assignment.
-    end
-end
-
-Person::people_created += 1 -- ERROR: 'Person::people_created' is immutable.
-Console::log(Person::people_created) -- valid.
-```
-
-#### Member functions
-When a function defined inside a class doesn't define `self` as its first parameter, it remains a function rather than becoming a method. However, as it's defined inside the class, these functions get to interact with member static variables as mutable:
-
-```judith
-    func reset_people_created ()
-        ::people_created = 0 -- valid, as it's done from inside the class.
-    end
-end
-```
-
-#### Summary
-The class we created above can be used like this:
-
-```judith
-const company = Company::get_by_name("Ajax")
-var kevin = Person::("Kevin", 1975, 'Germany', company)
-
-Console::log(kevin.name) -- valid, as "name" is visible from the outside.
-kevin.name == "George" -- invalid, as "name" is constant to the outside.
-kevin.country = 'Italy' -- valid, as "country" is variable to the outside.
-
-kevin.print_name() -- valid call, will print "Kevin"
-kevin.calc_age() -- invalid call, 'calc_age' is a hidden member.
-kevin.relocate('France') -- valid call, impure functions (that mutate state)
-                         -- can be called in variables.
-kevin.print_people_created() -- invalid call, "kevin" object doesn't have a member
-                             -- with that name, as that method belongs to Person.
-
-const kevin -- redeclare it as a constant
-kevin.relocate('France') -- error, relocate is an impure function that would
-                         -- mutate this constant.
-kevin.print_name() -- still valid, as it's a pure function.
-
-Person::print_people_created() -- valid, as this method belongs to Person.
 ```
 
 #### Implementing interfaces
@@ -2048,19 +1966,19 @@ Classes can implement interfaces in their own declaration. As always, this means
 ```judith
 typedef class Announcement
     organization: Organization
-    text: String
+    text: String (pub get)
     is_read: Bool
 
-    impl ISummarizable
-        func summary ()
+    impl ISummarize
+        func summary (self)
             return .text.substr(100) + "..."
         end
 
-        func get_is_read ()
+        func get_is_read (self)
             return .is_read
         end
 
-        impure func mark_as_read ()
+        impure func mark_as_read (var self)
             .is_read = true
         end
     end
@@ -2069,25 +1987,15 @@ typedef class Announcement
 end
 ```
 
-These types are not special nor restricted in any way. They are used as normal, as if the class they are defined in was their namespace:
-
-```judith
-const vehicleType: Vehicle::Type = 'Boat';
-const id: Vehicle::Id = {
-    registrar: "Kevin",
-    license: 42069,
-};
-```
-
 ## Associated items
 Top-level items can be associated with a specific type. Defining a top-level item in this way will make it accessible by qualifying it with the Type's name, _as if it was defined inside the type itself_.
 
 To define associated items, the name given to these items must be qualified with the type to which the item is associated. The following example associates a static variable called `empty` to `String`.
 
 ```judith
-static const String::empty = ""
+static String::empty = ""
 
-const name = String::empty -- 'empty' can now be used as if it was part of 'String'.
+let name = String::empty -- 'empty' can now be used as if it was part of 'String'.
 ```
 
 You can define all kinds of top-level items as associated items:
@@ -2104,7 +2012,7 @@ typedef struct Vehicle
     type: Vehicle::Type -- you can use it inside the type.
 end
 
-const vehicle_type: Vehicle::Type = 'Boat'. -- or outside, too.
+let vehicle_type: Vehicle::Type = 'Boat'. -- or outside, too.
 ```
 
 Associated items belong to whichever module they are defined in, not to the type they are associated with, which means that the relevant module has to be imported into the file for the associated item to be available. Also, just like extension methods, type-associated items can still be qualified with their modules:
@@ -2121,6 +2029,8 @@ end
 
 const vehicle_type: some_mod::Vehicle::Type = 'Horse'
 ```
+
+Just like interfaces, associated items follow the orphan rule, meaning that they can only be exported when they are defined for types that belong to the project.
 
 ### Extension methods
 Extension methods are a special case of associated functions. When an associate function defines `self` as its first parameter, it becomes an extension method. `self` is always of the type the function is associated with, and that type can be omitted when defining the parameter. Whether the `self` parameter is taken as `var` or `const` determines whether the method is pure or impure. The name of the method qualifies it into the type it's being implemented in:
@@ -2394,7 +2304,7 @@ Any operator not listed above cannot be overloaded. Among them, these are some o
 * Null-coalescing operator: `??`.
 
 # Templates
-**`EXPERIMENTAL`**
+***`EXPERIMENTAL`***
 
 Templates are Judith's way to implement generics. They are type-safe and only allow operations that can be proven correct.
 
@@ -2770,7 +2680,7 @@ Destructuring is a feature that allows the developer to unpack values from colle
 Destructuring can be done in two ways: by destructuring content, or by destructuring members:
 
 ## Content destructuring (`[a, b...]`)
-Content destructuring assigns values contained in an enumerable collection, in whichever order that collection enumerates them. A type is a enumerable collection if it imlpements the IEnumerable interface.
+Content destructuring assigns values contained in an enumerable collection, in whichever order that collection enumerates them. A type is a enumerable collection if it imlpements the IEnumerate interface.
 
 ```judith
 const countries = ['Japan', 'China', 'South Korea', 'Taiwan']
@@ -2976,7 +2886,7 @@ b.x = 50 -- here, we are changing "b", but not "a".
 Console::log(b.a) -- outputs "5"
 ```
 
-Inline container types are only copyable if all of their fields are copyable, or if they implement the `ICopyable` interface. The same applies to clonability: the type is only clonable if all of its fields are clonable, or if it implements the `IClonable` interface.
+Inline container types are only copyable if all of their fields are copyable, or if they implement the `ICopy` interface. The same applies to clonability: the type is only clonable if all of its fields are clonable, or if it implements the `IClone` interface.
 
 ### Inlined variables
 Values of pointer types can inline their value. Doing so will make that value behave as an inline struct / class.
@@ -3097,7 +3007,7 @@ p2.name = "John" -- invalid, "p2" is immutable.
 Console::log(p2.name) -- Valid.
 ```
 
-**`EXPERIMENTAL`** The short-hand syntax `let <variable-name>`, where `<variable-name>` is the name of a `let mut` variable that already exists, is short-hand for a new (shadowing) variable that takes ownership of the value held by the shadowed variable:
+***`EXPERIMENTAL`*** The short-hand syntax `let <variable-name>`, where `<variable-name>` is the name of a `let mut` variable that already exists, is short-hand for a new (shadowing) variable that takes ownership of the value held by the shadowed variable:
 
 ```judith
 let mut p: Person = get_person()
@@ -3401,7 +3311,7 @@ channel_is_sealed
 `Chan<T>`, like every construct in Judith, respects ownership semantics. Adding values to a channel, or sealing it, are mutating actions, and thus only the owner can do it, and only when the value is mutable. However, reading values from it does not mutate the channel, and thus any variable can do it, even if they just hold a reference to the channel. Just like with `Coroutine<T>`, using await immediately awards ownership of the value received, and that value cannot be received in anyway by anyone else via `await`. In case multiple coroutines are trying to read values from the same chan, whoever reads it first will get the value. It is not possible to determine, at compile time, which coroutine will receive which value, just that each value will be received by someone.
 
 ## Cogroups
-**`EXPERIMENTAL`** Judith's `CoGroup<T>` represent a group of coroutines. When a new coroutine is fired, it can be added to a cogroup (and get a reference to that coroutine) using `async(group)`. Doing this still grants ownership of the `Coroutine<T>` to the async expression - the cogroup only receives a reference to it. Coroutines cannot be accessed from the cogroup - instead, the cogroup acts as a black box that can be queried for information that concerns every coroutine.
+***`EXPERIMENTAL`*** Judith's `CoGroup<T>` represent a group of coroutines. When a new coroutine is fired, it can be added to a cogroup (and get a reference to that coroutine) using `async(group)`. Doing this still grants ownership of the `Coroutine<T>` to the async expression - the cogroup only receives a reference to it. Coroutines cannot be accessed from the cogroup - instead, the cogroup acts as a black box that can be queried for information that concerns every coroutine.
 
 ```jud
 var group = CoGroup<Num>::()
@@ -3431,7 +3341,7 @@ let say_hi = () => Console::log("hi") -- <-- closure occurs here
 
 This is the most basic version of a closure. Here, the closure is not capturing any variable from the outside and, as such, it's indistinguishable from a regular function. For this reason, the compiler allows us to treat them just like regular functions - e.g. the type of `say_hi` is `sS() -> Void`\*.
 
-_\*When dealing with function type notation, `s` means that a function is `ISendable`, and `S` means that a function is `ISyncable`. Thus, `sS() -> Void` is shorthand for `(() -> Void) & ISendable & ISyncable`._
+_\*When dealing with function type notation, `s` means that a function is `ISend`, and `S` means that a function is `ISync`. Thus, `sS() -> Void` is shorthand for `(() -> Void) & ISend & ISync`._
 
 ---
 
@@ -3444,7 +3354,7 @@ let say_hi = () => Console::log(str) -- <-- this closure captures "str".
 
 In this example, we are capturing `str`, which exists in the outer scope as an immutable value. The type of `say_hi` here is still `sS() -> Void`, as ownership is not involved in its usage\*.
 
-_\* Note that, for a closure to be `ISendable` / `ISyncable`, each of the values it captures has to be `ISendable` / `ISyncable`._
+_\* Note that, for a closure to be `ISend` / `ISync`, each of the values it captures has to be `ISend` / `ISync`._
 
 ---
 
@@ -3493,7 +3403,7 @@ fnonce
 TODO: `Cell<T>, RefCell<T>, Mutex<T>, Lock<T>, Cow<T>` (RefCell and Box?)
 
 # Unsafe Judith
-**`EXPERIMENTAL`** Unsafe Judith is a special set of features that break Judith's safety guarantees. This set of features is only available in unsafe contexts. Unsafe Judith exists because the analysis done by the compiler is conservative: any operation that the compiler cannot guarantee is safe is rejected, even if the operation is actually safe. This guarantees that the compiler never accepts invalid programs, but it also makes it reject some valid ones.
+***`EXPERIMENTAL`*** Unsafe Judith is a special set of features that break Judith's safety guarantees. This set of features is only available in unsafe contexts. Unsafe Judith exists because the analysis done by the compiler is conservative: any operation that the compiler cannot guarantee is safe is rejected, even if the operation is actually safe. This guarantees that the compiler never accepts invalid programs, but it also makes it reject some valid ones.
 
 Most unsafe operations are closely related to memory manipulation, but unsafe Judith is not limited to that. Any feature that breaks any of Judith's guarantees is considered unsafe.
 
@@ -3710,19 +3620,19 @@ Usf::mem_compare(arr, arr_3, 10)
 
 _Note: as always, template parameters are inferred from usage when possible. They are explicitly written in the examples above to make the examples more clear._
 
-## Memory unions
-Memory unions are c-style unions. They contain multiple fields that all coexist in the same address in memory. As such, only one of them is valid at a given time. The rest are safe to read (as the size of the memory union is equal to the size of the biggest member of the union), but their content will probably not make any sense.
+## Unions
+Unions are types that contain multiple fields that all coexist in the same address in memory. As such, only one of them is valid at a given time. The rest are safe to read (as the size of the union is equal to the size of the biggest member of the union), but their content will probably not make any sense.
 
-Passing memory unions as black boxes is not unsafe, but accessing values from it is unsafe.
+Passing unions as black boxes is not unsafe, but accessing values from it is unsafe.
 
 ```judith
-typedef memory_union Id
+typedef union Id
     as_number: Num
     as_string: String
 end
 
 func get_id () -> Id -- the function is safe
-    unsafe do -- we can only assign to a memory union in an unsafe context.
+    unsafe do -- we can only assign to a union in an unsafe context.
         return Id { as_number = 42 }
     end
 end
@@ -3733,22 +3643,32 @@ func print_id (id: Id)
     end
 end
 
-const id = get_id() -- passing the id around is not unsafe.
+let id = get_id() -- passing the id around is not unsafe.
 print_id(id) -- this is also safe.
 ```
 
-Memory union syntax can also be used for anonymous types:
+Union syntax can also be used for anonymous types:
 
 ```judith
 typedef struct Person
     name: String
     age: Num
-    id: memory_union
+    id: union
         as_number: Number
         as_guid: Guid
     end
 end
+
+let p: Person = {
+    name: "John",
+    age: 31,
+    id: {
+        as_number: 5
+    }
+}
 ```
+
+Note that defining the union or constructing it is not unsafe, as nothing is being read nor overwritten.
 
 ## A note on Judith pointer types
 Judith's safe syntax is agnostic to the method used to create the value held by a variable of a pointer type. When you encounter `const p: Person = get_person()`, `p` is agnostic to who is handling the memory for `p`. Normally, that will be Judith's garbage collector, but it's perfectly possible to use unsafe features to create a non-gc instance of `Person`. This same logic also applies to `self` in a constructor, which is what makes it possible to use constructors to build non-gc objects.
@@ -3914,19 +3834,6 @@ const type_data = typeof(Employee) -- the TypeMetadata of 'Employee'.
 
 Note that extension methods, constructors and interfaces will not be returned by these operations, as they aren't actually bound to their types.
 
-# Visibility modifiers (`hid`, `internal` and `export`)
-Judith features three keywords that affect the visibility of an item: `hid`, `internal` and `export`.
-
-With `hid`, the visibility of the item is confined to either the file (if used in a top-level item) or the namespace or class the item belongs to (if used in an item that is part of a namespace or class).
-
-`internal` and `export`, on the other hand, establish the visibility of items from outside the project. By default, top-level items in Judith are not visible outside the project. To make an item visible, you have to mark it with `export`:
-
-```judith
-export typedef struct Person --! ... -- end
-```
-
-In general, this is all that is involved when dealing with visibility from outside the project. There's, however, one extra case: when we want to make a (non hidden) field in an exported class not visible from other projects. To do this, we mark it as `internal`.
-
 # Input, output, console
 TODO
 
@@ -3942,7 +3849,7 @@ TODO - two types:
 # Directives
 
 ## Serialization
-**`EXPERIMENTAL`** Judith includes some directives that decorate the code to indicate serialization behavior, which can then be used by functions such as JSON serializers.
+***`EXPERIMENTAL`*** Judith includes some directives that decorate the code to indicate serialization behavior, which can then be used by functions such as JSON serializers.
 
 * `#serial ignore`: used on a field to mark it to be ignored during serialization.
 
@@ -4021,6 +3928,9 @@ const val: Bool? = false
 if val then end -- WARNING: Use a explicit comparison.
 if val == true then end -- No warning.
 ```
+
+## `null` vs `undefined`
+Judith has both `null` and `undefined`, which semantically represent different concepts. `null` is used to indicate a valid, existent value that is equal to a special "none" case. For example, if the user may or may not indicate their age, `null` would be used to indicate that the user explicitly didn't indicate the age. Meanwhile, `undefined` is used to indicate the absence of a value. For example, if trying to access the index `10` from a `List` of 5 elements, the result is `undefined`, because no such value exists. As such, `null` should never be used to indicate invalid values, and `undefined` should never be used to indicate that a value is equal to "none". 
 
 ## `.str()` method
 `str()` is a special method that is always defined for every type, even `Undefined` and `Dynamic`. As such, it is _always_ available, even on `Any` types or nullable ones, and never produces an error.
@@ -4122,7 +4032,7 @@ func get_num_or_str (val: Num) -> Auto -- type is inferred to be 'Num | String'
 end
 ```
 
-**_`EXPERIMENTAL`_** When initializing a value whose type is known, `Auto` represents the type of said field or local. This can be used to call constructors of said type:
+***`EXPERIMENTAL`*** When initializing a value whose type is known, `Auto` represents the type of said field or local. This can be used to call constructors of said type:
 
 ```judith
 var vals: Span<Num, 5>;
