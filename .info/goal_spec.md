@@ -2033,7 +2033,7 @@ const vehicle_type: some_mod::Vehicle::Type = 'Horse'
 Just like interfaces, associated items follow the orphan rule, meaning that they can only be exported when they are defined for types that belong to the project.
 
 ### Extension methods
-Extension methods are a special case of associated functions. When an associate function defines `self` as its first parameter, it becomes an extension method. `self` is always of the type the function is associated with, and that type can be omitted when defining the parameter. Whether the `self` parameter is taken as `var` or `const` determines whether the method is pure or impure. The name of the method qualifies it into the type it's being implemented in:
+Extension methods are a special case of associated functions. When an associated function defines `self` as its first parameter, it becomes an extension method. `self` is always of the type the function is associated with, and that type can be omitted when defining the parameter. The `self` parameter is borrowed just like any other value (meaning it may specify `const`, `var`, `in`, etc.). The name of the method qualifies it into the type it's being implemented in:
 
 ```judith
 func Vec2::normal (self) -> Vec2
@@ -2054,16 +2054,17 @@ end
 Methods can then be called as if they were members of instances:
 
 ```judith
-const p = Vec2 { x = 5, y = 3 }
-const normalized = p.normal() -- "p" becomes the argument for the "self" parameter.
+let p = Vec2 { x = 5, y = 3 }
+let normalized = p.normal() -- "p" becomes the argument for the "self" parameter.
 ```
 
 ### Extension constructors
-Although constructors cannot be top-level items outside classes by themselves (as they need somethign to construct), they can be defined as associated items. A constructor is always a function (never a generator), and always returns an instance of the type they are implemented for. Unlike methods, constructors do not take a `self` parameter. Instead, `self` is implicitly created at the start of the constructor, with uninitialized fields. Unlike regular methods, constructors can have no name at all. Constructors are associated functions and, as such, cannot share names with other associated functions (i.e. if there's a regular associated function for `Vec2` called `origin`, you cannot define a constructor that's also called `origin`).
+Constructors are special functions can be used along with initialization syntax (i.e. `<Type> { <field = value>... }`) to build new instances of a struct or a class. Inside the constructor, an uninitialized instance of the object is provided, which can be accessed with the special `self` name (just like inside methods). This `self` can be mutated, is implicitly returned at the end of the constructor, and cannot be lent to any other function. As this `self` is uninitialized, reading any field that hasn't been initialized yet is not allowed. Constructors do not support overloading, meaning that each constructor must be given its own name. Unlike functions, though, constructors can have no name at all.
 
 ```judith
 ctor Vec2 (x, y: Num)
-    .x = x
+    .x = x -- 'self' exists and we initialize 'self.x' here.
+    --Console::log(.y) -- ERROR: 'self.y' is not initialized.
     .y = y
 end
 ```
@@ -2071,7 +2072,7 @@ end
 Constructors are called like normal functions (with the small exception that they may have no name at all).
 
 ```judith
-const point = Vec2::(10, 16)
+let point = Vec2::(10, 16)
 ```
 
 Constructors are allowed to leave certain fields uninitialized, although this will force the caller to complement the function call with a partial initializer constructor.
@@ -2082,50 +2083,25 @@ ctor Vec2::with_x (x: Num)
     -- notice that we are not initializing "y" here.
 end
 
-const point = Vec2::with_x(5) -- ERROR: Incomplete initialization.
+let point = Vec2::with_x(5) -- ERROR: Incomplete initialization.
 
-const point = Vec2::with_x(5) {
+let point = Vec2::with_x(5) {
     y = 4,
 } -- valid, as we are initializing the fields the constructor left uninitialized.
 ```
 
-`self` is the return value of a constructor, which means that reassigning `self` is a valid way to construct an object.
-
-```judith
-ctor Num::parse (str: String)
-    -- logic
-    self = result -- this will make "result" the value 'constructed' by this ctor.
-end
-```
-
 _**`TODO`**: This breaks the rule that constructors are agnostic to the way the object is being allocated._
 
-If the type the constructor belongs to can only be instantiated with a constructor method (as it's commonly the case with classes), `self` will not be created implicitly, and thus will be unavailable until a value is assigned to it:
+If the type is a class that does not implement the default constructor, then `self` won't exist until you call an existing constructor. This call to the constructor is not assigned to anything, but instead marks when exactly 'self' will be initialized, and with which values.
 
 ```judith
 ctor Person::make_local_kevin (country: Country)
-    .country = country -- ERROR: "self" is uninitialized.
+    .country = country -- ERROR: "self" doesn't exist yet.
 
-    self = Person::("Kevin", 17, country) -- initialize "self" explicitly.
+    Person::("Kevin", 17, country) -- initialize "self" with this constructor.
 
-    Console::log(.country) -- valid, as "self" is initialized.
+    Console::log(.country) -- valid, as "self" exists here.
 end
-```
-
-The same happens when a type cannot be instanced directly.
-
-```judith
-typedef Animal = Dog | Cat
-
-ctor Animal::make_adorable ()
-    Console::log(self) - ERROR: What is 'self' here???
-    
-    self = Cat { name = "Macbeth", evil = true }
-
-    Console::log(self) -- valid, as 'self' is now a Cat.
-end
-
-const macbeth = Animal::make_adorable() -- "macbeth" is of type "Animal".
 ```
 
 ## Default values
@@ -2145,9 +2121,9 @@ These are the default values of each type (or lack of):
 * **Literal type**: itself.
 * **Union type**: no default value
 * **Alias type**: the default value of the aliased type, if any.
-* **Option type**: no default value, unless one option is marked as `default`.
+* **Option type**: no default value, unless one variant is marked as `default`.
 * **Interface type**: no default value.
-* **Class type**: if the default constructor is defined, then the result of calling such constructor. Else, no default value.
+* **Class type**: if the default constructor is defined (a nameless constructor with no parameters), then the result of calling such constructor. Else, no default value.
 
 You can add or override the default value of a type by implementing the `IDefault` interface to it.
 
@@ -2166,7 +2142,7 @@ ctor Car (make: String)
     .make = make
 end
 
-const my_car = Car::("Honda") {
+let my_car = Car::("Honda") {
     origin = 'Japan',
 }
 ```
@@ -2174,7 +2150,7 @@ const my_car = Car::("Honda") {
 In this example, `my_car` is initialized correctly, following this logic:
 
 * `make` was assigned a value (`"Honda"`) in the constructor.
-* `origin` was assigned a value (`"Japan"`) in the object initializer.
+* `origin` was assigned a value (`'Japan'`) in the object initializer.
 * `price` has a default value (20,000), and since it hasn't been assigned a value anywhere, that default value becomes the assigned value.
 * `color` is an optional field. It has not been assigned anywhere so its value is `undefined`.
 
@@ -2183,7 +2159,7 @@ If `Car` had an extra field `max_speed: Num`, then this initialization would be 
 ## Complex type declarations
 Judith features syntax to create new types that are derived from other types.
 
-### Partial&lt;T&gt;
+### `Partial<T>`
 `Partial<T>` (where `T` is a struct type) represents a type that is equivalent to `T`, except all of its fields are optional (i.e. can be `undefined`).
 
 ```judith
@@ -2539,7 +2515,7 @@ It is important to mention that, even though we refer to all subsets with `Excep
 
 ```judith
 func do_something ()
-    const res = divide(15, 0) -- "res" type is "Int | Exception".
+    let res = divide(15, 0) -- "res" type is "Int | Exception".
 
     if res is Int then -- we have to check the type at runtime.
         set_score(res)
@@ -2550,13 +2526,13 @@ end
 ```
 
 ### Handling exceptions when received (`catch`)
-Another way to handle exceptions is to do something about them when they are received. To do this, append a `catch` block to the faulty expression to handles the exceptional values.
+Another way to handle exceptions is to do something about them when they are received. To do this, append a `catch` block to the faulty expression to handle the exceptional values.
 
 In this first example, we simply log that an error has occurred and end the function early. By doing this, we guarantee that the result of the expression will not contain exceptions.
 
 ```judith
 func do_something ()
-    const res = divide(15, 0) catch ex do
+    let res = divide(15, 0) catch ex do
         Console::log("Error occurred")
         return
     end -- here "res" is narrowed to Int.
@@ -2569,7 +2545,7 @@ In this second example, instead of returning on exception, we `yield` a new valu
 
 ```judith
 func do_something ()
-    const res = divide(15, 0) catch ex do
+    let res = divide(15, 0) catch ex do
         Console::log("Error occurred")
         yield 0
     end -- here "res" is narrowed to Int.
@@ -2582,7 +2558,7 @@ In this third example we log the error, but don't deal with the exception. Unlik
 
 ```judith
 func do_something ()
-    const res = divide(15, 0) catch ex do
+    let res = divide(15, 0) catch ex do
         Console::log("Error occurred")
     end -- here "res" is NOT narrowed, it's still "Int | Exception"
         -- as we didn't deal with it.
@@ -2596,7 +2572,7 @@ Sometimes we can't deal with an exception, but we don't want to suppress it eith
 
 ```judith
 func !do_something ()
-    const res = try divide(15, 0) -- here "res" is of type Int.
+    let res = try divide(15, 0) -- here "res" is of type Int.
 
     set_score(res)
 end
@@ -2607,7 +2583,7 @@ In this example, we are using `divide()` normally, ignoring its exceptions. The 
 All of this means that the above snippet is equivalent to this:
 ```judith
 func !do_something ()
-    const res = divide(15, 0)
+    let res = divide(15, 0)
     return res when res is Exception
 
     set_score(res)
@@ -2619,28 +2595,29 @@ By using `try?`, we can ignore exceptions altogether by transforming every fault
 
 ```judith
 func do_something ()
-    const res = try? divide(15, 0) -- here "res" is of type "Int | Undefined".
+    let res = try? divide(15, 0) -- here "res" is of type "Int | undefined".
 
     set_score(res ?? 0)
+end
 ```
 
 ### Forgiving the exception (`try!`)
-We can tell the compiler that a faulty expression won't return an exception with `try!`. If the expresion returns an exception, the program will panic.
+We can tell the compiler that a faulty expression won't return an exception with `try!`. If the expression returns an exception, the program will panic.
 
 ```judith
 func do_something ()
-    const res = try! divide(15, 0) -- here, "res" is of type "Int". If "divide()"
-                                   -- returns an exception, the program will panic.
+    let res = try! divide(15, 0) -- here, "res" is of type "Int". If "divide()"
+                                 -- returns an exception, the program will panic.
 
     set_score(res)
 end
 ```
 
-## Exceptions on functions that don't return values (i.e. Void)
+## Exceptions on functions that don't return values (i.e. `Void`)
 When a function that doesn't return any value can return exceptions, then correct (i.e. non-faulty) executions of the function will return `undefined`, which is the idiomatic value that represents the lack of a value.
 
 ```judith
-const ret_val = do_something() -- "ret_val"'s type "Undefined | Exception".
+let ret_val = do_something() -- 'ret_val''s type 'Undefined | Exception'.
 ```
 
 Note that you are not required to assign the result of a function to anything to handle its exceptions:
@@ -2670,9 +2647,9 @@ func solve_p_np_problem ()
 end
 ```
 
-In this example, calling `solve_p_np_problem()` will immediatelly cause the program to show a message saying "Not yet implemented." and then exit.
+In this example, calling `solve_p_np_problem()` will immediately cause the program to show a message saying "Not yet implemented." and then exit.
 
-Note that there's no way to recover from a `panic`, as by definition `panic` it used to deal with unrecoverable errors.
+Note that there's no way to recover from a `panic`.
 
 # Destructuring and spreading
 Destructuring is a feature that allows the developer to unpack values from collections and values that contain members.
@@ -2680,19 +2657,19 @@ Destructuring is a feature that allows the developer to unpack values from colle
 Destructuring can be done in two ways: by destructuring content, or by destructuring members:
 
 ## Content destructuring (`[a, b...]`)
-Content destructuring assigns values contained in an enumerable collection, in whichever order that collection enumerates them. A type is a enumerable collection if it imlpements the IEnumerate interface.
+Content destructuring assigns values contained in an enumerable collection, in whichever order that collection enumerates them. A type is an enumerable collection if it implements the IEnumerate interface.
 
 ```judith
-const countries = ['Japan', 'China', 'South Korea', 'Taiwan']
+let countries = ['Japan', 'China', 'South Korea', 'Taiwan']
 
-const [ japan, china ] = countries -- The first two elements of the arrea are
-                                   -- assigned to the declared locals.
+let [ japan, china ] = countries -- The first two elements of the array are
+                                 -- assigned to the declared locals.
 ```
 
 The last local declared can capture all remaining values if expressed with `...`, like this:
 
 ```judith
-const [ japan, china, ...others ] = countries 
+let [ japan, china, ...others ] = countries 
 ```
 
 Here, the value of others is an array that contains `['South Korea', 'Taiwan']`.
@@ -2701,7 +2678,7 @@ Here, the value of others is an array that contains `['South Korea', 'Taiwan']`.
 Member destructuring assigns values contained in member fields of a type. Unlike content destructuring, this is resolved at compile time.
 
 ```judith
-const person = Person {
+let person = Person {
     name: "Kevin",
     age: 39,
     country: 'Germany'
@@ -2714,44 +2691,37 @@ const { name, age } = person -- The members Person.name and Person.age are
 Locals created by member destructuring do not need to use the original member's name:
 
 ```judith
-const { name => person_name } = person
+let { name => person_name } = person
 ```
 
 It is a compile-time error to destructure a member that doesn't exist.
 
 ```judith
-const { name, city } = person -- ERROR: Person.city doesn't exist
-const { name } = 2 -- ERROR: Num.name doesn't exist
-```
-
-When destructuring a member method, the method remains bound to the instance they were destructured from
-
-```judith
-const { get_nth_birthday } = person -- ok.
-get_nth_birthday(80) -- calls person.get_nth_birthday
+let { name, city } = person -- ERROR: Person.city doesn't exist
+let { name } = 2 -- ERROR: Num.name doesn't exist
 ```
 
 Just like with content destructuring, you can capture all remaining members with a `...` local. In this case, the remaining local will be an object type.
 
 ```judith
-const { name, ...rest } = person -- 'rest' contains { age = 39, country = 'Germany' }.
+let { name, ...rest } = person -- 'rest' contains { age = 39, country = 'Germany' }.
 ```
 
 ## Spread
 Spreading works similarly to destructuring, and allows developers to spread the contents of a collection or members of a value into a place that expects multiple values. Whether a spread is a content spread or a member spread depends on the context in which they are used:
 
 ```judith
-const europe = ['Germany', 'France', 'Italy']
-const eurasia = [...europe, 'China', 'Japan', 'Thailand']
+let europe = ['Germany', 'France', 'Italy']
+let eurasia = [...europe, 'China', 'Japan', 'Thailand']
 ```
 
 In the example above, `europe` is being spread in a place that expects values. As such, a content spread occurs and the 3 members in the `europe` array become the 3 first members of the `eurasia` array.
 
 ```judith
-const person = Person { name = "Kevin", age = 32, email = "kevin@gmail.com" }
-const contact_info = { email = "kevin@kevin.kev", phone = "555-31-21-11" }
+let person = Person { name = "Kevin", age = 32, email = "kevin@gmail.com" }
+let contact_info = { email = "kevin@kevin.kev", phone = "555-31-21-11" }
 
-const full_person = {
+let full_person = {
     name = "someone",
     ...person, -- person.name replaces the declared name field
     ...contact_info, -- contact_info.email replaces person.email
