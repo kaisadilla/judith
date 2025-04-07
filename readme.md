@@ -1,4 +1,4 @@
-**`DISCLAIMER`** Judith is a WIP started very recently. It's not even in pre-alpha. It doesn't even exist in a meaningful way. This project was started in February 2025. For the time being, all you'll find in this repo is an exhaustive description of the language, and some messy source code that can compile a very small subset of the language. You can read an informal specification [here](.info/spec.md).
+**`DISCLAIMER`** Judith is a WIP started very recently. It's not even in pre-alpha. It doesn't even exist in a meaningful way. This project was started in February 2025. For the time being, all you'll find in this repo is an exhaustive description of the language, and some messy source code that can compile a very small subset of the language. You can read the design goals of Judith [here](.info/goal_spec.md). You can read the current spec (i.e. the features that are currently implemented, in the state they are currently in) [here](.info/real_spec.md). This document is not the spec for the language, but rather an explanation of what exists today.
 
 <div align="center">
   <h1>Judith Programming Language</h1>
@@ -7,7 +7,8 @@
 ## About Judith
 Judith is a high-level, statically typed, compiled, general-purpose language. Judith is designed with the goal of writing maintainable, correct code, learning from the mistakes made by older languages. Judith's design has been carefully crafted to create a language that is pleasant, easy and intuitive to write. Judith makes no attempt to be a small language: quite the opposite, its syntax is purposefully extensive as to ensure that everything can be done in a streamlined and concise way.
 
-## Judith's main features
+## Judith's main goals
+Judith is in its earliest stage of development. At this point, the language only exists in theory, but is not yet implemented. However, these are a list of goals that Judith is being designed to accomplish:
 
 - **Managed language**: By default, Judith is a garbage-collected language. You can, however, manage memory manually.
 - **Thread-safe by default**: Judith is designed from the ground-up for safe asynchronous programming.
@@ -34,7 +35,7 @@ Judith is a high-level, statically typed, compiled, general-purpose language. Ju
 - **~G~coroutines!** WARNING: May or may not be inspired by Go.
 
 ## Comprehensive explanation
-You can read the entire informal specification [here](.info/spec.md). Note that, while the design of the language is in a very advanced stage, it's still subject to big changes, and inconsistencies in this document may appear as a result of it, which are eventually removed when as I periodically revise the entire document. The informal specification is not a tutorial, but rather a detailed explanation of each feature. The informal specification is not concerned with the implementation details of the features.
+You can read the design goals of the language [here](.info/spec.md). Note that, while the design of the language is in a very advanced stage, it's still subject to big changes, and inconsistencies in this document may appear as a result of it, which are eventually removed when as I periodically revise the entire document. The informal specification is not a tutorial, but rather a detailed explanation of each feature. The informal specification is not concerned with the implementation details of the features.
 
 ## How to get
 You don't. Development of the project just started.
