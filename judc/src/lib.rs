@@ -1,5 +1,6 @@
 pub mod judith;
 
+#[derive(Debug)]
 pub struct SourceSpan {
     pub start: i64,
     pub end: i64,

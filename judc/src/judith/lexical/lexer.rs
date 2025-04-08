@@ -2,6 +2,8 @@ use std::collections::HashMap;
 use std::iter::{Enumerate, Peekable};
 use std::str::Chars;
 use once_cell::sync::Lazy;
+use crate::judith::compiler_messages;
+use crate::judith::compiler_messages::{CompilerMessage, MessageContainer, MessageOrigin};
 use crate::judith::lexical::token::{RegularToken, StringLiteralKind, StringToken, Token, TokenKind, Trivia, TriviaKind};
 use crate::SourceSpan;
 
@@ -66,6 +68,13 @@ pub struct Lexer<'a> {
     start: usize,
     line: usize,
     column: usize,
+    hasErrors: bool,
+    messages: MessageContainer,
+}
+
+pub struct LexerResult {
+    pub tokens: Vec<Token>,
+    pub messages: MessageContainer,
 }
 
 impl<'a> Lexer<'a> {
@@ -76,6 +85,8 @@ impl<'a> Lexer<'a> {
             start: 0,
             line: FIRST_LINE,
             column: FIRST_COLUMN,
+            hasErrors: false,
+            messages: MessageContainer::new(),
         }
     }
 
@@ -225,7 +236,12 @@ impl<'a> Lexer<'a> {
                 self.scan_literal_like() // this includes literals, keywords and strings with prefixes.
             },
             _ => {
-                // TODO: Register compiler error message.
+                let cursor = self.cursor() as i64;
+                self.error(compiler_messages::Lexer::unexpected_character(SourceSpan {
+                    start: cursor,
+                    end: cursor,
+                    line: self.line as i64,
+                }, c));
                 self.make_token(TokenKind::Invalid)
             }
         }
@@ -288,6 +304,8 @@ impl<'a> Lexer<'a> {
         // Whether we've already found the "e" character in this literal, used for scientific
         // notation (e.g. 1.81e33).
         let mut e_found = false;
+        // Whether we've already encountered a digit in this literal.
+        let mut digit_found = Self::is_digit(first);
 
         // Whether the next character in this literal can be an underscore. Numeric literals can
         // include underscores, but underscores are not allowed in the following positions:
@@ -302,7 +320,7 @@ impl<'a> Lexer<'a> {
         if c.is_none() == false && first == '0' {
             match c.unwrap() {
                 'x' | 'b' | 'o' => {
-                    self.advance();
+                    digit_found = false; // the '0' we took for a digit isn't actually a digit.
                     self.advance();
                     c = self.peek();
                 }
@@ -310,8 +328,9 @@ impl<'a> Lexer<'a> {
             }
         }
 
+        let mut ends_in_e = false;
         // Parse the body of the numeric literal. This breaks when the body ends.
-            loop {
+        loop {
             // If there's no character, there's no more number.
             if c.is_none() {
                 break;
@@ -338,13 +357,24 @@ impl<'a> Lexer<'a> {
                 },
                 'e' => {
                     if e_found {
-                        // TODO: Invalid number.
+                        let cursor = self.cursor();
+                        self.error(compiler_messages::Lexer::invalid_number(SourceSpan {
+                            start: self.start as i64,
+                            end: cursor as i64,
+                            line: self.line as i64
+                        }, self.extract_lexeme(self.start, cursor)));
                     }
                     e_found = true;
+                    ends_in_e = true;
                 }
                 '_' => {
                     if underscore_allowed == false {
-                        // TODO: Invalid number.
+                        let cursor = self.cursor();
+                        self.error(compiler_messages::Lexer::invalid_number(SourceSpan {
+                            start: self.start as i64,
+                            end: cursor as i64,
+                            line: self.line as i64
+                        }, self.extract_lexeme(self.start, cursor)));
                     }
 
                     // Can't chain two underscores together, so the next character cannot be an
@@ -356,11 +386,22 @@ impl<'a> Lexer<'a> {
                 }
                 _ => {
                     underscore_allowed = true;
+                    digit_found = true;
+                    ends_in_e = false;
                 }
             }
 
             self.advance();
             c = self.peek();
+        }
+
+        if digit_found == false || ends_in_e {
+            let cursor = self.cursor();
+            self.error(compiler_messages::Lexer::invalid_number(SourceSpan {
+                start: self.start as i64,
+                end: cursor as i64,
+                line: self.line as i64
+            }, self.extract_lexeme(self.start, cursor)));
         }
 
         // Parse the suffix, if any.
@@ -380,7 +421,7 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        return self.make_token(TokenKind::Number);
+        self.make_token(TokenKind::Number)
     }
 
     /// Scans a string token until its end. This method assumes that everything up to the FIRST
@@ -414,7 +455,12 @@ impl<'a> Lexer<'a> {
 
         while closing_quotes < opening_quotes {
             if self.is_at_end() {
-                // TODO: Error message.
+                let cursor = self.cursor() as i64;
+                self.error(compiler_messages::Lexer::unterminated_string(SourceSpan {
+                    start: self.start as i64,
+                    end: cursor,
+                    line: self.line as i64
+                }));
                 return self.make_token(TokenKind::Invalid);
             }
 
@@ -542,6 +588,12 @@ impl<'a> Lexer<'a> {
             lexeme,
             span: SourceSpan::new(self.start as i64, self.cursor() as i64, self.line as i64),
         }
+    }
+
+    /// Marks the lexer as containing errors and adds the message to the container.
+    fn error(&mut self, msg: CompilerMessage) {
+        self.hasErrors = true;
+        self.messages.add(msg);
     }
 
     // region Helper functions
@@ -701,7 +753,7 @@ impl<'a> Lexer<'a> {
     // endregion
 }
 
-pub fn tokenize(src: &str) -> Vec<Token>  {
+pub fn tokenize(src: &str) -> LexerResult {
     let mut lexer = Lexer::new(src);
     let mut tokens: Vec<Token> = vec![];
 
@@ -709,11 +761,15 @@ pub fn tokenize(src: &str) -> Vec<Token>  {
         tokens.push(lexer.next_token());
     }
 
-    tokens
+    LexerResult {
+        tokens,
+        messages: lexer.messages,
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::judith::compiler_messages::MessageCode;
     use super::*;
 
     #[test]
@@ -767,8 +823,8 @@ mod tests {
             println!("Testing '{}'.", input);
 
             let res = tokenize(input);
-            assert_eq!(res.len(), 2); // Should contain [keyword, EOF].
-            assert_eq!(res[0].kind(), expected);
+            assert_eq!(res.tokens.len(), 2); // Should contain [keyword, EOF].
+            assert_eq!(res.tokens[0].kind(), expected);
         }
     }
 
@@ -778,35 +834,35 @@ mod tests {
 
         println!("Testing '+'");
         let res = tokenize("+");
-        assert_eq!(res.len(), 2);
-        assert_eq!(res[0].kind(), TokenKind::Plus);
+        assert_eq!(res.tokens.len(), 2);
+        assert_eq!(res.tokens[0].kind(), TokenKind::Plus);
 
         println!("Testing '- -'");
         let res = tokenize("- -");
-        println!("{:?}", res[0]);
-        println!("{:?}", res[1]);
-        assert_eq!(res.len(), 3);
-        assert_eq!(res[0].kind(), TokenKind::Minus);
-        assert_eq!(res[1].kind(), TokenKind::Minus);
+        println!("{:?}", res.tokens[0]);
+        println!("{:?}", res.tokens[1]);
+        assert_eq!(res.tokens.len(), 3);
+        assert_eq!(res.tokens[0].kind(), TokenKind::Minus);
+        assert_eq!(res.tokens[1].kind(), TokenKind::Minus);
 
         println!("Testing '--'");
         let res = tokenize("--");
-        assert_eq!(res.len(), 1);
-        assert_eq!(res[0].kind(), TokenKind::EOF);
-        assert_eq!(res[0].base().leading_trivia.len(), 1);
-        assert_eq!(res[0].base().leading_trivia[0].kind, TriviaKind::SingleLineComment);
+        assert_eq!(res.tokens.len(), 1);
+        assert_eq!(res.tokens[0].kind(), TokenKind::EOF);
+        assert_eq!(res.tokens[0].base().leading_trivia.len(), 1);
+        assert_eq!(res.tokens[0].base().leading_trivia[0].kind, TriviaKind::SingleLineComment);
 
         println!("Testing '= >'");
         let res = tokenize("= >");
-        assert_eq!(res.len(), 3);
-        assert_eq!(res[0].kind(), TokenKind::Equal);
-        assert_eq!(res[1].kind(), TokenKind::Greater);
+        assert_eq!(res.tokens.len(), 3);
+        assert_eq!(res.tokens[0].kind(), TokenKind::Equal);
+        assert_eq!(res.tokens[1].kind(), TokenKind::Greater);
 
         println!("Testing '=>'");
         let res = tokenize("=>");
-        println!("{:?}", res[0].kind());
-        assert_eq!(res.len(), 2);
-        assert_eq!(res[0].kind(), TokenKind::EqualArrow);
+        println!("{:?}", res.tokens[0].kind());
+        assert_eq!(res.tokens.len(), 2);
+        assert_eq!(res.tokens[0].kind(), TokenKind::EqualArrow);
     }
 
     #[test]
@@ -847,37 +903,84 @@ mod tests {
             println!("Testing '{}'.", input);
 
             let res = tokenize(input);
-            assert_eq!(res.len(), 2); // Should contain [keyword, EOF].
-            assert_eq!(res[0].kind(), TokenKind::Number);
-            assert_eq!(res[0].base().lexeme, expected);
+            assert_eq!(res.tokens.len(), 2); // Should contain [keyword, EOF].
+            assert_eq!(res.tokens[0].kind(), TokenKind::Number);
+            assert_eq!(res.tokens[0].base().lexeme, expected);
+            if res.messages.count() != 0 {
+                res.messages.dump_all();
+            }
+            assert_eq!(res.messages.count(), 0);
         }
     }
     #[test]
     fn test_numeric_literal_special_cases() {
-        println!("Testing '_123");
+        println!("Testing '_123'");
 
         let res = tokenize("_123");
-        assert_eq!(res.len(), 2);
-        assert_eq!(res[0].kind(), TokenKind::Identifier);
-        assert_eq!(res[0].base().lexeme, "_123");
+        assert_eq!(res.tokens.len(), 2);
+        assert_eq!(res.tokens[0].kind(), TokenKind::Identifier);
+        assert_eq!(res.tokens[0].base().lexeme, "_123");
 
-        //println!("Testing '1__2"); // TODO: when compiler messages are added.
-        //println!("Testing '1_.23"); // TODO: same.
-        //println!("Testing '0x"); // TODO: same.
-        //println!("Testing '0ou8"); // TODO: same.
-        //println!("Testing '5eu8"); // TODO: same.
-        //println!("Testing '5ee"); // TODO: same.
-        //println!("Testing '5ee5"); // TODO: same.
-        //println!("Testing '5.3.2"); // TODO: same.
+        println!("Testing '1__2'");
+        let res = tokenize("1__2");
+        assert_eq!(res.tokens.len(), 2);
+        assert_eq!(res.messages.errors.len(), 1);
+        assert_eq!(res.messages.errors[0].code, MessageCode::InvalidNumber { lexeme: "1_".to_string()});
+
+        println!("Testing '0x'");
+        let res = tokenize("0x");
+        assert_eq!(res.tokens.len(), 2);
+        assert_eq!(res.messages.errors.len(), 1);
+        assert_eq!(res.messages.errors[0].code, MessageCode::InvalidNumber { lexeme: "0x".to_string()});
+
+        println!("Testing '0ou8'");
+        let res = tokenize("0ou8");
+        assert_eq!(res.tokens.len(), 2);
+        assert_eq!(res.messages.errors.len(), 1);
+        assert_eq!(res.messages.errors[0].code, MessageCode::InvalidNumber { lexeme: "0o".to_string()});
+
+        println!("Testing '5eu8'");
+        let res = tokenize("5eu8");
+        assert_eq!(res.tokens.len(), 2);
+        assert_eq!(res.messages.errors.len(), 1);
+        assert_eq!(res.messages.errors[0].code, MessageCode::InvalidNumber { lexeme: "5e".to_string()});
+
+        println!("Testing '5ee");
+        let res = tokenize("5ee");
+        assert_eq!(res.tokens.len(), 2);
+        assert_eq!(res.messages.errors.len(), 2);
+        assert_eq!(res.messages.errors[0].code, MessageCode::InvalidNumber { lexeme: "5e".to_string()}); // this one for having two 'e'.
+        assert_eq!(res.messages.errors[1].code, MessageCode::InvalidNumber { lexeme: "5ee".to_string()}); // this one for not having anything after the 'e'.
+
+        println!("Testing '5ee5");
+        let res = tokenize("5ee5");
+        assert_eq!(res.tokens.len(), 2);
+        assert_eq!(res.messages.errors.len(), 1);
+        assert_eq!(res.messages.errors[0].code, MessageCode::InvalidNumber { lexeme: "5e".to_string()});
+
+        println!("Testing '5e3e1");
+        let res = tokenize("5e3e1");
+        assert_eq!(res.tokens.len(), 2);
+        assert_eq!(res.messages.errors.len(), 1);
+        assert_eq!(res.messages.errors[0].code, MessageCode::InvalidNumber { lexeme: "5e3".to_string()});
+
+        println!("Testing '5.3.1");
+        let res = tokenize("5.3.1");
+        assert_eq!(res.tokens.len(), 3);
+        assert_eq!(res.tokens[0].kind(), TokenKind::Number);
+        assert_eq!(res.tokens[0].base().lexeme, "5.3");
+        assert_eq!(res.tokens[1].kind(), TokenKind::Number);
+        assert_eq!(res.tokens[1].base().lexeme, ".1");
+        assert_eq!(res.messages.errors.len(), 0);
 
         println!("Testing '1.");
 
         let res = tokenize("1.");
-        assert_eq!(res.len(), 3);
-        assert_eq!(res[0].kind(), TokenKind::Number);
-        assert_eq!(res[0].base().lexeme, "1");
-        assert_eq!(res[1].kind(), TokenKind::Dot);
-        assert_eq!(res[1].base().lexeme, ".");
+        assert_eq!(res.tokens.len(), 3);
+        assert_eq!(res.tokens[0].kind(), TokenKind::Number);
+        assert_eq!(res.tokens[0].base().lexeme, "1");
+        assert_eq!(res.tokens[1].kind(), TokenKind::Dot);
+        assert_eq!(res.tokens[1].base().lexeme, ".");
     }
 
     #[test]
@@ -892,15 +995,15 @@ mod tests {
 
         for (input, leading_count, trailing_count) in cases {
             let res = tokenize(input); // should have 1 leading (space) and 2 trailing (space, newline).
-            assert_eq!(res.len(), 2); // Should contain [if, EOF].
+            assert_eq!(res.tokens.len(), 2); // Should contain [if, EOF].
 
             println!("Testing token's trivia.");
-            assert_eq!(res[0].base().leading_trivia.len(), leading_count, "Incorrect leading trivia count.");
-            assert_eq!(res[0].base().trailing_trivia.len(), trailing_count, "Incorrect trailing trivia count.");
+            assert_eq!(res.tokens[0].base().leading_trivia.len(), leading_count, "Incorrect leading trivia count.");
+            assert_eq!(res.tokens[0].base().trailing_trivia.len(), trailing_count, "Incorrect trailing trivia count.");
 
             println!("Testing EOF's trivia.");
-            assert_eq!(res[1].base().leading_trivia.len(), 0, "Incorrect EOF leading trivia count.");
-            assert_eq!(res[1].base().trailing_trivia.len(), 0, "Incorrect EOF trailing trivia count (????).");
+            assert_eq!(res.tokens[1].base().leading_trivia.len(), 0, "Incorrect EOF leading trivia count.");
+            assert_eq!(res.tokens[1].base().trailing_trivia.len(), 0, "Incorrect EOF trailing trivia count (????).");
         }
     }
 
@@ -909,38 +1012,38 @@ mod tests {
         println!("Testing first comment.");
         let res = tokenize("-- comment until next line\n`backticks`");
 
-        assert_eq!(res[0].base().leading_trivia.len(), 2);
-        assert_eq!(res[0].base().leading_trivia[0].kind, TriviaKind::SingleLineComment);
-        assert_eq!(res[0].base().leading_trivia[0].lexeme, "-- comment until next line");
-        assert_eq!(res[0].base().leading_trivia[1].kind, TriviaKind::LineBreak);
+        assert_eq!(res.tokens[0].base().leading_trivia.len(), 2);
+        assert_eq!(res.tokens[0].base().leading_trivia[0].kind, TriviaKind::SingleLineComment);
+        assert_eq!(res.tokens[0].base().leading_trivia[0].lexeme, "-- comment until next line");
+        assert_eq!(res.tokens[0].base().leading_trivia[1].kind, TriviaKind::LineBreak);
         println!("Testing second comment.");
         let res = tokenize("--! com -- --! com2 -- -- com\n--com do\nelse");
 
-        assert_eq!(res[0].base().leading_trivia.len(), 8);
-        assert_eq!(res[0].kind(), TokenKind::KwElse);
+        assert_eq!(res.tokens[0].base().leading_trivia.len(), 8);
+        assert_eq!(res.tokens[0].kind(), TokenKind::KwElse);
 
-        assert_eq!(res[0].base().leading_trivia[0].kind, TriviaKind::MultiLineComment);
-        assert_eq!(res[0].base().leading_trivia[0].lexeme, "--! com --");
+        assert_eq!(res.tokens[0].base().leading_trivia[0].kind, TriviaKind::MultiLineComment);
+        assert_eq!(res.tokens[0].base().leading_trivia[0].lexeme, "--! com --");
 
-        assert_eq!(res[0].base().leading_trivia[1].kind, TriviaKind::Whitespace);
-        assert_eq!(res[0].base().leading_trivia[1].lexeme, " ");
+        assert_eq!(res.tokens[0].base().leading_trivia[1].kind, TriviaKind::Whitespace);
+        assert_eq!(res.tokens[0].base().leading_trivia[1].lexeme, " ");
 
-        assert_eq!(res[0].base().leading_trivia[2].kind, TriviaKind::MultiLineComment);
-        assert_eq!(res[0].base().leading_trivia[2].lexeme, "--! com2 --");
+        assert_eq!(res.tokens[0].base().leading_trivia[2].kind, TriviaKind::MultiLineComment);
+        assert_eq!(res.tokens[0].base().leading_trivia[2].lexeme, "--! com2 --");
 
-        assert_eq!(res[0].base().leading_trivia[3].kind, TriviaKind::Whitespace);
-        assert_eq!(res[0].base().leading_trivia[3].lexeme, " ");
+        assert_eq!(res.tokens[0].base().leading_trivia[3].kind, TriviaKind::Whitespace);
+        assert_eq!(res.tokens[0].base().leading_trivia[3].lexeme, " ");
 
-        assert_eq!(res[0].base().leading_trivia[4].kind, TriviaKind::SingleLineComment);
-        assert_eq!(res[0].base().leading_trivia[4].lexeme, "-- com");
+        assert_eq!(res.tokens[0].base().leading_trivia[4].kind, TriviaKind::SingleLineComment);
+        assert_eq!(res.tokens[0].base().leading_trivia[4].lexeme, "-- com");
 
-        assert_eq!(res[0].base().leading_trivia[5].kind, TriviaKind::LineBreak);
-        assert_eq!(res[0].base().leading_trivia[5].lexeme, "\n");
+        assert_eq!(res.tokens[0].base().leading_trivia[5].kind, TriviaKind::LineBreak);
+        assert_eq!(res.tokens[0].base().leading_trivia[5].lexeme, "\n");
 
-        assert_eq!(res[0].base().leading_trivia[6].kind, TriviaKind::SingleLineComment);
-        assert_eq!(res[0].base().leading_trivia[6].lexeme, "--com do");
+        assert_eq!(res.tokens[0].base().leading_trivia[6].kind, TriviaKind::SingleLineComment);
+        assert_eq!(res.tokens[0].base().leading_trivia[6].lexeme, "--com do");
 
-        assert_eq!(res[0].base().leading_trivia[7].kind, TriviaKind::LineBreak);
-        assert_eq!(res[0].base().leading_trivia[7].lexeme, "\n");
+        assert_eq!(res.tokens[0].base().leading_trivia[7].kind, TriviaKind::LineBreak);
+        assert_eq!(res.tokens[0].base().leading_trivia[7].lexeme, "\n");
     }
 }

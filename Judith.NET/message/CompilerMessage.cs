@@ -84,7 +84,7 @@ public class CompilerMessage {
             throw new InvalidUnionException();
         }
 
-        return $"[{Origin} / {Kind}] {Code,4} - {Message} \n  - at {location}";
+        return $"[{Origin} / {Kind}] {Code,4} - {Message} \n - at {location}";
     }
 
     public static class Lexer {
