@@ -1,6 +1,8 @@
+use serde::Serialize;
+
 pub mod judith;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, Serialize)]
 pub struct SourceSpan {
     pub start: i64,
     pub end: i64,

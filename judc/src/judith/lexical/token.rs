@@ -1,6 +1,8 @@
 use std::fmt::{Debug, Formatter};
+use serde::Serialize;
 use crate::SourceSpan;
 
+#[derive(Clone, Serialize)]
 pub struct RegularToken {
     pub kind: TokenKind,
     pub lexeme: String,
@@ -11,6 +13,7 @@ pub struct RegularToken {
     pub trailing_trivia: Vec<Trivia>,
 }
 
+#[derive(Clone, Serialize)]
 pub struct StringToken {
     pub base: RegularToken,
     pub string_kind: StringLiteralKind,
@@ -19,13 +22,13 @@ pub struct StringToken {
     pub column: i32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize)]
 pub enum StringLiteralKind {
     Regular,
     Raw,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize)]
 pub enum Token {
     Regular(RegularToken),
     String(StringToken),
@@ -47,13 +50,14 @@ impl Token {
     }
 }
 
+#[derive(Debug, Clone, Serialize)]
 pub struct Trivia {
     pub kind: TriviaKind,
     pub lexeme: String,
     pub span: SourceSpan,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Serialize)]
 pub enum TokenKind {
     // Error tokens
     Invalid = 0,
@@ -234,7 +238,7 @@ impl TokenKind {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum TriviaKind {
     SingleLineComment,
     MultiLineComment,

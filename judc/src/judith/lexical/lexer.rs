@@ -3,7 +3,7 @@ use std::iter::{Enumerate, Peekable};
 use std::str::Chars;
 use once_cell::sync::Lazy;
 use crate::judith::compiler_messages;
-use crate::judith::compiler_messages::{CompilerMessage, MessageContainer, MessageOrigin};
+use crate::judith::compiler_messages::{CompilerMessage, MessageContainer};
 use crate::judith::lexical::token::{RegularToken, StringLiteralKind, StringToken, Token, TokenKind, Trivia, TriviaKind};
 use crate::SourceSpan;
 
@@ -68,7 +68,7 @@ pub struct Lexer<'a> {
     start: usize,
     line: usize,
     column: usize,
-    hasErrors: bool,
+    has_errors: bool,
     messages: MessageContainer,
 }
 
@@ -85,7 +85,7 @@ impl<'a> Lexer<'a> {
             start: 0,
             line: FIRST_LINE,
             column: FIRST_COLUMN,
-            hasErrors: false,
+            has_errors: false,
             messages: MessageContainer::new(),
         }
     }
@@ -592,7 +592,7 @@ impl<'a> Lexer<'a> {
 
     /// Marks the lexer as containing errors and adds the message to the container.
     fn error(&mut self, msg: CompilerMessage) {
-        self.hasErrors = true;
+        self.has_errors = true;
         self.messages.add(msg);
     }
 
@@ -601,11 +601,10 @@ impl<'a> Lexer<'a> {
     fn move_chars_forwards (&mut self) -> Option<char> {
         if let Some((_, char)) = self.chars.next() {
             self.column += 1;
-
-            return Some(char);
+            Some(char)
         }
         else {
-            return None;
+            None
         }
     }
 
@@ -696,7 +695,7 @@ impl<'a> Lexer<'a> {
     /// Creates a new string with contents of the source string between the start (inclusive) and
     /// end (exclusive) given.
     fn extract_lexeme (&self, start: usize, end: usize) -> String {
-        return self.src[start..end].to_string();
+        self.src[start..end].to_string()
     }
     // endregion
 

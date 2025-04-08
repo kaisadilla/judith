@@ -1,33 +1,37 @@
+use serde::Serialize;
 use crate::SourceSpan;
 use strum_macros::{EnumDiscriminants, EnumString, AsRefStr};
+use crate::judith::lexical::token::Token;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub enum MessageKind {
     Information,
     Warning,
     Error,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub enum MessageOrigin {
     Lexer,
     Parser,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub enum MessageSource {
     Span(SourceSpan),
+    Token(Token),
 }
 
 impl MessageSource {
     fn get_line(&self) -> i64 {
         match self {
-            MessageSource::Span(span) => span.line
+            MessageSource::Span(span) => span.line,
+            MessageSource::Token(tok) => tok.base().line,
         }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct CompilerMessage {
     pub kind: MessageKind,
     pub origin: MessageOrigin,
@@ -51,6 +55,7 @@ impl CompilerMessage {
     pub fn get_elaborate_message (&self, src: Option<&str>) -> String {
         let location = match &self.source {
             MessageSource::Span(span) => format!("line: {}", span.line),
+            MessageSource::Token(tok) => format!("line: {}", tok.base().line), // TODO: More complex.
         };
 
         format!(
@@ -64,7 +69,7 @@ impl CompilerMessage {
     }
 }
 
-#[derive(Debug, PartialEq, EnumDiscriminants, EnumString, AsRefStr)]
+#[derive(Debug, PartialEq, EnumDiscriminants, EnumString, AsRefStr, Serialize)]
 #[strum_discriminants(derive(EnumString, AsRefStr))]
 #[repr(i32)]
 pub enum MessageCode {
@@ -72,6 +77,11 @@ pub enum MessageCode {
     UnexpectedCharacter{ character: char } = 1_000,
     InvalidNumber{ lexeme: String },
     UnterminatedString,
+
+    // 2xxx - Parsing errors
+    UnexpectedToken = 2_000,
+    RightParenExpected,
+    ExpressionExpected,
 }
 
 impl MessageCode {
@@ -80,6 +90,7 @@ impl MessageCode {
     }
 }
 
+#[derive(Serialize)]
 pub struct MessageContainer {
     pub infos: Vec<CompilerMessage>,
     pub warnings: Vec<CompilerMessage>,
@@ -125,6 +136,8 @@ impl MessageContainer {
     }
 }
 
+pub struct Parser;
+
 pub mod Lexer {
     use crate::judith::compiler_messages::{CompilerMessage, MessageCode, MessageSource};
     use crate::judith::compiler_messages::MessageKind::*;
@@ -158,6 +171,28 @@ pub mod Lexer {
             code: MessageCode::UnterminatedString,
             message: String::from("Unterminated string."),
             source: MessageSource::Span(span),
+        }
+    }
+}
+
+impl Parser {
+    pub fn right_paren_expected(token: Token) -> CompilerMessage {
+        CompilerMessage {
+            kind: MessageKind::Error,
+            origin: MessageOrigin::Parser,
+            code: MessageCode::RightParenExpected,
+            message: format!("Expected ')', found '{:?}'", token.kind()),
+            source: MessageSource::Token(token),
+        }
+    }
+
+    pub fn expression_expected(token: Token) -> CompilerMessage {
+        CompilerMessage {
+            kind: MessageKind::Error,
+            origin: MessageOrigin::Parser,
+            code: MessageCode::ExpressionExpected,
+            message: format!("Expected expression, found '{:?}'", token.kind()),
+            source: MessageSource::Token(token),
         }
     }
 }
