@@ -11,8 +11,10 @@ impl Serialize for Expr {
             Expr::Assignment(expr) => custom_serial(serializer, "AssignmentExpr", expr.as_ref()),
             Expr::Binary(expr) => custom_serial(serializer, "BinaryExpr", expr.as_ref()),
             Expr::Group(expr) => custom_serial(serializer, "GroupExpr", expr.as_ref()),
+            Expr::Access(expr) => custom_serial(serializer, "AccessExpr", expr.as_ref()),
             Expr::Identifier(expr) => custom_serial(serializer, "IdentifierExpr", expr.as_ref()),
             Expr::Literal(expr) => custom_serial(serializer, "LiteralExpr", expr.as_ref()),
+            Expr::Error(expr) => custom_serial(serializer, "ErrorExpr", expr),
         }
     }
 }

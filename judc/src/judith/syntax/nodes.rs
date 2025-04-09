@@ -6,6 +6,7 @@ use crate::SourceSpan;
 #[derive(Debug, Serialize)]
 pub enum SyntaxNode {
     Expr(Expr),
+    Error(ErrorNode),
 }
 
 // region Expression
@@ -14,8 +15,24 @@ pub enum Expr {
     Assignment(Box<AssignmentExpr>),
     Binary(Box<BinaryExpr>),
     Group(Box<GroupExpr>),
+    Access(Box<AccessExpr>),
     Identifier(Box<IdentifierExpr>),
     Literal(Box<LiteralExpr>),
+    Error(ErrorNode),
+}
+
+impl Expr {
+    pub fn span (&self) -> &Option<SourceSpan> {
+        match self {
+            Expr::Assignment(expr) => &expr.span,
+            Expr::Binary(expr) => &expr.span,
+            Expr::Group(expr) => &expr.span,
+            Expr::Access(expr) => &expr.span,
+            Expr::Identifier(expr) => &expr.span,
+            Expr::Literal(expr) => &expr.span,
+            Expr::Error(expr) => &expr.span,
+        }
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -43,6 +60,14 @@ pub struct GroupExpr {
 }
 
 #[derive(Debug, Serialize)]
+pub struct AccessExpr {
+    pub receiver: Option<Expr>,
+    pub operator: Operator,
+    pub member: SimpleIdentifier,
+    pub span: Option<SourceSpan>,
+}
+
+#[derive(Debug, Serialize)]
 pub struct IdentifierExpr {
     pub identifier: Identifier,
     pub span: Option<SourceSpan>,
@@ -51,6 +76,11 @@ pub struct IdentifierExpr {
 #[derive(Debug, Serialize)]
 pub struct LiteralExpr {
     pub literal: Literal,
+    pub span: Option<SourceSpan>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ErrorNode {
     pub span: Option<SourceSpan>,
 }
 // endregion Expressions

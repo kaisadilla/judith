@@ -19,6 +19,28 @@ impl SyntaxFactory {
         }
     }
 
+    pub fn access_expr (receiver: Option<Expr>, op: Operator, member: SimpleIdentifier) -> AccessExpr {
+        let start: i64;
+        let end = member.span.unwrap().end;
+        let line: i64;
+
+        if let Some(expr) = &receiver {
+            start = expr.span().unwrap().start;
+            line = expr.span().unwrap().line;
+        }
+        else {
+            start = op.span.unwrap().start;
+            line = op.span.unwrap().line;
+        }
+
+        AccessExpr {
+            receiver,
+            operator: op,
+            member,
+            span: Some(SourceSpan { start, end, line }),
+        }
+    }
+
     pub fn identifier_expr (id: Identifier) -> IdentifierExpr {
         let span = id.span().clone();
 
@@ -34,6 +56,12 @@ impl SyntaxFactory {
         LiteralExpr {
             literal,
             span,
+        }
+    }
+
+    pub fn error_node() -> ErrorNode {
+        ErrorNode {
+            span: Some(SourceSpan { start: -1, end: -1, line: -1 }), // TODO
         }
     }
     // endregion Expressions

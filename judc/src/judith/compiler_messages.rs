@@ -80,8 +80,33 @@ pub enum MessageCode {
 
     // 2xxx - Parsing errors
     UnexpectedToken = 2_000,
+    IdentifierExpected,
+    TypeAnnotationExpected,
+    TypeExpected,
+    LeftParenExpected,
     RightParenExpected,
+    RightCurlyBracketExpected,
+    RightSquareBracketExpected,
     ExpressionExpected,
+    StatementExpected,
+    BlockOpeningKeywordExpected,
+    BodyExpected,
+    ArrowExpected,
+    ElsifBodyExpected,
+    InExpected,
+    DoExpected,
+    EndExpected,
+    ParameterExpected,
+    ArgumentExpected,
+    HidableItemExpected,
+    LocalDeclaratorExpected,
+    LocalDeclaratorListExpected,
+    AssignmentExpressionExpected,
+    InvalidTopLevelStatement,
+    InvalidIntegerLiteral,
+    InvalidFloatLiteral,
+    ParameterTypeMustBeSpecified,
+    FieldMustBeInitialized,
 }
 
 impl MessageCode {
@@ -176,6 +201,16 @@ pub mod Lexer {
 }
 
 impl Parser {
+    pub fn identifier_expected (token: Token) -> CompilerMessage {
+        CompilerMessage {
+            kind: MessageKind::Error,
+            origin: MessageOrigin::Parser,
+            code: MessageCode::IdentifierExpected,
+            message: format!("Expected identifier, found '{:?}", token.kind()),
+            source: MessageSource::Token(token),
+        }
+    }
+
     pub fn right_paren_expected(token: Token) -> CompilerMessage {
         CompilerMessage {
             kind: MessageKind::Error,

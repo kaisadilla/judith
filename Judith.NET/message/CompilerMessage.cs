@@ -112,6 +112,16 @@ public class CompilerMessage {
     }
 
     public static class Parser {
+        public static CompilerMessage UnexpectedToken (Token token) {
+            return new(
+                MessageKind.Error,
+                MessageOrigin.Parser,
+                (int)MessageCode.UnexpectedToken,
+                $"Unexpected Token: '{token.Kind}'.",
+                new(token)
+            );
+        }
+
         public static CompilerMessage IdentifierExpected (Token token) {
             return new(
                 MessageKind.Error,
@@ -138,16 +148,6 @@ public class CompilerMessage {
                 MessageOrigin.Parser,
                 (int)MessageCode.TypeAnnotationExpected,
                 $"Expected type annotation, found '{token.Kind}'.",
-                new(token)
-            );
-        }
-
-        public static CompilerMessage UnexpectedToken (Token token) {
-            return new(
-                MessageKind.Error,
-                MessageOrigin.Parser,
-                (int)MessageCode.UnexpectedToken,
-                $"Unexpected Token: '{token.Kind}'.",
                 new(token)
             );
         }

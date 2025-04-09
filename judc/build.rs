@@ -2,7 +2,7 @@ use std::{env, fs};
 use std::path::Path;
 
 fn main() {
-    let out_dir = env::var("OUT_DIR").unwrap();
+    //let out_dir = env::var("OUT_DIR").unwrap();
 
     let profile = env::var("PROFILE").unwrap();
     let target_dir = Path::new("target").join(profile).join("examples").join("resources");
