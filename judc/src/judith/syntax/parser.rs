@@ -5,6 +5,7 @@ use crate::judith::compiler_messages;
 use crate::judith::compiler_messages::{CompilerMessage, MessageContainer};
 use crate::judith::lexical::token::{Token, TokenKind};
 use crate::judith::syntax::nodes::*;
+use crate::judith::syntax::syntax_factory::SyntaxFactory;
 
 pub struct Parser<'a> {
     tokens: &'a Vec<Token>,
@@ -134,7 +135,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn try_consume_expr(&mut self) -> Option<Expr> {
+    pub fn try_consume_expr (&mut self) -> Option<Expr> {
         if let Some(expr) = self.try_consume_primary() {
             Some(expr)
         }
@@ -143,9 +144,12 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn try_consume_primary(&mut self) -> Option<Expr> {
+    pub fn try_consume_primary (&mut self) -> Option<Expr> {
         if let Some(group_expr) = self.try_consume_group_expr() {
             Some(group_expr)
+        }
+        else if let Some(id_expr) = self.try_consume_identifier_expr() {
+            Some(id_expr)
         }
         else if let Some(literal_expr) = self.try_consume_literal_expr() {
             Some(literal_expr)
@@ -155,7 +159,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn try_consume_group_expr(&mut self) -> Option<Expr> {
+    pub fn try_consume_group_expr (&mut self) -> Option<Expr> {
         let left_paren = self.try_consume(TokenKind::LeftParen)?;
 
         let tok = self.peek().unwrap().clone(); // TODO: Do not use unwrap.
@@ -181,7 +185,15 @@ impl<'a> Parser<'a> {
         ))
     }
 
-    pub fn try_consume_literal_expr(&mut self) -> Option<Expr> {
+    pub fn try_consume_identifier_expr (&mut self) -> Option<Expr> {
+        let id = self.try_consume_simple_identifier()?;
+
+        Some(Expr::Identifier(
+            Box::from(SyntaxFactory::identifier_expr(Identifier::Simple(id)))
+        ))
+    }
+
+    pub fn try_consume_literal_expr (&mut self) -> Option<Expr> {
         if let Some(literal) = self.try_consume_literal() {
             Some(Expr::Literal(Box::from(SyntaxFactory::literal_expr(literal))))
         }
@@ -190,8 +202,23 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn try_consume_literal(&mut self) -> Option<Literal> {
-        if let Some(tok) = self.try_consume(TokenKind::Number) {
+    pub fn try_consume_simple_identifier (&mut self) -> Option<SimpleIdentifier> {
+        let id_tok = self.try_consume(TokenKind::Identifier)?;
+
+        Some(SyntaxFactory::simple_identifier(id_tok))
+    }
+
+    pub fn try_consume_literal (&mut self) -> Option<Literal> {
+        if let Some(tok) = self.try_consume(TokenKind::KwTrue) {
+            Some(SyntaxFactory::literal(tok.clone()))
+        }
+        else if let Some(tok) = self.try_consume(TokenKind::KwFalse) {
+            Some(SyntaxFactory::literal(tok.clone()))
+        }
+        else if let Some(tok) = self.try_consume(TokenKind::Number) {
+            Some(SyntaxFactory::literal(tok.clone()))
+        }
+        else if let Some(tok) = self.try_consume(TokenKind::String) {
             Some(SyntaxFactory::literal(tok.clone()))
         }
         else {
@@ -201,7 +228,7 @@ impl<'a> Parser<'a> {
     // endregion
 
     /// Marks the lexer as containing errors and adds the message to the container.
-    fn error(&mut self, msg: CompilerMessage) {
+    fn error (&mut self, msg: CompilerMessage) {
         self.has_errors = true;
         self.messages.add(msg);
     }

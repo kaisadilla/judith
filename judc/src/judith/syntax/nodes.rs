@@ -2,16 +2,19 @@ use serde::Serialize;
 use crate::judith::lexical::token::Token;
 use crate::SourceSpan;
 
+// region Nodes
 #[derive(Debug, Serialize)]
 pub enum SyntaxNode {
     Expr(Expr),
 }
 
+// region Expression
 #[derive(Debug)]
 pub enum Expr {
     Assignment(Box<AssignmentExpr>),
     Binary(Box<BinaryExpr>),
     Group(Box<GroupExpr>),
+    Identifier(Box<IdentifierExpr>),
     Literal(Box<LiteralExpr>),
 }
 
@@ -40,57 +43,98 @@ pub struct GroupExpr {
 }
 
 #[derive(Debug, Serialize)]
+pub struct IdentifierExpr {
+    pub identifier: Identifier,
+    pub span: Option<SourceSpan>,
+}
+
+#[derive(Debug, Serialize)]
 pub struct LiteralExpr {
     pub literal: Literal,
+    pub span: Option<SourceSpan>,
+}
+// endregion Expressions
+
+// region Fragments
+#[derive(Debug, Serialize)]
+pub enum Identifier {
+    Simple(SimpleIdentifier),
+    Qualified(Box<QualifiedIdentifier>),
+}
+
+impl Identifier {
+    pub fn is_meta_name (&self) -> bool {
+        match self {
+            Identifier::Simple(id) => id.is_meta_name,
+            Identifier::Qualified(id) => id.is_meta_name,
+        }
+    }
+
+    pub fn span (&self) -> &Option<SourceSpan> {
+        match self {
+            Identifier::Simple(id) => &id.span,
+            Identifier::Qualified(id) => &id.span,
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct SimpleIdentifier {
+    pub is_meta_name: bool,
+    pub name: String,
+    pub is_escaped: bool,
+    pub raw_token: Option<Token>,
+    pub span: Option<SourceSpan>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct QualifiedIdentifier {
+    pub is_meta_name: bool,
+    pub qualifier: Identifier,
+    pub operator: Operator,
+    pub name: SimpleIdentifier,
     pub span: Option<SourceSpan>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct Literal {
     pub source: String,
-    pub rawToken: Option<Token>,
+    pub raw_token: Option<Token>,
     pub span: Option<SourceSpan>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct Operator {
-
+    pub kind: OperatorKind,
+    pub raw_token: Option<Token>,
+    pub span: Option<SourceSpan>,
 }
+// endregion Fragments
 
-pub struct SyntaxFactory;
+// endregion Nodes
 
-impl SyntaxFactory {
-    pub fn group_expr (left_paren: Token, expr: Expr, right_paren: Token) -> GroupExpr {
-        let start = left_paren.base().start;
-        let end = right_paren.base().end;
-        let line = left_paren.base().line;
-
-        GroupExpr {
-            expr,
-            left_paren_token: Some(left_paren),
-            right_paren_token: Some(right_paren),
-            span: Some(SourceSpan { start, end, line }),
-        }
-    }
-
-    pub fn literal_expr (literal: Literal) -> LiteralExpr {
-        let span = literal.span.clone();
-
-        LiteralExpr {
-            literal,
-            span,
-        }
-    }
-
-    pub fn literal (tok: Token) -> Literal {
-        let start = tok.base().start;
-        let end = tok.base().end;
-        let line = tok.base().line;
-
-        Literal {
-            source: tok.base().lexeme.clone(),
-            rawToken: Some(tok),
-            span: Some(SourceSpan { start, end, line }),
-        }
-    }
+// region Enums
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub enum OperatorKind {
+    Invalid,
+    Add, // +
+    Subtract, // -
+    Multiply, // *
+    Divide, // /
+    BitwiseNot, // ~
+    Assignment, // =
+    Equals, // ==
+    NotEquals, // !=
+    Like, // ~=
+    ReferenceEquals, // ===
+    ReferenceNotEquals, // !==
+    LessThan, // <
+    LessThanOrEqualsTo, // !==
+    GreaterThan, // >
+    GreaterThanOrEqualsTo, // >=
+    LogicalAnd, // and
+    LogicalOr, // or
+    MemberAccess, // .
+    ScopeResolution, // ::
 }
+// endregion
