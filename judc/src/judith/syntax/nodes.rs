@@ -16,6 +16,7 @@ pub enum Expr {
     Binary(Box<BinaryExpr>),
     Group(Box<GroupExpr>),
     Access(Box<AccessExpr>),
+    Call(Box<CallExpr>),
     Identifier(Box<IdentifierExpr>),
     Literal(Box<LiteralExpr>),
     Error(ErrorNode),
@@ -28,6 +29,7 @@ impl Expr {
             Expr::Binary(expr) => &expr.span,
             Expr::Group(expr) => &expr.span,
             Expr::Access(expr) => &expr.span,
+            Expr::Call(expr) => &expr.span,
             Expr::Identifier(expr) => &expr.span,
             Expr::Literal(expr) => &expr.span,
             Expr::Error(expr) => &expr.span,
@@ -64,6 +66,13 @@ pub struct AccessExpr {
     pub receiver: Option<Expr>,
     pub operator: Operator,
     pub member: SimpleIdentifier,
+    pub span: Option<SourceSpan>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CallExpr {
+    pub callee: Expr,
+    pub arguments: ArgumentList,
     pub span: Option<SourceSpan>,
 }
 
@@ -129,14 +138,29 @@ pub struct QualifiedIdentifier {
 #[derive(Debug, Serialize)]
 pub struct Literal {
     pub source: String,
-    pub raw_token: Option<Token>,
     pub span: Option<SourceSpan>,
+    pub raw_token: Option<Token>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct Operator {
     pub kind: OperatorKind,
+    pub span: Option<SourceSpan>,
     pub raw_token: Option<Token>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ArgumentList {
+    pub arguments: Vec<Argument>,
+    pub span: Option<SourceSpan>,
+    pub left_paren_token: Option<Token>,
+    pub right_paren_token: Option<Token>,
+    pub comma_tokens: Option<Vec<Token>>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct Argument {
+    pub expr: Expr,
     pub span: Option<SourceSpan>,
 }
 // endregion Fragments

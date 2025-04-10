@@ -7,18 +7,18 @@ using System.Threading.Tasks;
 namespace Judith.NET.ir.syntax;
 
 public class IRFunction : IRNode {
-    public string Name { get; private init; }
-    public List<IRParameter> Parameters { get; private init; }
-    public string ReturnType { get; private init; }
-    public IRFunctionKind Kind { get; private init; }
-    public bool IsMethod { get; private init; }
+    public string Name { get; }
+    public List<IRParameter> Parameters { get; }
+    public IRTypeName ReturnType { get; }
+    public IRFunctionKind Kind { get; }
+    public bool IsMethod { get; }
 
-    public List<IRStatement> Body { get; private init; }
+    public List<IRStatement> Body { get; }
 
     public IRFunction (
         string name,
         List<IRParameter> parameters,
-        string returnType,
+        IRTypeName returnType,
         List<IRStatement> body,
         IRFunctionKind kind,
         bool isMethod

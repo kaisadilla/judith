@@ -9,6 +9,7 @@ public enum SymbolKind {
     UnresolvedPseudoType,
     ErrorPseudoType,
     PseudoType,
+    AnyType,
     PrimitiveType,
     StringType,
     CharType,

@@ -11,7 +11,7 @@ public class IRMathUnaryExpression : IRExpression {
     public IRUnaryOperation Operation { get; private set; }
 
     public IRMathUnaryExpression (
-        IRExpression expr, IRUnaryOperation operation, string type
+        IRExpression expr, IRUnaryOperation operation, IRTypeName type
     )
         : base(type)
     {

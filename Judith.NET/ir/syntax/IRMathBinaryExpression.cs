@@ -12,7 +12,7 @@ public class IRMathBinaryExpression : IRExpression {
     public IRMathOperation Operation { get; private set; }
 
     public IRMathBinaryExpression (
-        IRExpression left, IRExpression right, IRMathOperation operation, string type
+        IRExpression left, IRExpression right, IRMathOperation operation, IRTypeName type
     )
         : base(type)
     {

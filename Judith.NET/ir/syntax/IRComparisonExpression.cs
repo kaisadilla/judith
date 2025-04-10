@@ -12,12 +12,12 @@ public class IRComparisonExpression : IRExpression {
     public IRComparisonOperation Operation { get; private set; }
 
     public IRComparisonExpression (
-        IRExpression left, IRExpression right, IRComparisonOperation operation, string type
+        IRExpression left, IRExpression right, IRComparisonOperation op, IRTypeName type
     )
         : base(type)
     {
         Left = left;
         Right = right;
-        Operation = operation;
+        Operation = op;
     }
 }

@@ -20,10 +20,10 @@ namespace Judith.NET.compilation;
 /// This compiler compiles a single Judith script to JASM.
 /// </summary>
 public class JasmScriptCompiler : IJudithCompiler {
+    public MessageContainer Messages { get; private set; } = new();
+
     public string FileName { get; private set; }
     public string Source { get; private set; }
-
-    public MessageContainer Messages { get; private set; } = new();
 
     /// <summary>
     /// The tokens contained in the source code, in order. This list is null

@@ -160,7 +160,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_expr (&mut self) -> ParseAttempt<Expr> {
-        match self.parse_access_expr() {
+        match self.parse_call_expr() {
             ParseAttempt::Ok(expr) => return ParseAttempt::Ok(expr),
             ParseAttempt::Err(err) => return self.register_err_expr(err),
             _ => {},
@@ -169,7 +169,25 @@ impl<'a> Parser<'a> {
         ParseAttempt::None
     }
 
-    pub fn parse_access_expr (&mut self) -> ParseAttempt<Expr> {
+    pub fn parse_call_expr(&mut self) -> ParseAttempt<Expr> {
+        let callee = match self.parse_access_expr() {
+            ParseAttempt::Ok(expr) => expr,
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            ParseAttempt::None => return ParseAttempt::None,
+        };
+
+        let arg_list = match self.parse_argument_list() {
+            ParseAttempt::Ok(arg_list) => arg_list,
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            ParseAttempt::None => return ParseAttempt::Ok(callee),
+        };
+        
+        ParseAttempt::Ok(Expr::Call(
+            Box::from(SyntaxFactory::call_expr(callee, arg_list))
+        ))
+    }
+
+    pub fn parse_access_expr(&mut self) -> ParseAttempt<Expr> {
         // Because member access can be implicit (e.g. '.name'), we cannot discard a member access
         // just because we didn't encounter what is being accessed.
         let mut receiver = match self.parse_primary() {
@@ -210,7 +228,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn parse_primary (&mut self) -> ParseAttempt<Expr> {
+    pub fn parse_primary(&mut self) -> ParseAttempt<Expr> {
         match self.parse_group_expr() {
             ParseAttempt::Ok(expr) => return ParseAttempt::Ok(expr),
             ParseAttempt::Err(err) => return ParseAttempt::Err(err),
@@ -232,7 +250,7 @@ impl<'a> Parser<'a> {
         ParseAttempt::None
     }
 
-    pub fn parse_group_expr (&mut self) -> ParseAttempt<Expr> {
+    pub fn parse_group_expr(&mut self) -> ParseAttempt<Expr> {
         let left_paren = match self.try_consume(TokenKind::LeftParen) {
             Some(tok) => tok,
             None => return ParseAttempt::None,
@@ -261,7 +279,7 @@ impl<'a> Parser<'a> {
         ))
     }
 
-    pub fn parse_identifier_expr (&mut self) -> ParseAttempt<Expr> {
+    pub fn parse_identifier_expr(&mut self) -> ParseAttempt<Expr> {
         let id = match self.parse_qualified_identifier() {
             ParseAttempt::Ok(id) => id,
             ParseAttempt::Err(msg) => return ParseAttempt::Err(msg),
@@ -273,7 +291,7 @@ impl<'a> Parser<'a> {
         ))
     }
 
-    pub fn parse_literal_expr (&mut self) -> ParseAttempt<Expr> {
+    pub fn parse_literal_expr(&mut self) -> ParseAttempt<Expr> {
         match self.parse_literal() {
             ParseAttempt::Ok(expr) => return ParseAttempt::Ok(Expr::Literal(
                 Box::from(SyntaxFactory::literal_expr(expr))
@@ -285,7 +303,8 @@ impl<'a> Parser<'a> {
         ParseAttempt::None
     }
 
-    pub fn parse_simple_identifier (&mut self) -> ParseAttempt<SimpleIdentifier> {
+    // region Fragments
+    pub fn parse_simple_identifier(&mut self) -> ParseAttempt<SimpleIdentifier> {
         let id_tok = match self.try_consume(TokenKind::Identifier) {
             Some(id) => id,
             None => return ParseAttempt::None,
@@ -294,7 +313,7 @@ impl<'a> Parser<'a> {
         ParseAttempt::Ok(SyntaxFactory::simple_identifier(id_tok))
     }
 
-    pub fn parse_qualified_identifier (&mut self) -> ParseAttempt<Identifier> {
+    pub fn parse_qualified_identifier(&mut self) -> ParseAttempt<Identifier> {
         let simple_id = match self.parse_simple_identifier() {
             ParseAttempt::Ok(id) => id,
             ParseAttempt::Err(msg) => return ParseAttempt::Err(msg),
@@ -321,7 +340,7 @@ impl<'a> Parser<'a> {
         ParseAttempt::Ok(identifier)
     }
 
-    pub fn parse_literal (&mut self) -> ParseAttempt<Literal> {
+    pub fn parse_literal(&mut self) -> ParseAttempt<Literal> {
         if let Some(tok) = self.try_consume(TokenKind::KwTrue) {
             ParseAttempt::Ok(SyntaxFactory::literal(tok.clone()))
         }
@@ -339,7 +358,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn parse_operator (&mut self, kinds: &[TokenKind]) -> ParseAttempt<Operator> {
+    pub fn parse_operator(&mut self, kinds: &[TokenKind]) -> ParseAttempt<Operator> {
         let op_tok = self.try_consume_many(kinds);
         if op_tok.is_none() {
             return ParseAttempt::None;
@@ -347,21 +366,79 @@ impl<'a> Parser<'a> {
 
         ParseAttempt::Ok(SyntaxFactory::operator(op_tok.unwrap()))
     }
-    // endregion
+
+    pub fn parse_argument_list(&mut self) -> ParseAttempt<ArgumentList> {
+        let left_paren = match self.try_consume(TokenKind::LeftParen) {
+            Some(tok) => tok,
+            None => return ParseAttempt::None,
+        };
+
+        let mut args: Vec<Argument> = Vec::new();
+        let mut comma_tokens: Vec<Token> = Vec::new();
+        if self.check(TokenKind::RightParen) == false {
+            loop {
+                let tok = self.now();
+                let arg = match self.parse_argument() {
+                    ParseAttempt::Ok(arg) => arg,
+                    ParseAttempt::Err(msg) => return ParseAttempt::Err(msg),
+                    ParseAttempt::None => return ParseAttempt::Err(
+                        compiler_messages::Parser::argument_expected(tok)
+                    ),
+                };
+                args.push(arg);
+
+                // After the argument, there may or may not be a comma. If there isn't a comma, then
+                // no more arguments can be found.
+                if let Some(tok) = self.try_consume(TokenKind::Comma) {
+                    comma_tokens.push(tok);
+                }
+                else {
+                    break;
+                }
+
+                // Trailing commas are allowed, so we may find a comma and still find the closing
+                // parenthesis afterward.
+                if self.check(TokenKind::RightParen) {
+                    break;
+                }
+            }
+        }
+
+        let tok = self.now();
+        let right_paren = match self.try_consume(TokenKind::RightParen) {
+            Some(tok) => tok,
+            None => return ParseAttempt::Err(compiler_messages::Parser::right_paren_expected(tok))
+        };
+
+        ParseAttempt::Ok(SyntaxFactory::argument_list(left_paren, args, right_paren, comma_tokens))
+    }
+
+    pub fn parse_argument(&mut self) -> ParseAttempt<Argument> {
+        let expr = match self.parse_expr() {
+            ParseAttempt::Ok(expr) => expr,
+            ParseAttempt::Err(msg) => return ParseAttempt::Err(msg),
+            ParseAttempt::None => return ParseAttempt::None,
+        };
+
+        ParseAttempt::Ok(SyntaxFactory::argument(expr))
+    }
+    // endregion Fragments
+
+    // endregion Parse methods
 
     /// Marks the lexer as containing errors and adds the message to the container.
-    fn error (&mut self, msg: CompilerMessage) {
+    fn error(&mut self, msg: CompilerMessage) {
         self.has_errors = true;
         self.messages.add(msg);
     }
 
-    fn register_err_expr (&mut self, err: CompilerMessage) -> ParseAttempt<Expr> {
+    fn register_err_expr(&mut self, err: CompilerMessage) -> ParseAttempt<Expr> {
         self.messages.add(err);
 
         ParseAttempt::Ok(Expr::Error(SyntaxFactory::error_node()))
     }
 
-    fn register_err_node (&mut self, err: CompilerMessage) -> ParseAttempt<SyntaxNode> {
+    fn register_err_node(&mut self, err: CompilerMessage) -> ParseAttempt<SyntaxNode> {
         self.messages.add(err);
 
         ParseAttempt::Ok(SyntaxNode::Error(SyntaxFactory::error_node()))

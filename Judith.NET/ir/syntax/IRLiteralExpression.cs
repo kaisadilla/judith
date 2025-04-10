@@ -9,7 +9,7 @@ namespace Judith.NET.ir.syntax;
 public class IRLiteralExpression : IRExpression {
     public ConstantValue Value { get; private init; }
 
-    public IRLiteralExpression (ConstantValue value, string type) : base(type) {
+    public IRLiteralExpression (ConstantValue value, IRTypeName type) : base(type) {
         Value = value;
     }
 }

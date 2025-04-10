@@ -11,11 +11,13 @@ public class IRNativeHeader : IRAssemblyHeader {
     public required TypeCollection TypeRefs { get; init; }
     public required FunctionCollection FuncRefs { get; init; }
     
-
     /// <summary>
     /// Maps the name of each type to its index in the JuVM.
     /// </summary>
     public required Dictionary<string, int> TypeIndices { get; init; }
+    /// <summary>
+    /// Maps the name of each function to its index in the JuVM.
+    /// </summary>
     public required Dictionary<string, int> FunctionIndices { get; init; }
 
     private IRNativeHeader () {}
@@ -26,21 +28,22 @@ public class IRNativeHeader : IRAssemblyHeader {
 
         TypeCollection typeRefs = new() {
             Void = AddType(new IRPseudoType("Void")),
+            Any = AddType(new IRPseudoType("Any")),
 
             F64 = AddType(new IRPrimitiveType("F64")),
             I64 = AddType(new IRPrimitiveType("I64")),
 
             Bool = AddType(new IRPrimitiveType("Bool")),
-            String = AddType(new IRStringType("String")),
+            String = AddType(new IRPrimitiveType("String")),
         };
 
         FunctionCollection funcRefs = new() {
             Print = AddFunction(new IRFunction(
                 "print",
                 [
-                    new IRParameter("value", typeRefs.String.Name, IRMutability.Constant),
+                    new IRParameter("value", typeRefs.String, true),
                 ],
-                typeRefs.Void.Name,
+                typeRefs.Void,
                 [],
                 IRFunctionKind.Function,
                 false
@@ -48,9 +51,9 @@ public class IRNativeHeader : IRAssemblyHeader {
             Println = AddFunction(new IRFunction(
                 "println",
                 [
-                    new IRParameter("value", typeRefs.String.Name, IRMutability.Constant),
+                    new IRParameter("value", typeRefs.String, true),
                 ],
-                typeRefs.Void.Name,
+                typeRefs.Void,
                 [],
                 IRFunctionKind.Function,
                 false
@@ -58,7 +61,7 @@ public class IRNativeHeader : IRAssemblyHeader {
             Readln = AddFunction(new IRFunction(
                 "readln",
                 [],
-                typeRefs.String.Name,
+                typeRefs.String,
                 [],
                 IRFunctionKind.Function,
                 false
@@ -118,12 +121,13 @@ public class IRNativeHeader : IRAssemblyHeader {
 
     public class TypeCollection {
         public required IRType Void;
+        public required IRType Any;
 
         public required IRPrimitiveType F64;
         public required IRPrimitiveType I64;
 
         public required IRPrimitiveType Bool;
-        public required IRStringType String;
+        public required IRPrimitiveType String;
     }
 
     public class FunctionCollection {

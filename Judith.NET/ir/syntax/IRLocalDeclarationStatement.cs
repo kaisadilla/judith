@@ -8,16 +8,22 @@ namespace Judith.NET.ir.syntax;
 
 public class IRLocalDeclarationStatement : IRStatement {
     public string Name { get; private set; }
-    public string Type { get; private set; }
-    public IRMutability Mutability { get; private set; }
+    public IRTypeName Type { get; private set; }
+    public bool IsFinal { get; private init; }
+    public bool IsImmutable { get; private init; }
     public IRExpression? Initialization { get; private set; }
 
     public IRLocalDeclarationStatement (
-        string name, string type, IRMutability mutability, IRExpression? initialization
+        string name,
+        IRTypeName type,
+        bool isFinal,
+        bool isImmutable,
+        IRExpression? initialization
     ) {
         Name = name;
         Type = type;
-        Mutability = mutability;
+        IsFinal = isFinal;
+        IsImmutable = isImmutable;
         Initialization = initialization;
     }
 }

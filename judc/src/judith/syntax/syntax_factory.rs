@@ -41,6 +41,18 @@ impl SyntaxFactory {
         }
     }
 
+    pub fn call_expr (callee: Expr, arguments: ArgumentList) -> CallExpr {
+        let start = callee.span().unwrap().start;
+        let end = arguments.span.unwrap().end;
+        let line = callee.span().unwrap().line;
+
+        CallExpr {
+            callee,
+            arguments,
+            span: Some(SourceSpan { start, end, line }),
+        }
+    }
+
     pub fn identifier_expr (id: Identifier) -> IdentifierExpr {
         let span = id.span().clone();
 
@@ -59,11 +71,6 @@ impl SyntaxFactory {
         }
     }
 
-    pub fn error_node() -> ErrorNode {
-        ErrorNode {
-            span: Some(SourceSpan { start: -1, end: -1, line: -1 }), // TODO
-        }
-    }
     // endregion Expressions
 
     // region Fragments
@@ -153,5 +160,35 @@ impl SyntaxFactory {
             span: Some(SourceSpan { start, end, line }),
         }
     }
+
+    pub fn argument_list (
+        left_paren: Token, args: Vec<Argument>, right_paren: Token, comma_tokens: Vec<Token>
+    ) -> ArgumentList {
+        let start = left_paren.base().start;
+        let end = right_paren.base().end;
+        let line = left_paren.base().line;
+
+        ArgumentList {
+            arguments: args,
+            span: Some(SourceSpan { start, end, line }),
+            left_paren_token: Some(left_paren),
+            right_paren_token: Some(right_paren),
+            comma_tokens: Some(comma_tokens),
+        }
+    }
+
+    pub fn argument (expr: Expr) -> Argument {
+        let span = expr.span().clone();
+        Argument {
+            expr,
+            span,
+        }
+    }
     // endregion Fragments
+
+    pub fn error_node() -> ErrorNode {
+        ErrorNode {
+            span: Some(SourceSpan { start: -1, end: -1, line: -1 }), // TODO
+        }
+    }
 }

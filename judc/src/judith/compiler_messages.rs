@@ -201,33 +201,43 @@ pub mod Lexer {
 }
 
 impl Parser {
-    pub fn identifier_expected (token: Token) -> CompilerMessage {
+    pub fn identifier_expected(tok: Token) -> CompilerMessage {
         CompilerMessage {
             kind: MessageKind::Error,
             origin: MessageOrigin::Parser,
             code: MessageCode::IdentifierExpected,
-            message: format!("Expected identifier, found '{:?}", token.kind()),
-            source: MessageSource::Token(token),
+            message: format!("Expected identifier, found '{:?}'.", tok.kind()),
+            source: MessageSource::Token(tok),
         }
     }
 
-    pub fn right_paren_expected(token: Token) -> CompilerMessage {
+    pub fn right_paren_expected(tok: Token) -> CompilerMessage {
         CompilerMessage {
             kind: MessageKind::Error,
             origin: MessageOrigin::Parser,
             code: MessageCode::RightParenExpected,
-            message: format!("Expected ')', found '{:?}'", token.kind()),
-            source: MessageSource::Token(token),
+            message: format!("Expected ')', found '{:?}'.", tok.kind()),
+            source: MessageSource::Token(tok),
         }
     }
 
-    pub fn expression_expected(token: Token) -> CompilerMessage {
+    pub fn expression_expected(tok: Token) -> CompilerMessage {
         CompilerMessage {
             kind: MessageKind::Error,
             origin: MessageOrigin::Parser,
             code: MessageCode::ExpressionExpected,
-            message: format!("Expected expression, found '{:?}'", token.kind()),
-            source: MessageSource::Token(token),
+            message: format!("Expected expression, found '{:?}'.", tok.kind()),
+            source: MessageSource::Token(tok),
+        }
+    }
+
+    pub fn argument_expected(tok: Token) -> CompilerMessage {
+        CompilerMessage {
+            kind: MessageKind::Error,
+            origin: MessageOrigin::Parser,
+            code: MessageCode::ArgumentExpected,
+            message: format!("Expected argument, found '{:?}'.", tok.kind()),
+            source: MessageSource::Token(tok),
         }
     }
 }

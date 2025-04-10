@@ -4,3 +4,7 @@ lmao
 \true
 Parser::result
 a.b
+c(d)
+e.f(g)
+do_thing(arg1,)
+do_thing(arg1, arg2)

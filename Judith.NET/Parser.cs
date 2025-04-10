@@ -1213,7 +1213,7 @@ public class Parser {
 
                 arguments.Add(argument);
             }
-            while (Match(TokenKind.Comma) && Peek().Kind != TokenKind.RightParen);
+            while (Match(TokenKind.Comma) && Peek().Kind != TokenKind.RightParen); // TODO: Here it should be Check(TokenKind.RightParen) ???
         }
 
         if (TryConsume(TokenKind.RightParen, out Token? rightParenToken) == false) {

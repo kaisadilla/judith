@@ -22,7 +22,7 @@ public class IRIdentifierExpression : IRExpression {
     public IRIdentifierKind Kind { get; private set; }
 
     public IRIdentifierExpression (
-        string name, IRIdentifierKind kind, string type
+        string name, IRIdentifierKind kind, IRTypeName type
     )
         : base(type)
     {

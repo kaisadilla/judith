@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 namespace Judith.NET.ir.syntax;
 
 public abstract class IRExpression : IRNode {
-    public string Type { get; private init; }
+    public IRTypeName Type { get; private init; }
 
-    protected IRExpression (string type) {
+    protected IRExpression (IRTypeName type) {
         Type = type;
     }
 }

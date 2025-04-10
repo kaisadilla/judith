@@ -10,6 +10,7 @@ namespace Judith.NET.ir;
 
 public class IRSourcePrinter {
     private readonly IRBlock _block;
+    private readonly IRNativeHeader _native;
     private StringBuilder _buffer = new();
     private int _indentation = 0;
 
@@ -17,8 +18,9 @@ public class IRSourcePrinter {
 
     public string? Source { get; private set; }
 
-    public IRSourcePrinter (IRBlock block) {
+    public IRSourcePrinter (IRBlock block, IRNativeHeader nativeHeader) {
         _block = block;
+        _native = nativeHeader;
     }
 
     [MemberNotNull(nameof(Source))]
@@ -44,8 +46,13 @@ public class IRSourcePrinter {
             Write(" kind=constructor");
         }
 
-        if (func.ReturnType != "Void") {
-            Write($" return_type='{func.ReturnType}'");
+        if (func.IsMethod) {
+            Write(" method");
+        }
+
+        if (func.ReturnType != _native.TypeRefs.Void) {
+            Write($" return_type=");
+            WriteType(func.ReturnType);
         }
 
         Write(" {");
@@ -78,8 +85,13 @@ public class IRSourcePrinter {
     }
 
     public void PrintParameter (IRParameter param) {
-        Write($"'{param.Name}' type='{param.Type}' ");
-        WriteMutability(param.Mutability);
+        Write($"'{param.Name}' type=");
+        WriteType(param.Type);
+
+        if (param.IsFinal) {
+            Write(" final");
+        }
+
         Write(";");
     }
 
@@ -115,8 +127,15 @@ public class IRSourcePrinter {
     }
 
     public void PrintLocalDeclarationStatement (IRLocalDeclarationStatement stmt) {
-        Write($"local '{stmt.Name}' type='{stmt.Type}' ");
-        WriteMutability(stmt.Mutability);
+        Write($"local '{stmt.Name}' type=");
+        WriteType(stmt.Type);
+
+        if (stmt.IsFinal) {
+            Write(" final");
+        }
+        if (stmt.IsFinal) {
+            Write(" final");
+        }
 
         if (stmt.Initialization != null) {
             Write(" init=(");
@@ -295,10 +314,45 @@ public class IRSourcePrinter {
                 Write($"{expr.Value.AsFloat}");
                 break;
             case ConstantValueKind.Boolean:
-                Write($"{expr.Value.AsBoolean}");
+                Write($"{expr.Value.AsBoolean.ToString().ToLowerInvariant()}");
                 break;
             case ConstantValueKind.String:
                 Write($"\"{expr.Value.AsString}\"");
+                break;
+        }
+    }
+
+    private void WriteType (IRType type) {
+        switch (type) {
+            case IRPseudoType:
+            case IRPrimitiveType:
+            case IRUserType:
+                Write($"'{type.Name}'");
+                break;
+            case IRBoxType boxType:
+                Write($"'Box'(");
+                WriteType(boxType.BoxedType);
+                Write(")");
+                break;
+            case IRPointerType ptrType:
+                Write($"'Ptr'(");
+                WriteType(ptrType.PointedType);
+                Write(")");
+                break;
+            case IRGcPointerType gcPtrType:
+                Write($"'GcPtr'(");
+                WriteType(gcPtrType.PointedType);
+                Write(")");
+                break;
+            case IRUniquePointerType uniquePtrType:
+                Write($"'UniquePtr'(");
+                WriteType(uniquePtrType.PointedType);
+                Write(")");
+                break;
+            case IRSharedPointerType sharedPtrType:
+                Write($"'SharedPtr'(");
+                WriteType(sharedPtrType.PointedType);
+                Write(")");
                 break;
         }
     }
@@ -307,17 +361,6 @@ public class IRSourcePrinter {
         Write("__p_print(");
         PrintExpression(stmt.Expression);
         Write(")");
-    }
-
-    private void WriteMutability (IRMutability mutability) {
-        switch (mutability) {
-            case IRMutability.Constant:
-                Write("constant");
-                break;
-            case IRMutability.Variable:
-                Write("variable");
-                break;
-        }
     }
 
     private void WriteMathOperator (IRMathOperation op) {

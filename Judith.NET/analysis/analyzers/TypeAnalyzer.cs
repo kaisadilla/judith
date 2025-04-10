@@ -43,10 +43,34 @@ public class TypeAnalyzer : SyntaxVisitor {
             throw new("Types are not resolved.");
         }
 
-        if (boundLeft.Type != boundRight.Type) {
+        if (IsAssignable(boundRight.Type, boundLeft.Type) == false) {
             Messages.Add(CompilerMessage.Analyzers.CannotAssignType(
                 node, boundLeft.Type, boundRight.Type
             ));
         }
+    }
+
+    /// <summary>
+    /// Returns true if the type given is assignable to a receiver of the type
+    /// given.
+    /// </summary>
+    /// <param name="type">The type of the value to assign.</param>
+    /// <param name="receiver">The type of the receiver of said value.</param>
+    /// <returns></returns>
+    private bool IsAssignable (TypeSymbol type, TypeSymbol receiver) {
+        // If both are the same type, then it's always allowed.
+        if (type == receiver) return true;
+
+        // If the receiver is "Any", any type can be assigned to it.
+        if (receiver == _cmp.NativeTypes.Any) return true;
+
+        // If the type is "Any", it cannot be assigned to any receiver whose
+        // type is not "Any".
+        if (type == _cmp.NativeTypes.Any) return false;
+
+        // TODO: Check compatible types.
+
+        // If no implicit transformation exists, then it cannot be assigned.
+        return false;
     }
 }

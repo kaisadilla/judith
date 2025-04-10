@@ -54,7 +54,7 @@ public class JasmFunctionCompiler {
             int nameIndex = _block.StringTable.GetStringIndex(param.Name);
 
             // Get the type reference in the assembly for this parameter's type.
-            int typeRefIndex = _generator.GetTypeReferenceIndex(param.Type);
+            int typeRefIndex = _generator.GetTypeReferenceIndex(param.Type.Name);
 
             // Add the parameter itself to the Jasm Function's metadata.
             JasmFunction.Parameters.Add(new(nameIndex, typeRefIndex));
@@ -134,7 +134,7 @@ public class JasmFunctionCompiler {
 
         // When the expression returns a value, the value will not be used, so
         // we immediately pop it off the stack.
-        if (stmt.Expression.Type != _generator.Program.NativeHeader.TypeRefs.Void.Name) {
+        if (stmt.Expression.Type != _generator.Program.NativeHeader.TypeRefs.Void) {
             Chunk.WriteInstruction(OpCode.POP);
         }
     }
@@ -258,9 +258,7 @@ public class JasmFunctionCompiler {
         CompileExpression(expr.Left);
         CompileExpression(expr.Right);
 
-        var irType = _generator.Resolver.GetIRType(expr.Left.Type);
-
-        if (irType == NativeTypes.F64) {
+        if (expr.Left.Type == NativeTypes.F64) {
             Chunk.WriteInstruction(expr.Operation switch {
                 IRMathOperation.Add => OpCode.F_ADD,
                 IRMathOperation.Subtract => OpCode.F_SUB,
@@ -269,7 +267,7 @@ public class JasmFunctionCompiler {
                 _ => throw new InvalidIRProgramException("Invalid comparison operation."),
             });
         }
-        else if (irType == NativeTypes.I64) {
+        else if (expr.Left.Type == NativeTypes.I64) {
             Chunk.WriteInstruction(expr.Operation switch {
                 IRMathOperation.Add => OpCode.I_ADD,
                 IRMathOperation.Subtract => OpCode.I_SUB,
@@ -286,15 +284,13 @@ public class JasmFunctionCompiler {
     public void CompileMathUnaryExpression (IRMathUnaryExpression expr) {
         CompileExpression(expr.Expression);
 
-        var irType = _generator.Resolver.GetIRType(expr.Type);
-
-        if (irType == NativeTypes.F64) {
+        if (expr.Type == NativeTypes.F64) {
             Chunk.WriteInstruction(expr.Operation switch {
                 IRUnaryOperation.Negate => OpCode.F_NEG,
                 _ => throw new InvalidIRProgramException("Invalid unary operation."),
             });
         }
-        else if (irType == NativeTypes.I64) {
+        else if (expr.Type == NativeTypes.I64) {
             Chunk.WriteInstruction(expr.Operation switch {
                 IRUnaryOperation.Negate => OpCode.I_NEG,
                 _ => throw new InvalidIRProgramException("Invalid unary operation."),
@@ -313,9 +309,7 @@ public class JasmFunctionCompiler {
         CompileExpression(expr.Left);
         CompileExpression(expr.Right);
 
-        var irType = _generator.Resolver.GetIRType(expr.Left.Type);
-
-        if (irType == NativeTypes.F64) {
+        if (expr.Type == NativeTypes.F64) {
             Chunk.WriteInstruction(expr.Operation switch {
                 IRComparisonOperation.Equals => OpCode.EQ,
                 IRComparisonOperation.NotEquals => OpCode.NEQ,
@@ -326,7 +320,7 @@ public class JasmFunctionCompiler {
                 _ => throw new InvalidIRProgramException("Invalid comparison operation."),
             });
         }
-        else if (irType == NativeTypes.I64) {
+        else if (expr.Type == NativeTypes.I64) {
             Chunk.WriteInstruction(expr.Operation switch {
                 IRComparisonOperation.Equals => OpCode.EQ,
                 IRComparisonOperation.NotEquals => OpCode.NEQ,
@@ -379,15 +373,13 @@ public class JasmFunctionCompiler {
     }
 
     public void CompileLiteralExpression (IRLiteralExpression expr) {
-        var irType = _generator.Resolver.GetIRType(expr.Type);
-
-        if (irType == NativeTypes.F64) {
+        if (expr.Type == NativeTypes.F64) {
             Chunk.WriteF64Const(expr.Value.AsFloat);
         }
-        else if (irType == NativeTypes.Bool) {
+        else if (expr.Type == NativeTypes.Bool) {
             Chunk.WriteBoolConst(expr.Value.AsBoolean);
         }
-        else if (irType == NativeTypes.String) {
+        else if (expr.Type == NativeTypes.String) {
             int index = _block.StringTable.GetStringIndex(expr.Value.AsString!);
 
             Chunk.WriteUtf8StringConst(index);
@@ -402,12 +394,10 @@ public class JasmFunctionCompiler {
 
         Chunk.WriteInstruction(OpCode.PRINT);
 
-        var irType = _generator.Resolver.GetIRType(stmt.Expression.Type);
-
-        if (irType == NativeTypes.F64) {
+        if (stmt.Expression.Type == NativeTypes.F64) {
             Chunk.WriteByte((byte)JasmConstantType.Float64);
         }
-        else if (irType == NativeTypes.String) {
+        else if (stmt.Expression.Type == NativeTypes.String) {
             Chunk.WriteByte((byte)JasmConstantType.StringUtf8);
         }
         else {

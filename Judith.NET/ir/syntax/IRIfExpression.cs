@@ -15,7 +15,7 @@ public class IRIfExpression : IRExpression {
         IRExpression test,
         List<IRStatement> consequent,
         List<IRStatement>? alternate,
-        string type
+        IRTypeName type
     )
         : base(type)
     {

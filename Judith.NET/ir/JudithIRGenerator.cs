@@ -67,7 +67,10 @@ public class JudithIRGenerator {
             parameters.Add(CompileParameter(param));
         }
 
-        string returnType = boundNode.Symbol.ReturnType.FullyQualifiedName;
+        IRTypeName returnType = new(
+            IRTypeKind.Regular,
+            boundNode.Symbol.ReturnType.FullyQualifiedName
+        );
         var body = CompileFunctionBody(node.Body);
         var kind = IRFunctionKind.Function; // TODO.
         bool isMethod = false; // TODO.
@@ -83,13 +86,13 @@ public class JudithIRGenerator {
         if (boundNode.Symbol.Type == null) ThrowIncompleteNode(node);
 
         string name = boundNode.Symbol.Name;
-        string type = boundNode.Symbol.Type.Name;
-        var mutability = node.Declarator.LocalKind switch {
-            LocalKind.Variable => IRMutability.Variable,
-            _ => IRMutability.Constant,
-        };
+        IRTypeName type = new(
+            IRTypeKind.Regular,
+            boundNode.Symbol.Type.FullyQualifiedName
+        );
+        bool isFinal = node.Declarator.LocalKind == LocalKind.Constant;
 
-        IRParameter irParam = new(name, type, mutability);
+        IRParameter irParam = new(name, type, isFinal);
         LinkToSource(irParam, node);
 
         return irParam;
@@ -145,6 +148,7 @@ public class JudithIRGenerator {
     private List<IRStatement> CompileLocalDeclarationStatement (
         LocalDeclarationStatement localDeclStmt
     ) {
+        // TODO: Multiple declarations.
         if (localDeclStmt.DeclaratorList.DeclaratorKind != LocalDeclaratorKind.Regular) {
             throw new NotImplementedException("Declarator kind not yet supported.");
         }
@@ -159,17 +163,15 @@ public class JudithIRGenerator {
 
         string name = boundDecl.Symbol.Name;
         string type = boundDecl.Symbol.Type.FullyQualifiedName;
-        var mutability = localDeclStmt.DeclaratorList.Declarators[0].LocalKind switch {
-            LocalKind.Variable => IRMutability.Variable,
-            _ => IRMutability.Constant,
-        };
+        bool isFinal = localDeclStmt.DeclaratorList.Declarators[0].LocalKind == LocalKind.Constant;
+        bool isImmutable = false;
 
         IRExpression? init = null;
         if (localDeclStmt.Initializer != null) {
             init = CompileExpression(localDeclStmt.Initializer.Values[0]);
         }
 
-        IRLocalDeclarationStatement irLocalDecl = new(name, type, mutability, init);
+        IRLocalDeclarationStatement irLocalDecl = new(name, type, isFinal, isImmutable, init);
         LinkToSource(irLocalDecl, localDeclStmt);
 
         return [irLocalDecl];

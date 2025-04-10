@@ -7,6 +7,8 @@ using Judith.NET.message;
 namespace Judith.NET.analysis;
 
 public class JudithCompilation {
+    public MessageContainer Messages { get; private set; } = new();
+
     public string AssemblyName { get; private init; }
 
     public JudithProgram Program { get; private set; }
@@ -15,9 +17,9 @@ public class JudithCompilation {
     public SymbolTable RootSymbolTable { get; private set; }
     public Binder Binder { get; private set; }
 
-    public MessageContainer Messages { get; private set; } = new();
-
     public bool IsValidProgram { get; private set; } = false;
+
+    public JudithNativeHeader.TypeCollection NativeTypes => Program.NativeHeader.TypeRefs;
 
     public JudithCompilation (
         string assemblyName, List<CompilerUnit> units

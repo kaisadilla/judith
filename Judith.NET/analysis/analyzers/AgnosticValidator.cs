@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Judith.NET.analysis;
+namespace Judith.NET.analysis.analyzers;
 
 /// <summary>
 /// Validates that every use of a node is valid in its context, for rules that

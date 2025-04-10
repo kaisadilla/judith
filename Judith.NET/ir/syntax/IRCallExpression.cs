@@ -11,7 +11,7 @@ public class IRCallExpression : IRExpression {
     public List<IRArgument> Arguments { get; private set; }
 
     public IRCallExpression (
-        IRExpression callee, List<IRArgument> arguments, string type
+        IRExpression callee, List<IRArgument> arguments, IRTypeName type
     )
         : base(type)
     {

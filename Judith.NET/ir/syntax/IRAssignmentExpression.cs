@@ -11,7 +11,7 @@ public class IRAssignmentExpression : IRExpression {
     public IRExpression Right { get; private set; }
 
     public IRAssignmentExpression (
-        IRExpression left, IRExpression right, string type
+        IRExpression left, IRExpression right, IRTypeName type
     )
         : base(type)
     {
