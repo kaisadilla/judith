@@ -149,6 +149,7 @@ impl<'a> Parser<'a> {
     // endregion
 
     // region Parse methods
+    // node ::= expr
     pub fn parse_top_level_node (&mut self) -> ParseAttempt<SyntaxNode> {
         match self.parse_expr() {
             ParseAttempt::Ok(expr) => return ParseAttempt::Ok(SyntaxNode::Expr(expr)),
@@ -159,8 +160,9 @@ impl<'a> Parser<'a> {
         ParseAttempt::None
     }
 
+    // expr ::= object_init_expr
     pub fn parse_expr (&mut self) -> ParseAttempt<Expr> {
-        match self.parse_call_expr() {
+        match self.parse_object_init_expr() {
             ParseAttempt::Ok(expr) => return ParseAttempt::Ok(expr),
             ParseAttempt::Err(err) => return self.register_err_expr(err),
             _ => {},
@@ -169,6 +171,34 @@ impl<'a> Parser<'a> {
         ParseAttempt::None
     }
 
+    // object_init_expr ::= call_expr obj_initialization?
+    pub fn parse_object_init_expr(&mut self) -> ParseAttempt<Expr> {
+        // An object initialization may not have any provider (for anonymous structs, or structs whose
+        // type can be inferred). For this reason, we can't discard an object initialization even if
+        // the provider is not found.
+        let provider = match self.parse_call_expr() {
+            ParseAttempt::Ok(expr) => Some(expr),
+            ParseAttempt::Err(msg) => return ParseAttempt::Err(msg),
+            ParseAttempt::None => None,
+        };
+
+        // If there's no initializer block, then whether this parse failed or succeeded depends on
+        // whether there's a provider.
+        let obj_init = match self.parse_object_initializer() {
+            ParseAttempt::Ok(obj_init) => obj_init,
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            ParseAttempt::None => match provider {
+                Some(expr) => return ParseAttempt::Ok(expr),
+                None => return ParseAttempt::None,
+            }
+        };
+
+        ParseAttempt::Ok(Expr::ObjectInit(
+            Box::from(SyntaxFactory::object_init_expr(provider, obj_init))
+        ))
+    }
+
+    // call_expr ::= access_expr arg_list*
     pub fn parse_call_expr(&mut self) -> ParseAttempt<Expr> {
         let callee = match self.parse_access_expr() {
             ParseAttempt::Ok(expr) => expr,
@@ -187,6 +217,7 @@ impl<'a> Parser<'a> {
         ))
     }
 
+    // access_expr ::= primary_expr ( "." primary_expr )*
     pub fn parse_access_expr(&mut self) -> ParseAttempt<Expr> {
         // Because member access can be implicit (e.g. '.name'), we cannot discard a member access
         // just because we didn't encounter what is being accessed.
@@ -228,6 +259,7 @@ impl<'a> Parser<'a> {
         }
     }
 
+    // primary_expr ::= group_expr | identifier_expr | literal_expr
     pub fn parse_primary(&mut self) -> ParseAttempt<Expr> {
         match self.parse_group_expr() {
             ParseAttempt::Ok(expr) => return ParseAttempt::Ok(expr),
@@ -250,6 +282,7 @@ impl<'a> Parser<'a> {
         ParseAttempt::None
     }
 
+    // group_expr ::= "(" expr ")"
     pub fn parse_group_expr(&mut self) -> ParseAttempt<Expr> {
         let left_paren = match self.try_consume(TokenKind::LeftParen) {
             Some(tok) => tok,
@@ -279,6 +312,7 @@ impl<'a> Parser<'a> {
         ))
     }
 
+    // identifier_expr ::= qualified_identifier
     pub fn parse_identifier_expr(&mut self) -> ParseAttempt<Expr> {
         let id = match self.parse_qualified_identifier() {
             ParseAttempt::Ok(id) => id,
@@ -291,6 +325,7 @@ impl<'a> Parser<'a> {
         ))
     }
 
+    // literal_expr ::= literal
     pub fn parse_literal_expr(&mut self) -> ParseAttempt<Expr> {
         match self.parse_literal() {
             ParseAttempt::Ok(expr) => return ParseAttempt::Ok(Expr::Literal(
@@ -304,6 +339,7 @@ impl<'a> Parser<'a> {
     }
 
     // region Fragments
+    // identifier ::= IDENTIFIER
     pub fn parse_simple_identifier(&mut self) -> ParseAttempt<SimpleIdentifier> {
         let id_tok = match self.try_consume(TokenKind::Identifier) {
             Some(id) => id,
@@ -313,6 +349,7 @@ impl<'a> Parser<'a> {
         ParseAttempt::Ok(SyntaxFactory::simple_identifier(id_tok))
     }
 
+    // qualified_identifier ::= IDENTIFIER ( "::" IDENTIFIER )*
     pub fn parse_qualified_identifier(&mut self) -> ParseAttempt<Identifier> {
         let simple_id = match self.parse_simple_identifier() {
             ParseAttempt::Ok(id) => id,
@@ -340,6 +377,7 @@ impl<'a> Parser<'a> {
         ParseAttempt::Ok(identifier)
     }
 
+    // literal ::= NUMBER | STRING | CHAR | REGEX | "true" | "false" | "null" | "undefined"
     pub fn parse_literal(&mut self) -> ParseAttempt<Literal> {
         if let Some(tok) = self.try_consume(TokenKind::KwTrue) {
             ParseAttempt::Ok(SyntaxFactory::literal(tok.clone()))
@@ -358,6 +396,43 @@ impl<'a> Parser<'a> {
         }
     }
 
+    pub fn parse_equals_value_clause(
+        &mut self, allow_multiple: bool
+    ) -> ParseAttempt<EqualsValueClause> {
+        let equal_tok = match self.try_consume(TokenKind::Equal) {
+            Some(tok) => tok,
+            None => return ParseAttempt::None,
+        };
+
+        let mut expressions: Vec<Expr> = Vec::new();
+        let mut comma_tokens: Vec<Token> = Vec::new();
+        loop {
+            let tok = self.now();
+            let expr = match self.parse_expr() {
+                ParseAttempt::Ok(expr) => expr,
+                ParseAttempt::Err(msg) => return ParseAttempt::Err(msg),
+                ParseAttempt::None => return ParseAttempt::Err(
+                    compiler_messages::Parser::expression_expected(tok)
+                ),
+            };
+
+            expressions.push(expr);
+
+            if allow_multiple == false {
+                break;
+            }
+
+            if let Some(tok) = self.try_consume(TokenKind::Comma) {
+                comma_tokens.push(tok);
+            }
+            else {
+                break;
+            }
+        }
+
+        ParseAttempt::Ok(SyntaxFactory::equals_value_clause(equal_tok, expressions, comma_tokens))
+    }
+
     pub fn parse_operator(&mut self, kinds: &[TokenKind]) -> ParseAttempt<Operator> {
         let op_tok = self.try_consume_many(kinds);
         if op_tok.is_none() {
@@ -367,6 +442,7 @@ impl<'a> Parser<'a> {
         ParseAttempt::Ok(SyntaxFactory::operator(op_tok.unwrap()))
     }
 
+    // arg_list ::= "(" ( arg ( "," arg )* )? ")"
     pub fn parse_argument_list(&mut self) -> ParseAttempt<ArgumentList> {
         let left_paren = match self.try_consume(TokenKind::LeftParen) {
             Some(tok) => tok,
@@ -413,6 +489,7 @@ impl<'a> Parser<'a> {
         ParseAttempt::Ok(SyntaxFactory::argument_list(left_paren, args, right_paren, comma_tokens))
     }
 
+    // arg ::= expr
     pub fn parse_argument(&mut self) -> ParseAttempt<Argument> {
         let expr = match self.parse_expr() {
             ParseAttempt::Ok(expr) => expr,
@@ -421,6 +498,73 @@ impl<'a> Parser<'a> {
         };
 
         ParseAttempt::Ok(SyntaxFactory::argument(expr))
+    }
+
+    pub fn parse_field_init(&mut self) -> ParseAttempt<FieldInit> {
+        let identifier = match self.parse_simple_identifier() {
+            ParseAttempt::Ok(id) => id,
+            ParseAttempt::Err(msg) => return ParseAttempt::Err(msg),
+            ParseAttempt::None => return ParseAttempt::None,
+        };
+
+        let tok = self.now();
+        let initializer = match self.parse_equals_value_clause(false) {
+            ParseAttempt::Ok(evc) => evc,
+            ParseAttempt::Err(msg) => return ParseAttempt::Err(msg),
+            ParseAttempt::None => return ParseAttempt::Err(
+                compiler_messages::Parser::field_must_be_initialized(tok)
+            ),
+        };
+
+        ParseAttempt::Ok(SyntaxFactory::field_init(identifier, initializer))
+    }
+
+    pub fn parse_object_initializer(&mut self) -> ParseAttempt<ObjectInitializer> {
+        let left_bracket = match self.try_consume(TokenKind::LeftCurlyBracket) {
+            Some(tok) => tok,
+            None => return ParseAttempt::None,
+        };
+
+        let mut field_inits: Vec<FieldInit> = Vec::new();
+        let mut comma_tokens: Vec<Token> = Vec::new();
+        if self.check(TokenKind::RightCurlyBracket) == false {
+            loop {
+                let tok = self.now();
+                let init = match self.parse_field_init() {
+                    ParseAttempt::Ok(arg) => arg,
+                    ParseAttempt::Err(msg) => return ParseAttempt::Err(msg),
+                    ParseAttempt::None => return ParseAttempt::Err(
+                        compiler_messages::Parser::field_initialization_expected(tok)
+                    ),
+                };
+                field_inits.push(init);
+
+                // After the argument, there may or may not be a comma. If there isn't a comma, then
+                // no more arguments can be found.
+                if let Some(tok) = self.try_consume(TokenKind::Comma) {
+                    comma_tokens.push(tok);
+                }
+                else {
+                    break;
+                }
+
+                // Trailing commas are allowed, so we may find a comma and still find the closing
+                // parenthesis afterward.
+                if self.check(TokenKind::RightCurlyBracket) {
+                    break;
+                }
+            }
+        }
+
+        let tok = self.now();
+        let right_bracket = match self.try_consume(TokenKind::RightCurlyBracket) {
+            Some(tok) => tok,
+            None => return ParseAttempt::Err(compiler_messages::Parser::right_curly_bracket_expected(tok))
+        };
+
+        ParseAttempt::Ok(
+            SyntaxFactory::object_initializer(left_bracket, field_inits, right_bracket, comma_tokens)
+        )
     }
     // endregion Fragments
 

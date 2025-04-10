@@ -1280,7 +1280,7 @@ public class Parser {
             if (TryConsumeFieldInitialization(
                 out FieldInitialization? fieldInit
             ) == false) throw Error(
-                CompilerMessage.Parser.AssignmentExpressionExpected(Peek())
+                CompilerMessage.Parser.FieldInitializationExpected(Peek())
             );
 
             fieldInits.Add(fieldInit);

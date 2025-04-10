@@ -15,6 +15,7 @@ pub enum Expr {
     Assignment(Box<AssignmentExpr>),
     Binary(Box<BinaryExpr>),
     Group(Box<GroupExpr>),
+    ObjectInit(Box<ObjectInitExpr>),
     Access(Box<AccessExpr>),
     Call(Box<CallExpr>),
     Identifier(Box<IdentifierExpr>),
@@ -28,6 +29,7 @@ impl Expr {
             Expr::Assignment(expr) => &expr.span,
             Expr::Binary(expr) => &expr.span,
             Expr::Group(expr) => &expr.span,
+            Expr::ObjectInit(expr) => &expr.span,
             Expr::Access(expr) => &expr.span,
             Expr::Call(expr) => &expr.span,
             Expr::Identifier(expr) => &expr.span,
@@ -58,6 +60,13 @@ pub struct GroupExpr {
     pub expr: Expr,
     pub left_paren_token: Option<Token>,
     pub right_paren_token: Option<Token>,
+    pub span: Option<SourceSpan>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ObjectInitExpr {
+    pub provider: Option<Expr>,
+    pub initializer: ObjectInitializer,
     pub span: Option<SourceSpan>,
 }
 
@@ -143,6 +152,14 @@ pub struct Literal {
 }
 
 #[derive(Debug, Serialize)]
+pub struct EqualsValueClause {
+    pub values: Vec<Expr>,
+    pub span: Option<SourceSpan>,
+    pub equals_token: Option<Token>,
+    pub comma_tokens: Option<Vec<Token>>,
+}
+
+#[derive(Debug, Serialize)]
 pub struct Operator {
     pub kind: OperatorKind,
     pub span: Option<SourceSpan>,
@@ -162,6 +179,22 @@ pub struct ArgumentList {
 pub struct Argument {
     pub expr: Expr,
     pub span: Option<SourceSpan>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct FieldInit {
+    pub field_name: SimpleIdentifier,
+    pub initializer: EqualsValueClause,
+    pub span: Option<SourceSpan>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ObjectInitializer {
+    pub field_inits: Vec<FieldInit>,
+    pub span: Option<SourceSpan>,
+    pub left_bracket_token: Option<Token>,
+    pub right_bracket_token: Option<Token>,
+    pub comma_tokens: Option<Vec<Token>>,
 }
 // endregion Fragments
 

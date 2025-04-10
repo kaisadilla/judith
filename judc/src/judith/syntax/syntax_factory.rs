@@ -19,6 +19,27 @@ impl SyntaxFactory {
         }
     }
 
+    pub fn object_init_expr (provider: Option<Expr>, initializer: ObjectInitializer) -> ObjectInitExpr {
+        let start: i64;
+        let end = initializer.span.unwrap().end;
+        let line: i64;
+
+        if let Some(provider) = &provider {
+            start = provider.span().unwrap().start;
+            line = provider.span().unwrap().line;
+        }
+        else {
+            start = initializer.span.unwrap().start;
+            line = initializer.span.unwrap().line;
+        };
+
+        ObjectInitExpr {
+            provider,
+            initializer,
+            span: Some(SourceSpan { start, end, line }),
+        }
+    }
+
     pub fn access_expr (receiver: Option<Expr>, op: Operator, member: SimpleIdentifier) -> AccessExpr {
         let start: i64;
         let end = member.span.unwrap().end;
@@ -126,6 +147,25 @@ impl SyntaxFactory {
         }
     }
 
+    pub fn equals_value_clause (
+        equals_token: Token, values: Vec<Expr>, comma_tokens: Vec<Token>
+    ) -> EqualsValueClause {
+        if values.len() == 0 {
+            panic!("EqualsValueClause must have at least one value.");
+        }
+
+        let start = equals_token.base().start;
+        let end = values.last().unwrap().span().unwrap().end;
+        let line = equals_token.base().line;
+
+        EqualsValueClause {
+            values,
+            span: Some(SourceSpan { start, end, line }),
+            equals_token: Some(equals_token),
+            comma_tokens: Some(comma_tokens),
+        }
+    }
+
     pub fn operator (tok: Token) -> Operator {
         let start = tok.base().start;
         let end = tok.base().end;
@@ -182,6 +222,34 @@ impl SyntaxFactory {
         Argument {
             expr,
             span,
+        }
+    }
+
+    pub fn field_init (field_name: SimpleIdentifier, initializer: EqualsValueClause) -> FieldInit {
+        let start = field_name.span.unwrap().start;
+        let end = initializer.span.unwrap().end;
+        let line = field_name.span.unwrap().line;
+
+        FieldInit {
+            field_name,
+            initializer,
+            span: Some(SourceSpan { start, end, line }),
+        }
+    }
+
+    pub fn object_initializer (
+        left_bracket: Token, field_inits: Vec<FieldInit>, right_bracket: Token, comma_tokens: Vec<Token>
+    ) -> ObjectInitializer {
+        let start = left_bracket.base().start;
+        let end = right_bracket.base().end;
+        let line = left_bracket.base().line;
+
+        ObjectInitializer {
+            field_inits,
+            span: Some(SourceSpan { start, end, line }),
+            left_bracket_token: Some(left_bracket),
+            right_bracket_token: Some(right_bracket),
+            comma_tokens: Some(comma_tokens),
         }
     }
     // endregion Fragments

@@ -1,10 +1,19 @@
-"lol"
-true
-lmao
-\true
-Parser::result
-a.b
-c(d)
-e.f(g)
-do_thing(arg1,)
-do_thing(arg1, arg2)
+--"lol"
+--true
+--lmao
+--\true
+--Parser::result
+--a.b
+--c(d)
+--e.f(g)
+--do_thing(arg1,)
+--do_thing(arg1, arg2)
+
+SomeType {
+    field1 = 42,
+    field2 = "My string",
+    field3 = false,
+    field4 = \false
+}
+
+--do_thing(,)

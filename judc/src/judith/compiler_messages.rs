@@ -101,7 +101,7 @@ pub enum MessageCode {
     HidableItemExpected,
     LocalDeclaratorExpected,
     LocalDeclaratorListExpected,
-    AssignmentExpressionExpected,
+    FieldInitializationExpected,
     InvalidTopLevelStatement,
     InvalidIntegerLiteral,
     InvalidFloatLiteral,
@@ -221,6 +221,16 @@ impl Parser {
         }
     }
 
+    pub fn right_curly_bracket_expected(tok: Token) -> CompilerMessage {
+        CompilerMessage {
+            kind: MessageKind::Error,
+            origin: MessageOrigin::Parser,
+            code: MessageCode::RightCurlyBracketExpected,
+            message: format!("Expected '}}', found '{:?}'.", tok.kind()),
+            source: MessageSource::Token(tok),
+        }
+    }
+
     pub fn expression_expected(tok: Token) -> CompilerMessage {
         CompilerMessage {
             kind: MessageKind::Error,
@@ -237,6 +247,26 @@ impl Parser {
             origin: MessageOrigin::Parser,
             code: MessageCode::ArgumentExpected,
             message: format!("Expected argument, found '{:?}'.", tok.kind()),
+            source: MessageSource::Token(tok),
+        }
+    }
+
+    pub fn field_initialization_expected(tok: Token) -> CompilerMessage {
+        CompilerMessage {
+            kind: MessageKind::Error,
+            origin: MessageOrigin::Parser,
+            code: MessageCode::FieldInitializationExpected,
+            message: format!("Expected field initialization, found '{:?}'.", tok.kind()),
+            source: MessageSource::Token(tok),
+        }
+    }
+
+    pub fn field_must_be_initialized(tok: Token) -> CompilerMessage {
+        CompilerMessage {
+            kind: MessageKind::Error,
+            origin: MessageOrigin::Parser,
+            code: MessageCode::FieldMustBeInitialized,
+            message: String::from("Field must be initialized."),
             source: MessageSource::Token(tok),
         }
     }

@@ -344,11 +344,11 @@ public class CompilerMessage {
             );
         }
 
-        public static CompilerMessage AssignmentExpressionExpected (Token token) {
+        public static CompilerMessage FieldInitializationExpected (Token token) {
             return new(
                 MessageKind.Error,
                 MessageOrigin.Parser,
-                (int)MessageCode.AssignmentExpressionExpected,
+                (int)MessageCode.FieldInitializationExpected,
                 $"Expected assignment, found '{token.Kind}'.",
                 new(token)
             );
