@@ -10,6 +10,7 @@ impl Serialize for Expr {
         match self {
             Expr::Assignment(expr) => custom_serial(serializer, "AssignmentExpr", expr.as_ref()),
             Expr::Binary(expr) => custom_serial(serializer, "BinaryExpr", expr.as_ref()),
+            Expr::LeftUnary(expr) => custom_serial(serializer, "LeftUnaryExpr", expr.as_ref()),
             Expr::Group(expr) => custom_serial(serializer, "GroupExpr", expr.as_ref()),
             Expr::ObjectInit(expr) => custom_serial(serializer, "ObjectInitExpr", expr.as_ref()),
             Expr::Access(expr) => custom_serial(serializer, "AccessExpr", expr.as_ref()),

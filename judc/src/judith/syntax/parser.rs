@@ -160,15 +160,181 @@ impl<'a> Parser<'a> {
         ParseAttempt::None
     }
 
-    // expr ::= object_init_expr
+    // expr ::= add_expr
     pub fn parse_expr (&mut self) -> ParseAttempt<Expr> {
-        match self.parse_object_init_expr() {
+        match self.parse_or_logical_expr() {
             ParseAttempt::Ok(expr) => return ParseAttempt::Ok(expr),
             ParseAttempt::Err(err) => return self.register_err_expr(err),
             _ => {},
         };
 
         ParseAttempt::None
+    }
+
+    // or_logical_expr ::= and_logical_expr ( ( "or" ) and_logical_expr )*
+    pub fn parse_or_logical_expr(&mut self) -> ParseAttempt<Expr> {
+        let mut left = match self.parse_and_logical_expr() {
+            ParseAttempt::Ok(expr) => expr,
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            ParseAttempt::None => return ParseAttempt::None,
+        };
+
+        while let ParseAttempt::Ok(op) = self.parse_operator(&[
+            TokenKind::KwOr,
+        ]) {
+            let right = match self.parse_and_logical_expr() {
+                ParseAttempt::Ok(expr) => expr,
+                ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+                ParseAttempt::None => return ParseAttempt::Err(
+                    compiler_messages::Parser::expression_expected(self.now())
+                ),
+            };
+
+            left = Expr::Binary(
+                Box::from(SyntaxFactory::binary_expr(left, op, right))
+            );
+        }
+
+        ParseAttempt::Ok(left)
+    }
+
+    // and_logical_expr ::= parse_bool_expr ( ( "and" ) parse_bool_expr )*
+    pub fn parse_and_logical_expr(&mut self) -> ParseAttempt<Expr> {
+        let mut left = match self.parse_bool_expr() {
+            ParseAttempt::Ok(expr) => expr,
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            ParseAttempt::None => return ParseAttempt::None,
+        };
+
+        while let ParseAttempt::Ok(op) = self.parse_operator(&[
+            TokenKind::KwAnd,
+        ]) {
+            let right = match self.parse_bool_expr() {
+                ParseAttempt::Ok(expr) => expr,
+                ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+                ParseAttempt::None => return ParseAttempt::Err(
+                    compiler_messages::Parser::expression_expected(self.now())
+                ),
+            };
+
+            left = Expr::Binary(
+                Box::from(SyntaxFactory::binary_expr(left, op, right))
+            );
+        }
+
+        ParseAttempt::Ok(left)
+    }
+
+    // bool_expr ::= add_expr ( ( "==" | "!=" | "~=" | "!~" | "===" | "!==" | "<" | "<=" | ">" | ">=" ) add_expr )*
+    pub fn parse_bool_expr(&mut self) -> ParseAttempt<Expr> {
+        let mut left = match self.parse_add_expr() {
+            ParseAttempt::Ok(expr) => expr,
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            ParseAttempt::None => return ParseAttempt::None,
+        };
+
+        while let ParseAttempt::Ok(op) = self.parse_operator(&[
+            TokenKind::EqualEqual,
+            TokenKind::BangEqual,
+            TokenKind::TildeTilde,
+            TokenKind::BangTilde,
+            TokenKind::EqualEqualEqual,
+            TokenKind::BangEqualEqual,
+            TokenKind::Less,
+            TokenKind::LessEqual,
+            TokenKind::Greater,
+            TokenKind::GreaterEqual,
+        ]) {
+            let right = match self.parse_add_expr() {
+                ParseAttempt::Ok(expr) => expr,
+                ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+                ParseAttempt::None => return ParseAttempt::Err(
+                    compiler_messages::Parser::expression_expected(self.now())
+                ),
+            };
+
+            left = Expr::Binary(
+                Box::from(SyntaxFactory::binary_expr(left, op, right))
+            );
+        }
+
+        ParseAttempt::Ok(left)
+    }
+
+    // add_expr ::= mult_expr ( ( "+" | "-" ) mult_expr )*
+    pub fn parse_add_expr(&mut self) -> ParseAttempt<Expr> {
+        let mut left = match self.parse_mult_expr() {
+            ParseAttempt::Ok(expr) => expr,
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            ParseAttempt::None => return ParseAttempt::None,
+        };
+
+        while let ParseAttempt::Ok(op) = self.parse_operator(
+            &[TokenKind::Plus, TokenKind::Minus]
+        ) {
+            let right = match self.parse_mult_expr() {
+                ParseAttempt::Ok(expr) => expr,
+                ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+                ParseAttempt::None => return ParseAttempt::Err(
+                    compiler_messages::Parser::expression_expected(self.now())
+                ),
+            };
+
+            left = Expr::Binary(
+                Box::from(SyntaxFactory::binary_expr(left, op, right))
+            );
+        }
+
+        ParseAttempt::Ok(left)
+    }
+
+    // mult_expr ::= left_unary-expr ( ( "*" | "/" ) left_unary_expr )*
+    pub fn parse_mult_expr(&mut self) -> ParseAttempt<Expr> {
+        let mut left = match self.parse_left_unary_expr() {
+            ParseAttempt::Ok(expr) => expr,
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            ParseAttempt::None => return ParseAttempt::None,
+        };
+
+        while let ParseAttempt::Ok(op) = self.parse_operator(
+            &[TokenKind::Asterisk, TokenKind::Slash]
+        ) {
+            let right = match self.parse_left_unary_expr() {
+                ParseAttempt::Ok(expr) => expr,
+                ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+                ParseAttempt::None => return ParseAttempt::Err(
+                    compiler_messages::Parser::expression_expected(self.now())
+                ),
+            };
+
+            left = Expr::Binary(
+                Box::from(SyntaxFactory::binary_expr(left, op, right))
+            );
+        }
+
+        ParseAttempt::Ok(left)
+    }
+
+    // left_unary_expr ::= ( ( "not" | "-" | "~" ) left_unary_expr ) | object_init_expr
+    pub fn parse_left_unary_expr(&mut self) -> ParseAttempt<Expr> {
+        if let ParseAttempt::Ok(op) = self.parse_operator(
+            &[TokenKind::KwNot, TokenKind::Minus, TokenKind::Tilde]
+        ) {
+            let expr = match self.parse_left_unary_expr() {
+                ParseAttempt::Ok(expr) => expr,
+                ParseAttempt::Err(msg) => return ParseAttempt::Err(msg),
+                ParseAttempt::None => return ParseAttempt::Err(
+                    compiler_messages::Parser::expression_expected(self.now())
+                ),
+            };
+
+            ParseAttempt::Ok(Expr::LeftUnary(
+                Box::from(SyntaxFactory::left_unary_expr(op, expr))
+            ))
+        }
+        else {
+            self.parse_object_init_expr()
+        }
     }
 
     // object_init_expr ::= call_expr obj_initialization?

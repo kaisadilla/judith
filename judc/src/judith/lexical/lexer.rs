@@ -198,15 +198,18 @@ impl<'a> Lexer<'a> {
                     true => self.make_token(TokenKind::BangEqualEqual), // !==
                     false => self.make_token(TokenKind::BangEqual), // !=
                 },
-                false => self.make_token(TokenKind::Bang), // !
+                false => match self.try_match('~') {
+                    true => self.make_token(TokenKind::BangEqual), // !~
+                    false => self.make_token(TokenKind::Bang), // !
+                }
             },
             '?' => match self.try_match('?') {
                 true => self.make_token(TokenKind::DoubleQuestionMark), // ??
                 false => self.make_token(TokenKind::QuestionMark), // ?
             },
-            '~' => match self.try_match('=') {
-                true => self.make_token(TokenKind::TildeEqual),
-                false => self.make_token(TokenKind::Tilde),
+            '~' => match self.try_match('~') {
+                true => self.make_token(TokenKind::TildeTilde), // ~~
+                false => self.make_token(TokenKind::Tilde), // ~
             },
             '.' => {
                 // When we encounter ".", we may be encountering the dot token, or a numeric literal

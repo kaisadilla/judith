@@ -5,8 +5,33 @@ use crate::SourceSpan;
 pub struct SyntaxFactory;
 
 impl SyntaxFactory {
+    pub fn binary_expr(left: Expr, op: Operator, right: Expr) -> BinaryExpr {
+        let start = left.span().unwrap().start;
+        let end = right.span().unwrap().end;
+        let line = left.span().unwrap().line;
+
+        BinaryExpr {
+            left,
+            operator: op,
+            right,
+            span: Some(SourceSpan { start, end, line })
+        }
+    }
+
+    pub fn left_unary_expr(op: Operator, expr: Expr) -> LeftUnaryExpr {
+        let start = op.span.unwrap().start;
+        let end = expr.span().unwrap().end;
+        let line = op.span.unwrap().line;
+
+        LeftUnaryExpr {
+            operator: op,
+            expr,
+            span: Some(SourceSpan { start, end, line }),
+        }
+    }
+
     // region Expressions
-    pub fn group_expr (left_paren: Token, expr: Expr, right_paren: Token) -> GroupExpr {
+    pub fn group_expr(left_paren: Token, expr: Expr, right_paren: Token) -> GroupExpr {
         let start = left_paren.base().start;
         let end = right_paren.base().end;
         let line = left_paren.base().line;
@@ -19,7 +44,7 @@ impl SyntaxFactory {
         }
     }
 
-    pub fn object_init_expr (provider: Option<Expr>, initializer: ObjectInitializer) -> ObjectInitExpr {
+    pub fn object_init_expr(provider: Option<Expr>, initializer: ObjectInitializer) -> ObjectInitExpr {
         let start: i64;
         let end = initializer.span.unwrap().end;
         let line: i64;
@@ -40,7 +65,7 @@ impl SyntaxFactory {
         }
     }
 
-    pub fn access_expr (receiver: Option<Expr>, op: Operator, member: SimpleIdentifier) -> AccessExpr {
+    pub fn access_expr(receiver: Option<Expr>, op: Operator, member: SimpleIdentifier) -> AccessExpr {
         let start: i64;
         let end = member.span.unwrap().end;
         let line: i64;
@@ -62,7 +87,7 @@ impl SyntaxFactory {
         }
     }
 
-    pub fn call_expr (callee: Expr, arguments: ArgumentList) -> CallExpr {
+    pub fn call_expr(callee: Expr, arguments: ArgumentList) -> CallExpr {
         let start = callee.span().unwrap().start;
         let end = arguments.span.unwrap().end;
         let line = callee.span().unwrap().line;
@@ -74,7 +99,7 @@ impl SyntaxFactory {
         }
     }
 
-    pub fn identifier_expr (id: Identifier) -> IdentifierExpr {
+    pub fn identifier_expr(id: Identifier) -> IdentifierExpr {
         let span = id.span().clone();
 
         IdentifierExpr {
@@ -83,7 +108,7 @@ impl SyntaxFactory {
         }
     }
 
-    pub fn literal_expr (literal: Literal) -> LiteralExpr {
+    pub fn literal_expr(literal: Literal) -> LiteralExpr {
         let span = literal.span.clone();
 
         LiteralExpr {
@@ -95,7 +120,7 @@ impl SyntaxFactory {
     // endregion Expressions
 
     // region Fragments
-    pub fn simple_identifier (tok: Token) -> SimpleIdentifier {
+    pub fn simple_identifier(tok: Token) -> SimpleIdentifier {
         const ESCAPE_CHAR: char = '\\';
         let start = tok.base().start;
         let end = tok.base().end;
@@ -119,7 +144,7 @@ impl SyntaxFactory {
         }
     }
 
-    pub fn qualified_identifier (
+    pub fn qualified_identifier(
         qualifier: Identifier, op: Operator, name: SimpleIdentifier
     ) -> QualifiedIdentifier {
         let start = qualifier.span().unwrap().start;
@@ -135,7 +160,7 @@ impl SyntaxFactory {
         }
     }
 
-    pub fn literal (tok: Token) -> Literal {
+    pub fn literal(tok: Token) -> Literal {
         let start = tok.base().start;
         let end = tok.base().end;
         let line = tok.base().line;
@@ -147,7 +172,7 @@ impl SyntaxFactory {
         }
     }
 
-    pub fn equals_value_clause (
+    pub fn equals_value_clause(
         equals_token: Token, values: Vec<Expr>, comma_tokens: Vec<Token>
     ) -> EqualsValueClause {
         if values.len() == 0 {
@@ -166,7 +191,7 @@ impl SyntaxFactory {
         }
     }
 
-    pub fn operator (tok: Token) -> Operator {
+    pub fn operator(tok: Token) -> Operator {
         let start = tok.base().start;
         let end = tok.base().end;
         let line = tok.base().line;
@@ -180,7 +205,8 @@ impl SyntaxFactory {
             TokenKind::Equal => OperatorKind::Assignment,
             TokenKind::EqualEqual => OperatorKind::Equals,
             TokenKind::BangEqual => OperatorKind::NotEquals,
-            TokenKind::TildeEqual => OperatorKind::Like,
+            TokenKind::TildeTilde => OperatorKind::Like,
+            TokenKind::BangTilde => OperatorKind::NotLike,
             TokenKind::EqualEqualEqual => OperatorKind::ReferenceEquals,
             TokenKind::BangEqualEqual => OperatorKind::ReferenceNotEquals,
             TokenKind::Less => OperatorKind::LessThan,
@@ -201,7 +227,7 @@ impl SyntaxFactory {
         }
     }
 
-    pub fn argument_list (
+    pub fn argument_list(
         left_paren: Token, args: Vec<Argument>, right_paren: Token, comma_tokens: Vec<Token>
     ) -> ArgumentList {
         let start = left_paren.base().start;
@@ -217,7 +243,7 @@ impl SyntaxFactory {
         }
     }
 
-    pub fn argument (expr: Expr) -> Argument {
+    pub fn argument(expr: Expr) -> Argument {
         let span = expr.span().clone();
         Argument {
             expr,
@@ -225,7 +251,7 @@ impl SyntaxFactory {
         }
     }
 
-    pub fn field_init (field_name: SimpleIdentifier, initializer: EqualsValueClause) -> FieldInit {
+    pub fn field_init(field_name: SimpleIdentifier, initializer: EqualsValueClause) -> FieldInit {
         let start = field_name.span.unwrap().start;
         let end = initializer.span.unwrap().end;
         let line = field_name.span.unwrap().line;
@@ -237,7 +263,7 @@ impl SyntaxFactory {
         }
     }
 
-    pub fn object_initializer (
+    pub fn object_initializer(
         left_bracket: Token, field_inits: Vec<FieldInit>, right_bracket: Token, comma_tokens: Vec<Token>
     ) -> ObjectInitializer {
         let start = left_bracket.base().start;

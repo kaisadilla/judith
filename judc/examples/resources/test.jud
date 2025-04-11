@@ -1,13 +1,13 @@
---"lol"
---true
---lmao
---\true
---Parser::result
---a.b
---c(d)
---e.f(g)
---do_thing(arg1,)
---do_thing(arg1, arg2)
+"lol"
+true
+lmao
+\true
+Parser::result
+a.b
+c(d)
+e.f(g)
+do_thing(arg1,)
+do_thing(arg1, arg2)
 
 SomeType {
     field1 = 42,
@@ -16,4 +16,11 @@ SomeType {
     field4 = \false
 }
 
---do_thing(,)
+-val
+
+12 * 14
+3 + 4 * 5 + 1
+
+result ~~ 5 + 2
+
+3 + 1 or true and false

@@ -14,6 +14,7 @@ pub enum SyntaxNode {
 pub enum Expr {
     Assignment(Box<AssignmentExpr>),
     Binary(Box<BinaryExpr>),
+    LeftUnary(Box<LeftUnaryExpr>),
     Group(Box<GroupExpr>),
     ObjectInit(Box<ObjectInitExpr>),
     Access(Box<AccessExpr>),
@@ -28,6 +29,7 @@ impl Expr {
         match self {
             Expr::Assignment(expr) => &expr.span,
             Expr::Binary(expr) => &expr.span,
+            Expr::LeftUnary(expr) => &expr.span,
             Expr::Group(expr) => &expr.span,
             Expr::ObjectInit(expr) => &expr.span,
             Expr::Access(expr) => &expr.span,
@@ -42,7 +44,7 @@ impl Expr {
 #[derive(Debug, Serialize)]
 pub struct AssignmentExpr {
     pub left: Expr,
-    pub op: Operator,
+    pub operator: Operator,
     pub right: Expr,
     pub span: Option<SourceSpan>,
 }
@@ -50,8 +52,15 @@ pub struct AssignmentExpr {
 #[derive(Debug, Serialize)]
 pub struct BinaryExpr {
     pub left: Expr,
-    pub op: Operator,
+    pub operator: Operator,
     pub right: Expr,
+    pub span: Option<SourceSpan>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct LeftUnaryExpr {
+    pub operator: Operator,
+    pub expr: Expr,
     pub span: Option<SourceSpan>,
 }
 
@@ -212,7 +221,8 @@ pub enum OperatorKind {
     Assignment, // =
     Equals, // ==
     NotEquals, // !=
-    Like, // ~=
+    Like, // ~~
+    NotLike, // !~
     ReferenceEquals, // ===
     ReferenceNotEquals, // !==
     LessThan, // <
