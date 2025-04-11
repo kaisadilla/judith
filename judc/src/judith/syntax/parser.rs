@@ -157,12 +157,12 @@ impl<'a> Parser<'a> {
             _ => {},
         };
 
-        ParseAttempt::None
+        ParseAttempt::None // TODO: Should this be err? How do we detect when there's still tokens, but don't form a top level node?
     }
 
-    // expr ::= add_expr
+    // expr ::= assignment_expr
     pub fn parse_expr (&mut self) -> ParseAttempt<Expr> {
-        match self.parse_or_logical_expr() {
+        match self.parse_assignment_expr() {
             ParseAttempt::Ok(expr) => return ParseAttempt::Ok(expr),
             ParseAttempt::Err(err) => return self.register_err_expr(err),
             _ => {},
@@ -171,7 +171,34 @@ impl<'a> Parser<'a> {
         ParseAttempt::None
     }
 
-    // or_logical_expr ::= and_logical_expr ( ( "or" ) and_logical_expr )*
+    // assignment_expr ::= or_logical_expr ( "=" or_logical_expr )?
+    pub fn parse_assignment_expr(&mut self) -> ParseAttempt<Expr> {
+        let left = match self.parse_or_logical_expr() {
+            ParseAttempt::Ok(expr) => expr,
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            ParseAttempt::None => return ParseAttempt::None,
+        };
+
+        let op = match self.parse_operator(&[TokenKind::Equal]) {
+            ParseAttempt::Ok(op) => op,
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            ParseAttempt::None => return ParseAttempt::Ok(left),
+        };
+
+        let right = match self.parse_or_logical_expr() {
+            ParseAttempt::Ok(expr) => expr,
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            ParseAttempt::None => return ParseAttempt::Err(
+                compiler_messages::Parser::expression_expected(self.now())
+            ),
+        };
+
+        ParseAttempt::Ok(Expr::Assignment(
+            Box::from(SyntaxFactory::assignment_expr(left, op, right))
+        ))
+    }
+
+    // or_logical_expr ::= and_logical_expr ( "or" and_logical_expr )*
     pub fn parse_or_logical_expr(&mut self) -> ParseAttempt<Expr> {
         let mut left = match self.parse_and_logical_expr() {
             ParseAttempt::Ok(expr) => expr,
@@ -198,7 +225,7 @@ impl<'a> Parser<'a> {
         ParseAttempt::Ok(left)
     }
 
-    // and_logical_expr ::= parse_bool_expr ( ( "and" ) parse_bool_expr )*
+    // and_logical_expr ::= parse_bool_expr ( "and" parse_bool_expr )*
     pub fn parse_and_logical_expr(&mut self) -> ParseAttempt<Expr> {
         let mut left = match self.parse_bool_expr() {
             ParseAttempt::Ok(expr) => expr,

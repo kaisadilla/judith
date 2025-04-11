@@ -201,6 +201,16 @@ pub mod Lexer {
 }
 
 impl Parser {
+    pub fn unexpected_token(tok: Token) -> CompilerMessage {
+        CompilerMessage {
+            kind: MessageKind::Error,
+            origin: MessageOrigin::Parser,
+            code: MessageCode::UnexpectedToken,
+            message: format!("Unexpected token: '{:?}'", tok.kind()),
+            source: MessageSource::Token(tok),
+        }
+    }
+
     pub fn identifier_expected(tok: Token) -> CompilerMessage {
         CompilerMessage {
             kind: MessageKind::Error,

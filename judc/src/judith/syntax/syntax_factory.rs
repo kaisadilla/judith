@@ -5,6 +5,19 @@ use crate::SourceSpan;
 pub struct SyntaxFactory;
 
 impl SyntaxFactory {
+    pub fn assignment_expr(left: Expr, op: Operator, right: Expr) -> AssignmentExpr {
+        let start = left.span().unwrap().start;
+        let end = right.span().unwrap().end;
+        let line = left.span().unwrap().line;
+
+        AssignmentExpr {
+            left,
+            operator: op,
+            right,
+            span: Some(SourceSpan { start, end, line }),
+        }
+    }
+
     pub fn binary_expr(left: Expr, op: Operator, right: Expr) -> BinaryExpr {
         let start = left.span().unwrap().start;
         let end = right.span().unwrap().end;
@@ -14,7 +27,7 @@ impl SyntaxFactory {
             left,
             operator: op,
             right,
-            span: Some(SourceSpan { start, end, line })
+            span: Some(SourceSpan { start, end, line }),
         }
     }
 
