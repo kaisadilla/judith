@@ -5,6 +5,108 @@ use crate::SourceSpan;
 pub struct SyntaxFactory;
 
 impl SyntaxFactory {
+    // region Bodies
+    pub fn block_body(
+        opening_token: Option<Token>, nodes: Vec<SyntaxNode>, closing_token: Option<Token>
+    ) -> BlockBody {
+        let start: i64;
+        let end: i64;
+        let line: i64;
+
+        if let Some(tok) = &opening_token {
+            start = tok.base().start;
+            line = tok.base().line;
+        } else if let Some(node) = nodes.last() {
+            start = node.span().unwrap().start;
+            line = node.span().unwrap().end;
+        } else if let Some(tok) = &closing_token {
+            start = tok.base().start;
+            line = tok.base().line;
+        }
+        else {
+            panic!("Block body must contain, at least, one token.");
+        };
+
+        if let Some(tok) = &closing_token {
+            end = tok.base().end;
+        }
+        else if let Some(node) = nodes.last() {
+            end = node.span().unwrap().end;
+        }
+        else if let Some(tok) = &opening_token {
+            end = tok.base().end;
+        }
+        else {
+            panic!("Block body must contain, at least, one token.");
+        }
+
+        BlockBody {
+            opening_token,
+            nodes,
+            closing_token,
+            span: Some(SourceSpan { start, end, line }),
+        }
+    }
+
+    pub fn arrow_body(arrow_tok: Token, expr: Expr) -> ArrowBody {
+        let start = arrow_tok.base().start;
+        let end = expr.span().unwrap().end;
+        let line = arrow_tok.base().line;
+
+        ArrowBody {
+            arrow_token: Some(arrow_tok),
+            expr,
+            span: Some(SourceSpan { start, end, line }),
+        }
+    }
+
+    pub fn expr_body(expr: Expr) -> ExprBody {
+        let start = expr.span().unwrap().start;
+        let end = expr.span().unwrap().end;
+        let line = expr.span().unwrap().line;
+
+        ExprBody {
+            expr,
+            span: Some(SourceSpan { start, end, line }),
+        }
+    }
+    // endregion
+
+    // region Expressions
+
+    pub fn if_expr(if_tok: Token, test: Expr, body: Body) -> IfExpr {
+        let start = if_tok.base().start;
+        let end = body.span().unwrap().end;
+        let line = if_tok.base().line;
+
+        IfExpr {
+            test,
+            consequent: body,
+            alternate: None,
+            span: Some(SourceSpan { start, end, line }),
+            if_token: Some(if_tok),
+            else_token: None,
+        }
+    }
+
+    pub fn if_else_expr(
+        if_tok: Token, test: Expr, consequent: Body, else_tok: Option<Token>, alternate: Body
+    ) -> IfExpr {
+        let start = if_tok.base().start;
+        let end = alternate.span().unwrap().end;
+        let line = if_tok.base().line;
+
+        IfExpr {
+            test,
+            consequent,
+            alternate: Some(alternate),
+            span: Some(SourceSpan { start, end, line }),
+            if_token: Some(if_tok),
+            else_token: else_tok,
+        }
+    }
+
+    // region Cascading expressions
     pub fn assignment_expr(left: Expr, op: Operator, right: Expr) -> AssignmentExpr {
         let start = left.span().unwrap().start;
         let end = right.span().unwrap().end;
@@ -43,7 +145,6 @@ impl SyntaxFactory {
         }
     }
 
-    // region Expressions
     pub fn group_expr(left_paren: Token, expr: Expr, right_paren: Token) -> GroupExpr {
         let start = left_paren.base().start;
         let end = right_paren.base().end;
@@ -129,6 +230,7 @@ impl SyntaxFactory {
             span,
         }
     }
+    // endregion Cascading expressions
 
     // endregion Expressions
 

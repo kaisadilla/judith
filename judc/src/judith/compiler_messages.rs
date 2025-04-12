@@ -161,18 +161,14 @@ impl MessageContainer {
     }
 }
 
+pub struct Lexer;
 pub struct Parser;
 
-pub mod Lexer {
-    use crate::judith::compiler_messages::{CompilerMessage, MessageCode, MessageSource};
-    use crate::judith::compiler_messages::MessageKind::*;
-    use crate::judith::compiler_messages::MessageOrigin::*;
-    use crate::SourceSpan;
-
+impl Lexer {
     pub fn unexpected_character(span: SourceSpan, unexpected_char: char) -> CompilerMessage {
         CompilerMessage {
-            kind: Error,
-            origin: Lexer,
+            kind: MessageKind::Error,
+            origin: MessageOrigin::Lexer,
             code: MessageCode::UnexpectedCharacter {character: unexpected_char},
             message: format!("Unexpected character: {}", unexpected_char),
             source: MessageSource::Span(span),
@@ -181,8 +177,8 @@ pub mod Lexer {
 
     pub fn invalid_number(span: SourceSpan, num: String) -> CompilerMessage {
         CompilerMessage {
-            kind: Error,
-            origin: Lexer,
+            kind: MessageKind::Error,
+            origin: MessageOrigin::Lexer,
             code: MessageCode::InvalidNumber {lexeme: num.clone()},
             message: format!("Invalid number: {}", num),
             source: MessageSource::Span(span),
@@ -191,8 +187,8 @@ pub mod Lexer {
 
     pub fn unterminated_string(span: SourceSpan) -> CompilerMessage {
         CompilerMessage {
-            kind: Error,
-            origin: Lexer,
+            kind: MessageKind::Error,
+            origin: MessageOrigin::Lexer,
             code: MessageCode::UnterminatedString,
             message: String::from("Unterminated string."),
             source: MessageSource::Span(span),
@@ -247,6 +243,36 @@ impl Parser {
             origin: MessageOrigin::Parser,
             code: MessageCode::ExpressionExpected,
             message: format!("Expected expression, found '{:?}'.", tok.kind()),
+            source: MessageSource::Token(tok),
+        }
+    }
+
+    pub fn body_expected(tok: Token) -> CompilerMessage {
+        CompilerMessage {
+            kind: MessageKind::Error,
+            origin: MessageOrigin::Parser,
+            code: MessageCode::BodyExpected,
+            message: format!("Expected body, found '{:?}'.", tok.kind()),
+            source: MessageSource::Token(tok),
+        }
+    }
+
+    pub fn elsif_body_expected(tok: Token) -> CompilerMessage {
+        CompilerMessage {
+            kind: MessageKind::Error,
+            origin: MessageOrigin::Parser,
+            code: MessageCode::ElsifBodyExpected,
+            message: format!("Expected 'elsif' body, found '{:?}'.", tok.kind()),
+            source: MessageSource::Token(tok),
+        }
+    }
+
+    pub fn end_expected(tok: Token) -> CompilerMessage {
+        CompilerMessage {
+            kind: MessageKind::Error,
+            origin: MessageOrigin::Parser,
+            code: MessageCode::EndExpected,
+            message: format!("Expected end token, found '{:?}'.", tok.kind()),
             source: MessageSource::Token(tok),
         }
     }

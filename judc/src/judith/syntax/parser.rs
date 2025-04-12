@@ -150,7 +150,7 @@ impl<'a> Parser<'a> {
 
     // region Parse methods
     // node ::= expr
-    pub fn parse_top_level_node (&mut self) -> ParseAttempt<SyntaxNode> {
+    pub fn parse_top_level_node(&mut self) -> ParseAttempt<SyntaxNode> {
         match self.parse_expr() {
             ParseAttempt::Ok(expr) => return ParseAttempt::Ok(SyntaxNode::Expr(expr)),
             ParseAttempt::Err(err) => return self.register_err_node(err),
@@ -160,8 +160,94 @@ impl<'a> Parser<'a> {
         ParseAttempt::None // TODO: Should this be err? How do we detect when there's still tokens, but don't form a top level node?
     }
 
+    // region Parse bodies
+    pub fn parse_body(&mut self, opening_token: Option<TokenKind>) -> ParseAttempt<Body> {
+        // Arrow must be tried first, since block statement may not have an opening token (and thus
+        // would report an error trying to read an arrow.
+        match self.parse_arrow_body() {
+            ParseAttempt::Ok(arrow_body) => return ParseAttempt::Ok(Body::Arrow(arrow_body)),
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            _ => {}
+        };
+
+        match self.parse_block_body(opening_token) {
+            ParseAttempt::Ok(block) => return ParseAttempt::Ok(Body::Block(block)),
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            _ => {}
+        };
+
+        ParseAttempt::None
+    }
+
+    pub fn parse_block_body(&mut self, opening_token: Option<TokenKind>) -> ParseAttempt<BlockBody> {
+        let opening_token = if let Some(tok_kind) = opening_token {
+            match self.try_consume(tok_kind) {
+                Some(tok) => Some(tok),
+                None => return ParseAttempt::None,
+            }
+        }
+        else {
+            None
+        };
+
+        let mut nodes: Vec<SyntaxNode> = Vec::new();
+        let closing_token: Option<Token>;
+        loop {
+            if self.is_at_end() {
+                return ParseAttempt::Err(
+                    compiler_messages::Parser::end_expected(self.now())
+                )
+            };
+            if let Some(tok) = self.try_consume(TokenKind::KwEnd) {
+                closing_token = Some(tok);
+                break;
+            }
+            if self.check_many(&[TokenKind::KwEnd, TokenKind::KwElse, TokenKind::KwElsif]) {
+                closing_token = None;
+                break;
+            }
+
+            let node = match self.parse_top_level_node() {
+                ParseAttempt::Ok(node) => node,
+                ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+                ParseAttempt::None => return ParseAttempt::Err(
+                    compiler_messages::Parser::unexpected_token(self.now())
+                ),
+            };
+
+            nodes.push(node);
+        }
+
+        ParseAttempt::Ok(SyntaxFactory::block_body(opening_token, nodes, closing_token))
+    }
+
+    pub fn parse_arrow_body(&mut self) -> ParseAttempt<ArrowBody> {
+        let arrow_tok = match self.try_consume(TokenKind::EqualArrow) {
+            Some(tok) => tok,
+            None => return ParseAttempt::None,
+        };
+
+        let expr = match self.parse_expr() {
+            ParseAttempt::Ok(expr) => expr,
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            ParseAttempt::None => return ParseAttempt::Err(
+                compiler_messages::Parser::expression_expected(self.now())
+            ),
+        };
+
+        ParseAttempt::Ok(SyntaxFactory::arrow_body(arrow_tok, expr))
+    }
+    // endregion
+
+    // region Parse expressions
+
     // expr ::= assignment_expr
-    pub fn parse_expr (&mut self) -> ParseAttempt<Expr> {
+    pub fn parse_expr(&mut self) -> ParseAttempt<Expr> {
+        match self.parse_if_expr(TokenKind::KwIf) {
+            ParseAttempt::Ok(expr) => return ParseAttempt::Ok(Expr::If(Box::from(expr))),
+            ParseAttempt::Err(err) => return self.register_err_expr(err),
+            _ => {}
+        };
         match self.parse_assignment_expr() {
             ParseAttempt::Ok(expr) => return ParseAttempt::Ok(expr),
             ParseAttempt::Err(err) => return self.register_err_expr(err),
@@ -171,6 +257,73 @@ impl<'a> Parser<'a> {
         ParseAttempt::None
     }
 
+    pub fn parse_if_expr(&mut self, if_token_kind: TokenKind) -> ParseAttempt<IfExpr> {
+        let if_tok = match self.try_consume(if_token_kind) {
+            Some(tok) => tok,
+            None => return ParseAttempt::None,
+        };
+
+        let test = match self.parse_expr() {
+            ParseAttempt::Ok(expr) => expr,
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            ParseAttempt::None => return ParseAttempt::Err(
+                compiler_messages::Parser::expression_expected(self.now())
+            ),
+        };
+
+        let consequent = match self.parse_body(Some(TokenKind::KwThen)) {
+            ParseAttempt::Ok(body) => body,
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            ParseAttempt::None => return ParseAttempt::Err(
+                compiler_messages::Parser::body_expected(self.now())
+            )
+        };
+
+        // We first check if there's an "elsif" block. In this case, we don't consume the token, as
+        // it will become the opening token for the subsequent (els)if expression.
+        if self.check(TokenKind::KwElsif) {
+            let alternate = match self.parse_if_expr(TokenKind::KwElsif) {
+                ParseAttempt::Ok(elsif) => elsif,
+                ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+                ParseAttempt::None => return ParseAttempt::Err(
+                    compiler_messages::Parser::elsif_body_expected(self.now())
+                )
+            };
+
+            ParseAttempt::Ok(SyntaxFactory::if_else_expr(
+                if_tok,
+                test,
+                consequent,
+                None,
+                Body::Expr(SyntaxFactory::expr_body(
+                    Expr::If(Box::from(alternate))
+                ))
+            ))
+        }
+        // Then we check if there's an "else" block. In this case, we consume the token, as we'll
+        // use it here.
+        else if let Some(else_tok) = self.try_consume(TokenKind::KwElse) {
+            let alternate = match self.parse_body(None) {
+                ParseAttempt::Ok(body) => body,
+                ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+                ParseAttempt::None => return ParseAttempt::Err(
+                    compiler_messages::Parser::body_expected(self.now())
+                )
+            };
+
+            ParseAttempt::Ok(
+                SyntaxFactory::if_else_expr(if_tok, test, consequent, Some(else_tok), alternate)
+            )
+        }
+        // If there isn't either an "elsif" nor an "else", we build an if expression without alternate.
+        else {
+            ParseAttempt::Ok(
+                SyntaxFactory::if_expr(if_tok, test, consequent)
+            )
+        }
+    }
+
+    // region Parse cascading expressions
     // assignment_expr ::= or_logical_expr ( "=" or_logical_expr )?
     pub fn parse_assignment_expr(&mut self) -> ParseAttempt<Expr> {
         let left = match self.parse_or_logical_expr() {
@@ -530,6 +683,9 @@ impl<'a> Parser<'a> {
 
         ParseAttempt::None
     }
+    // endregion Parse cascading expressions
+
+    // endregion Parse expressions
 
     // region Fragments
     // identifier ::= IDENTIFIER

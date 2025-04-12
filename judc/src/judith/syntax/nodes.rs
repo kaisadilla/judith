@@ -1,32 +1,112 @@
-use serde::Serialize;
+use serde::*;
 use crate::judith::lexical::token::Token;
 use crate::SourceSpan;
 
+extern crate serde;
+
 // region Nodes
 #[derive(Debug, Serialize)]
+#[serde(tag = "node_kind")]
 pub enum SyntaxNode {
     Expr(Expr),
     Error(ErrorNode),
 }
 
+impl SyntaxNode {
+    pub fn span (&self) -> &Option<SourceSpan> {
+        match self {
+            SyntaxNode::Expr(expr) => expr.span(),
+            SyntaxNode::Error(err) => &err.span,
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+#[serde(tag = "block_kind")]
+pub enum Body {
+    #[serde(rename = "Block")]
+    Block(BlockBody),
+
+    #[serde(rename = "Arrow")]
+    Arrow(ArrowBody),
+
+    #[serde(rename = "Expr")]
+    Expr(ExprBody),
+}
+
+impl Body {
+    pub fn span (&self) -> &Option<SourceSpan> {
+        match self {
+            Body::Block(b) => &b.span,
+            Body::Arrow(b) => &b.span,
+            Body::Expr(b) => &b.span,
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct BlockBody {
+    pub nodes: Vec<SyntaxNode>,
+    pub span: Option<SourceSpan>,
+    pub opening_token: Option<Token>,
+    pub closing_token: Option<Token>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ArrowBody {
+    pub expr: Expr,
+    pub span: Option<SourceSpan>,
+    pub arrow_token: Option<Token>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ExprBody {
+    pub expr: Expr,
+    pub span: Option<SourceSpan>,
+}
+
 // region Expression
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
+#[serde(tag = "expr_kind")]
 pub enum Expr {
+    #[serde(rename = "If")]
+    If(Box<IfExpr>),
+
+    #[serde(rename = "Assignment")]
     Assignment(Box<AssignmentExpr>),
+
+    #[serde(rename = "Binary")]
     Binary(Box<BinaryExpr>),
+
+    #[serde(rename = "LeftUnary")]
     LeftUnary(Box<LeftUnaryExpr>),
+
+    #[serde(rename = "Group")]
     Group(Box<GroupExpr>),
+
+    #[serde(rename = "ObjectInit")]
     ObjectInit(Box<ObjectInitExpr>),
+
+    #[serde(rename = "Access")]
     Access(Box<AccessExpr>),
+
+    #[serde(rename = "Call")]
     Call(Box<CallExpr>),
+
+    #[serde(rename = "Identifier")]
     Identifier(Box<IdentifierExpr>),
+
+    #[serde(rename = "Literal")]
     Literal(Box<LiteralExpr>),
+
+    #[serde(rename = "Error")]
     Error(ErrorNode),
 }
 
 impl Expr {
     pub fn span (&self) -> &Option<SourceSpan> {
         match self {
+            Expr::If(expr) => &expr.span,
             Expr::Assignment(expr) => &expr.span,
             Expr::Binary(expr) => &expr.span,
             Expr::LeftUnary(expr) => &expr.span,
@@ -39,6 +119,16 @@ impl Expr {
             Expr::Error(expr) => &expr.span,
         }
     }
+}
+
+#[derive(Debug, Serialize)]
+pub struct IfExpr {
+    pub test: Expr,
+    pub consequent: Body,
+    pub alternate: Option<Body>,
+    pub span: Option<SourceSpan>,
+    pub if_token: Option<Token>,
+    pub else_token: Option<Token>,
 }
 
 #[derive(Debug, Serialize)]
@@ -114,8 +204,12 @@ pub struct ErrorNode {
 
 // region Fragments
 #[derive(Debug, Serialize)]
+#[serde(tag = "identifier_kind")]
 pub enum Identifier {
+    #[serde(rename = "Simple")]
     Simple(SimpleIdentifier),
+
+    #[serde(rename = "Qualified")]
     Qualified(Box<QualifiedIdentifier>),
 }
 
