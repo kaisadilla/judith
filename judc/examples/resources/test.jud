@@ -44,3 +44,11 @@ if some_bool_3 then
 else
     print("here it is")
 end
+
+loop
+    print("This is infinite.")
+end
+
+while i < 10 do
+    print("This is tenfold.")
+end

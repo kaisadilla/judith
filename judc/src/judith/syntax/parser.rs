@@ -151,8 +151,8 @@ impl<'a> Parser<'a> {
     // region Parse methods
     // node ::= expr
     pub fn parse_top_level_node(&mut self) -> ParseAttempt<SyntaxNode> {
-        match self.parse_expr() {
-            ParseAttempt::Ok(expr) => return ParseAttempt::Ok(SyntaxNode::Expr(expr)),
+        match self.parse_stmt() {
+            ParseAttempt::Ok(stmt) => return ParseAttempt::Ok(SyntaxNode::Stmt(stmt)),
             ParseAttempt::Err(err) => return self.register_err_node(err),
             _ => {},
         };
@@ -239,12 +239,44 @@ impl<'a> Parser<'a> {
     }
     // endregion
 
-    // region Parse expressions
+    // region Parse statements
+    pub fn parse_stmt(&mut self) -> ParseAttempt<Stmt> {
+        match self.parse_expr_stmt() {
+            ParseAttempt::Ok(expr) => return ParseAttempt::Ok(Stmt::Expr(expr)),
+            ParseAttempt::Err(err) => return self.register_err_stmt(err),
+            _ => {}
+        };
 
-    // expr ::= assignment_expr
+        ParseAttempt::None
+    }
+
+    pub fn parse_expr_stmt(&mut self) -> ParseAttempt<ExprStmt> {
+        let expr = match self.parse_expr() {
+            ParseAttempt::Ok(expr) => expr,
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            ParseAttempt::None => return ParseAttempt::None,
+        };
+
+        ParseAttempt::Ok(SyntaxFactory::expr_stmt(expr))
+    }
+
+    // endregion Parse statements
+
+    // region Parse expressions
+    // expr ::= if_expr | loop_expr | while_expr | assignment_expr
     pub fn parse_expr(&mut self) -> ParseAttempt<Expr> {
         match self.parse_if_expr(TokenKind::KwIf) {
             ParseAttempt::Ok(expr) => return ParseAttempt::Ok(Expr::If(Box::from(expr))),
+            ParseAttempt::Err(err) => return self.register_err_expr(err),
+            _ => {}
+        };
+        match self.parse_loop_expr() {
+            ParseAttempt::Ok(expr) => return ParseAttempt::Ok(Expr::Loop(Box::from(expr))),
+            ParseAttempt::Err(err) => return self.register_err_expr(err),
+            _ => {}
+        };
+        match self.parse_while_expr() {
+            ParseAttempt::Ok(expr) => return ParseAttempt::Ok(Expr::While(Box::from(expr))),
             ParseAttempt::Err(err) => return self.register_err_expr(err),
             _ => {}
         };
@@ -257,6 +289,7 @@ impl<'a> Parser<'a> {
         ParseAttempt::None
     }
 
+    // if_expr ::=
     pub fn parse_if_expr(&mut self, if_token_kind: TokenKind) -> ParseAttempt<IfExpr> {
         let if_tok = match self.try_consume(if_token_kind) {
             Some(tok) => tok,
@@ -321,6 +354,50 @@ impl<'a> Parser<'a> {
                 SyntaxFactory::if_expr(if_tok, test, consequent)
             )
         }
+    }
+
+    // loop_expr ::=
+    pub fn parse_loop_expr(&mut self) -> ParseAttempt<LoopExpr> {
+        let loop_tok = match self.try_consume(TokenKind::KwLoop) {
+            Some(tok) => tok,
+            None => return ParseAttempt::None,
+        };
+
+        let body = match self.parse_body(None) {
+            ParseAttempt::Ok(body) => body,
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            ParseAttempt::None => return ParseAttempt::Err(
+                compiler_messages::Parser::body_expected(self.now())
+            )
+        };
+
+        ParseAttempt::Ok(SyntaxFactory::loop_expr(loop_tok, body))
+    }
+
+    // while_expr ::=
+    pub fn parse_while_expr(&mut self) -> ParseAttempt<WhileExpr> {
+        let while_expr = match self.try_consume(TokenKind::KwWhile) {
+            Some(tok) => tok,
+            None => return ParseAttempt::None,
+        };
+
+        let test = match self.parse_expr() {
+            ParseAttempt::Ok(expr) => expr,
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            ParseAttempt::None => return ParseAttempt::Err(
+                compiler_messages::Parser::expression_expected(self.now())
+            ),
+        };
+
+        let body = match self.parse_body(Some(TokenKind::KwDo)) {
+            ParseAttempt::Ok(body) => body,
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            ParseAttempt::None => return ParseAttempt::Err(
+                compiler_messages::Parser::body_expected(self.now())
+            )
+        };
+
+        ParseAttempt::Ok(SyntaxFactory::while_expr(while_expr, test, body))
     }
 
     // region Parse cascading expressions
@@ -925,16 +1002,22 @@ impl<'a> Parser<'a> {
         self.messages.add(msg);
     }
 
-    fn register_err_expr(&mut self, err: CompilerMessage) -> ParseAttempt<Expr> {
-        self.messages.add(err);
-
-        ParseAttempt::Ok(Expr::Error(SyntaxFactory::error_node()))
-    }
-
     fn register_err_node(&mut self, err: CompilerMessage) -> ParseAttempt<SyntaxNode> {
         self.messages.add(err);
 
         ParseAttempt::Ok(SyntaxNode::Error(SyntaxFactory::error_node()))
+    }
+
+    fn register_err_stmt(&mut self, err: CompilerMessage) -> ParseAttempt<Stmt> {
+        self.messages.add(err);
+
+        ParseAttempt::Ok(Stmt::Error(SyntaxFactory::error_node()))
+    }
+
+    fn register_err_expr(&mut self, err: CompilerMessage) -> ParseAttempt<Expr> {
+        self.messages.add(err);
+
+        ParseAttempt::Ok(Expr::Error(SyntaxFactory::error_node()))
     }
 }
 

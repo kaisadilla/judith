@@ -8,6 +8,7 @@ extern crate serde;
 #[derive(Debug, Serialize)]
 #[serde(tag = "node_kind")]
 pub enum SyntaxNode {
+    Stmt(Stmt),
     Expr(Expr),
     Error(ErrorNode),
 }
@@ -15,12 +16,14 @@ pub enum SyntaxNode {
 impl SyntaxNode {
     pub fn span (&self) -> &Option<SourceSpan> {
         match self {
+            SyntaxNode::Stmt(expr) => expr.span(),
             SyntaxNode::Expr(expr) => expr.span(),
             SyntaxNode::Error(err) => &err.span,
         }
     }
 }
 
+// region Bodies
 #[derive(Debug, Serialize)]
 #[serde(tag = "block_kind")]
 pub enum Body {
@@ -64,13 +67,47 @@ pub struct ExprBody {
     pub expr: Expr,
     pub span: Option<SourceSpan>,
 }
+// endregion Bodies
 
-// region Expression
+// region Statements
+#[derive(Debug, Serialize)]
+#[serde(tag = "stmt_kind")]
+pub enum Stmt {
+    #[serde(rename = "Expr")]
+    Expr(ExprStmt),
+
+    #[serde(rename = "Error")]
+    Error(ErrorNode),
+}
+
+impl Stmt {
+    pub fn span (&self) -> &Option<SourceSpan> {
+        match self {
+            Stmt::Expr(stmt) => &stmt.span,
+            Stmt::Error(stmt) => &stmt.span,
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct ExprStmt {
+    pub expr: Expr,
+    pub span: Option<SourceSpan>,
+}
+// endregion Statements
+
+// region Expressions
 #[derive(Debug, Serialize)]
 #[serde(tag = "expr_kind")]
 pub enum Expr {
     #[serde(rename = "If")]
     If(Box<IfExpr>),
+
+    #[serde(rename = "Loop")]
+    Loop(Box<LoopExpr>),
+
+    #[serde(rename = "While")]
+    While(Box<WhileExpr>),
 
     #[serde(rename = "Assignment")]
     Assignment(Box<AssignmentExpr>),
@@ -107,6 +144,8 @@ impl Expr {
     pub fn span (&self) -> &Option<SourceSpan> {
         match self {
             Expr::If(expr) => &expr.span,
+            Expr::Loop(expr) => &expr.span,
+            Expr::While(expr) => &expr.span,
             Expr::Assignment(expr) => &expr.span,
             Expr::Binary(expr) => &expr.span,
             Expr::LeftUnary(expr) => &expr.span,
@@ -129,6 +168,21 @@ pub struct IfExpr {
     pub span: Option<SourceSpan>,
     pub if_token: Option<Token>,
     pub else_token: Option<Token>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct LoopExpr {
+    pub body: Body,
+    pub span: Option<SourceSpan>,
+    pub loop_token: Option<Token>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct WhileExpr {
+    pub test: Expr,
+    pub body: Body,
+    pub span: Option<SourceSpan>,
+    pub while_token: Option<Token>,
 }
 
 #[derive(Debug, Serialize)]
@@ -263,6 +317,13 @@ pub struct EqualsValueClause {
 }
 
 #[derive(Debug, Serialize)]
+pub struct TypeAnnotation {
+    pub ty: TypeNode,
+    pub span: Option<SourceSpan>,
+    pub colon_token: Option<Token>,
+}
+
+#[derive(Debug, Serialize)]
 pub struct Operator {
     pub kind: OperatorKind,
     pub span: Option<SourceSpan>,
@@ -301,6 +362,87 @@ pub struct ObjectInitializer {
 }
 // endregion Fragments
 
+// region Type nodes
+#[derive(Debug, Serialize)]
+pub enum TypeNode {
+    Identifier(TypeNodeInfo, IdentifierType),
+    Group(TypeNodeInfo, Box<GroupType>),
+    Function(TypeNodeInfo, Box<FunctionType>),
+    // TODO ObjectType
+    TupleArray(TypeNodeInfo, Box<TupleArrayType>),
+    RawArray(TypeNodeInfo, Box<RawArrayType>),
+    Literal(TypeNodeInfo, LiteralType),
+    Sum(TypeNodeInfo, Box<SumType>),
+    Product(TypeNodeInfo, Box<ProductType>),
+}
+
+#[derive(Debug, Serialize)]
+pub struct TypeNodeInfo {
+    pub is_nullable: bool,
+    pub ownership_kind: OwnershipKind,
+    pub span: Option<SourceSpan>,
+    pub nullable_token: Option<Token>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct IdentifierType {
+    pub name: Identifier,
+}
+
+#[derive(Debug, Serialize)]
+pub struct GroupType {
+    pub ty: TypeNode,
+    pub left_paren_token: Option<Token>,
+    pub right_paren_token: Option<Token>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct FunctionType {
+    pub param_types: Vec<TypeNode>,
+    pub return_type: TypeNode,
+    pub is_send: bool,
+    pub is_sync: bool,
+    pub has_exception: bool,
+    pub ss_token: Option<Token>,
+    pub exception_mark_token: Option<Token>,
+    pub left_paren_token: Option<Token>,
+    pub right_paren_token: Option<Token>,
+    pub return_annotation_token: Option<Token>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TupleArrayType {
+    pub member_types: Vec<TypeNode>,
+    pub left_square_bracket_token: Option<Token>,
+    pub right_square_bracket_token: Option<Token>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct RawArrayType {
+    pub member_type: Vec<TypeNode>,
+    pub length: Expr,
+    pub left_square_bracket_token: Option<Token>,
+    pub right_square_bracket_token: Option<Token>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct LiteralType {
+    pub literal: Literal,
+}
+
+#[derive(Debug, Serialize)]
+pub struct SumType {
+    pub member_types: Vec<TypeNode>,
+    pub or_tokens: Option<Vec<Token>>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ProductType {
+    pub member_types: Vec<TypeNode>,
+    pub and_tokens: Option<Vec<Token>>,
+}
+// endregion
+
 // endregion Nodes
 
 // region Enums
@@ -327,5 +469,16 @@ pub enum OperatorKind {
     LogicalOr, // or
     MemberAccess, // .
     ScopeResolution, // ::
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub enum OwnershipKind {
+    /// This node doesn't define any ownership kind.
+    None,
+    Final,
+    Mut,
+    Shared,
+    Ref,
+    In,
 }
 // endregion

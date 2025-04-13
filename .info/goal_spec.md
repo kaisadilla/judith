@@ -739,7 +739,7 @@ end
 ```
 
 ## Do
-Do is a simple block that executes one. It can be used to define blocks with modifiers such as `unsafe` or `unchecked`, or to `yield` a value.
+Do is a simple block that executes once. It can be used to define blocks with modifiers such as `unsafe` or `unchecked`, or to `yield` a value.
 
 ```judith
 do
@@ -1572,6 +1572,13 @@ A common use case of product types is to force a value of a given type to implem
 
 ```judith
 let callback: (() => Void) & ISend -- this only accepts functions that are ISend.
+```
+
+Note that product types do not create new types. Instead, members of a product type must overlap, meaning that it has to be possible for a value to belong to all member types.
+
+```judith
+let multithread: ISend & ISync -- valid, as a value could implement both interfaces.
+--let something: Person & Vehicle -- ERROR, 'Person' and 'Vehicle' are two structs.
 ```
 
 ## User-defined types
@@ -3808,17 +3815,33 @@ Note that extension methods, constructors and interfaces will not be returned by
 TODO
 
 # FFI
-TODO
+TODO `#extern 'C' (name = 'different_name')`
 
 # Metaprogramming
 TODO - two types:
 
 * Mixins: functions that can be evaluated at compile time. Used for simple cases.
-* Macros: Judith scripts that generate Judith source code at compile time. Macros do not have access to the project they are defined in, but have access to all of its dependencies. Used for complex cases. Use `$identifier` or `$identifier(<params>)` syntax. Params follow the same rules as macros themselves (no access to the project, but access to dependencies). You can even use other macros as params.
+* Macros: Judith scripts that generate Judith source code at compile time. Macros do not have access to the project they are defined in, but have access to all of its dependencies. Used for complex cases. Use `$<identifier>` or `$<identifier>(<params>)` syntax. Params follow the same rules as macros themselves (no access to the project, but access to dependencies). You can even use other macros as params.
+* Macros 2: Using `#[]` or `#derive <identifier>` / `#derive <identifier>(<params>)`.
 
 # Directives
+Directives are special annotations that can be added to code to modify the behavior of the compiler, the IDE or other tools used to build the project.
 
-## Serialization
+## `#if`, `#elsif`, `#else`, `#endif`
+
+## `#def`, `#undef`
+
+## `#nowarn`
+
+## `#using`
+
+## `#pragma`
+
+## Annotations (`#[]`)
+TODO: Annotations are a kind of directives that are implemented as procedural macros. They use the `#[]` syntax.
+
+### Serialization
+TODO: Move into annotations
 ***`EXPERIMENTAL`*** Judith includes some directives that decorate the code to indicate serialization behavior, which can then be used by functions such as JSON serializers.
 
 * `#serial ignore`: used on a field to mark it to be ignored during serialization.

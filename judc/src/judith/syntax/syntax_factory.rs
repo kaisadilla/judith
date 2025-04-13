@@ -72,8 +72,18 @@ impl SyntaxFactory {
     }
     // endregion
 
-    // region Expressions
+    // region Statements
+    pub fn expr_stmt(expr: Expr) -> ExprStmt {
+        let span = expr.span().unwrap().clone();
 
+        ExprStmt {
+            expr,
+            span: Some(span),
+        }
+    }
+    // endregion Statements
+
+    // region Expressions
     pub fn if_expr(if_tok: Token, test: Expr, body: Body) -> IfExpr {
         let start = if_tok.base().start;
         let end = body.span().unwrap().end;
@@ -103,6 +113,31 @@ impl SyntaxFactory {
             span: Some(SourceSpan { start, end, line }),
             if_token: Some(if_tok),
             else_token: else_tok,
+        }
+    }
+
+    pub fn loop_expr(loop_tok: Token, body: Body) -> LoopExpr {
+        let start = loop_tok.base().start;
+        let end = body.span().unwrap().end;
+        let line = loop_tok.base().line;
+
+        LoopExpr {
+            body,
+            span: Some(SourceSpan { start, end, line }),
+            loop_token: Some(loop_tok),
+        }
+    }
+
+    pub fn while_expr(while_tok: Token, test: Expr, body: Body) -> WhileExpr {
+        let start = while_tok.base().start;
+        let end = body.span().unwrap().end;
+        let line = while_tok.base().line;
+
+        WhileExpr {
+            test,
+            body,
+            span: Some(SourceSpan { start, end, line }),
+            while_token: Some(while_tok),
         }
     }
 
