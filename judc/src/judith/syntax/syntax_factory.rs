@@ -81,6 +81,68 @@ impl SyntaxFactory {
             span: Some(span),
         }
     }
+
+    pub fn local_decl_stmt(
+        let_tok: Token,
+        ownership_tok: Option<Token>,
+        decl: PartialLocalDecl,
+        init: Option<EqualsValueClause>
+    ) -> LocalDeclStmt {
+        let start = let_tok.base().start;
+        let end: i64;
+        let line = let_tok.base().line;
+
+        if let Some(init) = &init {
+            end = init.span.unwrap().end;
+        }
+        else {
+            end = decl.span().unwrap().end;
+        }
+
+        let ownership_kind = get_ownership(&ownership_tok);
+
+        LocalDeclStmt {
+            ownership_kind,
+            decl,
+            initializer: init,
+            span: Some(SourceSpan { start, end, line }),
+            let_token: Some(let_tok),
+            ownership_token: ownership_tok,
+        }
+    }
+
+    pub fn regular_local_decl(declarator: LocalDeclarator) -> RegularLocalDecl {
+        let span = declarator.span.unwrap().clone();
+
+        RegularLocalDecl {
+            declarator,
+            span: Some(span),
+        }
+    }
+
+    pub fn destructured_local_decl(
+        opening_tok: Token, declarators: Vec<LocalDeclarator>, closing_tok: Token
+    ) -> DestructuredLocalDecl {
+        panic_when_invalid_pair(&opening_tok, &closing_tok);
+
+        let start = opening_tok.base().start;
+        let end = closing_tok.base().end;
+        let line = opening_tok.base().line;
+
+        let destructuring_kind = match &opening_tok.kind() {
+            TokenKind::LeftSquareBracket => DestructuringKind::ArrayPattern,
+            TokenKind::LeftCurlyBracket => DestructuringKind::ObjectPattern,
+            _ => panic!("Invalid destructuring token."),
+        };
+
+        DestructuredLocalDecl {
+            declarators,
+            destructuring_kind,
+            span: Some(SourceSpan { start, end, line }),
+            opening_token: Some(opening_tok),
+            closing_token: Some(closing_tok),
+        }
+    }
     // endregion Statements
 
     // region Expressions
@@ -341,6 +403,18 @@ impl SyntaxFactory {
         }
     }
 
+    pub fn type_annotation(colon: Token, ty: TypeNode) -> TypeAnnotation {
+        let start = colon.base().start;
+        let end = ty.span().unwrap().end;
+        let line = colon.base().line;
+
+        TypeAnnotation {
+            ty,
+            span: Some(SourceSpan { start, end, line }),
+            colon_token: Some(colon),
+        }
+    }
+
     pub fn operator(tok: Token) -> Operator {
         let start = tok.base().start;
         let end = tok.base().end;
@@ -401,6 +475,25 @@ impl SyntaxFactory {
         }
     }
 
+    pub fn local_declarator(name: SimpleIdentifier, ty: Option<TypeAnnotation>) -> LocalDeclarator {
+        let start = name.span.unwrap().start;
+        let end: i64;
+        let line = name.span.unwrap().line;
+
+        if let Some(ty) = &ty {
+            end = ty.span.unwrap().end;
+        }
+        else {
+            end = name.span.unwrap().end;
+        };
+
+        LocalDeclarator {
+            name,
+            type_annotation: ty,
+            span: Some(SourceSpan { start, end, line }),
+        }
+    }
+
     pub fn field_init(field_name: SimpleIdentifier, initializer: EqualsValueClause) -> FieldInit {
         let start = field_name.span.unwrap().start;
         let end = initializer.span.unwrap().end;
@@ -430,9 +523,229 @@ impl SyntaxFactory {
     }
     // endregion Fragments
 
+    //region Type nodes
+    pub fn type_node(
+        ownership_tok: Option<Token>, ty: PartialType, nullable_tok: Option<Token>
+    ) -> TypeNode {
+        let is_nullable = match &nullable_tok {
+            Some(tok) if tok.kind() == TokenKind::QuestionMark => true,
+            None => false,
+            _ => panic!("'nullable_tok' can only be None or '?'."),
+        };
+
+        let ownership_kind = get_ownership(&ownership_tok);
+
+        TypeNode {
+            is_nullable,
+            ownership_kind,
+            ty,
+            nullable_token: nullable_tok,
+            ownership_token: ownership_tok,
+        }
+    }
+
+    pub fn identifier_type(id: Identifier) -> IdentifierType {
+        let span = id.span().unwrap().clone();
+
+        IdentifierType {
+            name: id,
+            span: Some(span),
+        }
+    }
+
+    pub fn group_type(left_paren: Token, ty: TypeNode, right_paren: Token) -> GroupType {
+        let start = left_paren.base().start;
+        let end = right_paren.base().end;
+        let line = left_paren.base().line;
+
+        GroupType {
+            ty,
+            span: Some(SourceSpan { start, end, line }),
+            left_paren_token: Some(left_paren),
+            right_paren_token: Some(right_paren),
+        }
+    }
+
+    pub fn function_type(
+        ss: Option<Token>,
+        except: Option<Token>,
+        left_paren: Token,
+        param_types: Vec<TypeNode>,
+        right_paren: Token,
+        param_comma_tokens: Vec<Token>,
+        return_annotation: Token,
+        return_type: TypeNode
+    ) -> FunctionType {
+        let start: i64;
+        let end = return_type.span().unwrap().end;
+        let line: i64;
+
+        if let Some(tok) = &ss {
+            start = tok.base().start;
+            line = tok.base().line;
+        }
+        else if let Some(tok) = &except {
+            start = tok.base().start;
+            line = tok.base().line;
+        }
+        else {
+            start = left_paren.base().start;
+            line = left_paren.base().line;
+        };
+
+        let is_send: bool;
+        let is_sync: bool;
+        let has_exception: bool;
+
+        match &ss {
+            Some(tok) if tok.base().lexeme == "s" => { is_send = true; is_sync = false; },
+            Some(tok) if tok.base().lexeme == "S" => { is_send = false; is_sync = true; },
+            Some(tok) if tok.base().lexeme == "sS" => { is_send = true; is_sync = true; },
+            None => { is_send = false; is_sync = false; },
+            _ => panic!("ss token can only contain None, 's', 'sS' or 'S'."),
+        }
+
+        match &except {
+            Some(tok) if tok.kind() == TokenKind::Bang => has_exception = true,
+            None => has_exception = false,
+            _ => panic!("except token can only contain None or '!'."),
+        }
+
+        FunctionType {
+            param_types,
+            return_type,
+            is_send,
+            is_sync,
+            has_exception,
+            span: Some(SourceSpan { start, end, line }),
+            ss_token: ss,
+            exception_mark_token: except,
+            left_paren_token: Some(left_paren),
+            right_paren_token: Some(right_paren),
+            param_comma_tokens: Some(param_comma_tokens),
+            return_annotation_token: Some(return_annotation),
+        }
+    }
+
+    pub fn tuple_array_type(
+        left_bracket: Token, member_types: Vec<TypeNode>, right_bracket: Token, comma_tokens: Vec<Token>
+    ) -> TupleArrayType {
+        let start = left_bracket.base().start;
+        let end = right_bracket.base().end;
+        let line = left_bracket.base().line;
+
+        TupleArrayType {
+            member_types,
+            span: Some(SourceSpan { start, end, line }),
+            left_square_bracket_token: Some(left_bracket),
+            right_square_bracket_token: Some(right_bracket),
+            comma_tokens: Some(comma_tokens),
+        }
+    }
+
+    pub fn raw_array_type(
+        member_type: TypeNode, left_bracket: Token, len: Expr, right_bracket: Token
+    ) -> RawArrayType {
+        let start = member_type.span().unwrap().start;
+        let end = right_bracket.base().end;
+        let line = member_type.span().unwrap().start;
+
+        RawArrayType {
+            member_type,
+            length: len,
+            span: Some(SourceSpan { start, end, line }),
+            left_square_bracket_token: Some(left_bracket),
+            right_square_bracket_token: Some(right_bracket),
+        }
+    }
+
+    pub fn literal_type(lit: Literal) -> LiteralType {
+        let span = lit.span.unwrap().clone();
+
+        LiteralType {
+            literal: lit,
+            span: Some(span),
+        }
+    }
+
+    pub fn sum_type(member_types: Vec<TypeNode>, or_tokens: Vec<Token>) -> SumType {
+        if member_types.len() == 0 {
+            panic!("A sum type must contain, at least, one type.");
+        };
+
+        let start = member_types.first().unwrap().span().unwrap().start;
+        let end = member_types.last().unwrap().span().unwrap().end;
+        let line = member_types.first().unwrap().span().unwrap().line;
+
+        SumType {
+            member_types,
+            span: Some(SourceSpan { start, end, line }),
+            or_tokens: Some(or_tokens),
+        }
+    }
+
+    pub fn product_type(member_types: Vec<TypeNode>, and_tokens: Vec<Token>) -> ProductType {
+        if member_types.len() == 0 {
+            panic!("A product type must contain, at least, one type.");
+        };
+
+        let start = member_types.first().unwrap().span().unwrap().start;
+        let end = member_types.last().unwrap().span().unwrap().end;
+        let line = member_types.first().unwrap().span().unwrap().line;
+
+        ProductType {
+            member_types,
+            span: Some(SourceSpan { start, end, line }),
+            and_tokens: Some(and_tokens),
+        }
+    }
+    //endregion Type nodes
+
     pub fn error_node() -> ErrorNode {
         ErrorNode {
             span: Some(SourceSpan { start: -1, end: -1, line: -1 }), // TODO
         }
     }
+}
+
+fn get_ownership(tok: &Option<Token>) -> OwnershipKind {
+    match &tok {
+        Some(tok) if tok.kind() == TokenKind::KwFinal => OwnershipKind::Final,
+        Some(tok) if tok.kind() == TokenKind::KwMut => OwnershipKind::Mut,
+        Some(tok) if tok.kind() == TokenKind::KwIn => OwnershipKind::In,
+        Some(tok) if tok.kind() == TokenKind::KwShared => OwnershipKind::Shared,
+        Some(tok) if tok.kind() == TokenKind::KwRef => OwnershipKind::Ref,
+        None => OwnershipKind::None,
+        _ => panic!("Ownership token can only be None, 'final', 'mut', 'in', 'shared' or 'ref'."),
+    }
+}
+
+/// Checks the token kinds given and panics if they don't form a pair. Valid pairs:
+/// * `(` and `)`.
+/// * `[` and `]`.
+/// * `{` and `}`.
+/// * `<` and `>` only when they are `LeftAngleBracket` and `RightAngleBracket`.
+fn panic_when_invalid_pair(left: &Token, right: &Token) {
+    if left.kind() == TokenKind::LeftParen {
+        if right.kind() == TokenKind::RightParen {
+            return;
+        }
+    }
+    if left.kind() == TokenKind::LeftSquareBracket {
+        if right.kind() == TokenKind::RightSquareBracket {
+            return;
+        }
+    }
+    if left.kind() == TokenKind::LeftCurlyBracket {
+        if right.kind() == TokenKind::RightCurlyBracket {
+            return;
+        }
+    }
+    if left.kind() == TokenKind::LeftAngleBracket {
+        if right.kind() == TokenKind::RightAngleBracket {
+            return;
+        }
+    }
+
+    panic!("Invalid token pair.");
 }

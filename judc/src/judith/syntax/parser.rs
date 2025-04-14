@@ -1,4 +1,5 @@
 use std::iter::{Enumerate, Peekable};
+use std::ptr::null;
 use std::slice::Iter;
 use crate::judith::compiler_messages;
 use crate::judith::compiler_messages::{CompilerMessage, MessageContainer};
@@ -163,7 +164,7 @@ impl<'a> Parser<'a> {
     // region Parse bodies
     pub fn parse_body(&mut self, opening_token: Option<TokenKind>) -> ParseAttempt<Body> {
         // Arrow must be tried first, since block statement may not have an opening token (and thus
-        // would report an error trying to read an arrow.
+        // would report an error trying to read an arrow).
         match self.parse_arrow_body() {
             ParseAttempt::Ok(arrow_body) => return ParseAttempt::Ok(Body::Arrow(arrow_body)),
             ParseAttempt::Err(err) => return ParseAttempt::Err(err),
@@ -259,6 +260,10 @@ impl<'a> Parser<'a> {
 
         ParseAttempt::Ok(SyntaxFactory::expr_stmt(expr))
     }
+
+    //pub fn parse_local_decl_stmt(&mut self) -> ParseAttempt<LocalDeclStmt> {
+    //
+    //}
 
     // endregion Parse statements
 
@@ -994,6 +999,379 @@ impl<'a> Parser<'a> {
     }
     // endregion Fragments
 
+    pub fn parse_type(&mut self) -> ParseAttempt<TypeNode> {
+        let ownership_tok = self.parse_ownership_token();
+
+        match self.parse_sum_type() {
+            ParseAttempt::Ok(ty) => ParseAttempt::Ok(SyntaxFactory::type_node(
+                ownership_tok,
+                ty.ty,
+                ty.nullable_token,
+            )),
+            ParseAttempt::Err(msg) => ParseAttempt::Err(msg),
+            ParseAttempt::None => ParseAttempt::None,
+        }
+    }
+
+    // sum_type ::= product_type ( "|" product_type )*
+    pub fn parse_sum_type(&mut self) -> ParseAttempt<TypeNode> {
+        let ty = match self.parse_product_type() {
+            ParseAttempt::Ok(ty) => ty,
+            ParseAttempt::Err(msg) => return ParseAttempt::Err(msg),
+            ParseAttempt::None => return ParseAttempt::None,
+        };
+
+        if self.check(TokenKind::Pipe) == false {
+            return ParseAttempt::Ok(ty);
+        }
+
+        let mut member_types = vec![ty];
+        let mut or_tokens: Vec<Token> = Vec::new();
+        loop {
+            match self.try_consume(TokenKind::Pipe) {
+                Some(tok) => or_tokens.push(tok),
+                None => break,
+            };
+
+            match self.parse_product_type() {
+                ParseAttempt::Ok(ty) => member_types.push(ty),
+                ParseAttempt::Err(msg) => return ParseAttempt::Err(msg),
+                ParseAttempt::None => return ParseAttempt::Err(
+                    compiler_messages::Parser::type_expected(self.now())
+                ),
+            };
+        };
+
+        ParseAttempt::Ok(SyntaxFactory::type_node(
+            None,
+            PartialType::Sum(Box::from(
+                SyntaxFactory::sum_type(member_types, or_tokens)
+            )),
+            None,
+        ))
+    }
+
+    // product_type ::= raw_array_type ( "&" raw_array_type )*
+    pub fn parse_product_type(&mut self) -> ParseAttempt<TypeNode> {
+        let ty = match self.parse_raw_array_type() {
+            ParseAttempt::Ok(ty) => ty,
+            ParseAttempt::Err(msg) => return ParseAttempt::Err(msg),
+            ParseAttempt::None => return ParseAttempt::None,
+        };
+
+        if self.check(TokenKind::Ampersand) == false {
+            return ParseAttempt::Ok(ty);
+        }
+
+        let mut member_types = vec![ty];
+        let mut and_tokens: Vec<Token> = Vec::new();
+        loop {
+            match self.try_consume(TokenKind::Ampersand) {
+                Some(tok) => and_tokens.push(tok),
+                None => break,
+            };
+
+            match self.parse_raw_array_type() {
+                ParseAttempt::Ok(ty) => member_types.push(ty),
+                ParseAttempt::Err(msg) => return ParseAttempt::Err(msg),
+                ParseAttempt::None => return ParseAttempt::Err(
+                    compiler_messages::Parser::type_expected(self.now())
+                ),
+            };
+        };
+
+        ParseAttempt::Ok(SyntaxFactory::type_node(
+            None,
+            PartialType::Product(Box::from(
+                SyntaxFactory::product_type(member_types, and_tokens)
+            )),
+            None,
+        ))
+    }
+
+    // raw_array_type ::= primary_type ( "[" expr "]" )*
+    pub fn parse_raw_array_type(&mut self) -> ParseAttempt<TypeNode> {
+        let ty = match self.parse_primary_type() {
+            ParseAttempt::Ok(ty) => ty,
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            ParseAttempt::None => return ParseAttempt::None,
+        };
+
+        let nullable_tok = self.try_consume(TokenKind::QuestionMark);
+
+        let mut ty= SyntaxFactory::type_node(None, ty, nullable_tok);
+
+        loop {
+            let left_sq_bracket = match self.try_consume(TokenKind::LeftSquareBracket) {
+                Some(tok) => tok,
+                None => return ParseAttempt::Ok(ty),
+            };
+
+            let len = match self.parse_expr() {
+                ParseAttempt::Ok(expr) => expr,
+                ParseAttempt::Err(msg) => return ParseAttempt::Err(msg),
+                ParseAttempt::None => return ParseAttempt::Err(
+                    compiler_messages::Parser::expression_expected(self.now())
+                ),
+            };
+
+            let right_sq_bracket = match self.try_consume(TokenKind::RightSquareBracket) {
+                Some(tok) => tok,
+                None => return ParseAttempt::Err(
+                    compiler_messages::Parser::right_square_bracket_expected(self.now())
+                ),
+            };
+
+            let nullable_tok = self.try_consume(TokenKind::QuestionMark);
+
+            ty = SyntaxFactory::type_node(
+                None,
+                PartialType::RawArray(Box::from(
+                    SyntaxFactory::raw_array_type(ty, left_sq_bracket, len, right_sq_bracket)
+                )),
+                nullable_tok,
+            );
+        }
+    }
+
+    // primary_type ::= identifier_type | function_type | tuple_array_type | literal_type
+    pub fn parse_primary_type(&mut self) -> ParseAttempt<PartialType> {
+        match self.parse_function_type() {
+            ParseAttempt::Ok(ty) => return ParseAttempt::Ok(ty),
+            ParseAttempt::Err(err) => return self.register_err_type(err),
+            _ => {}
+        };
+        match self.parse_tuple_array_type() {
+            ParseAttempt::Ok(ty) => return ParseAttempt::Ok(PartialType::TupleArray(Box::from(ty))),
+            ParseAttempt::Err(err) => return self.register_err_type(err),
+            _ => {}
+        };
+        match self.parse_literal_type() {
+            ParseAttempt::Ok(ty) => return ParseAttempt::Ok(PartialType::Literal(ty)),
+            ParseAttempt::Err(err) => return self.register_err_type(err),
+            _ => {}
+        };
+        match self.parse_identifier_type() {
+            ParseAttempt::Ok(ty) => return ParseAttempt::Ok(PartialType::Identifier(ty)),
+            ParseAttempt::Err(err) => return self.register_err_type(err),
+            _ => {}
+        };
+
+        ParseAttempt::None
+    }
+
+    // identifier_type ::= identifier
+    pub fn parse_identifier_type(&mut self) -> ParseAttempt<IdentifierType> {
+        let identifier = match self.parse_qualified_identifier() {
+            ParseAttempt::Ok(id) => id,
+            ParseAttempt::Err(msg) => return ParseAttempt::Err(msg),
+            ParseAttempt::None => return ParseAttempt::None,
+        };
+
+        ParseAttempt::Ok(SyntaxFactory::identifier_type(identifier))
+    }
+
+    // function_type ::= ( "s" | "S" | "sS" )? "!"? "(" type ( "," type )* ")" "->" type
+    //                 | "(" type ")" ; group_type
+    pub fn parse_function_type(&mut self) -> ParseAttempt<PartialType> {
+        // We may be parsing a function type or a group type. More on that later.
+
+        // A function type may start with the ss token ('s' for Send, 'S' for Sync, or 'sS' for both).
+        let ss_tok = match self.peek() {
+            Some(tok) if tok.base().lexeme == "s" => Some(tok),
+            Some(tok) if tok.base().lexeme == "S" => Some(tok),
+            Some(tok) if tok.base().lexeme == "sS" => Some(tok),
+            _ => None,
+        };
+
+        // If we encountered an ss token, we move forwards, consuming it.
+        if ss_tok.is_some() {
+            self.advance();
+        }
+
+        // A function may then contain '!' to indicate it can return exceptions.
+        let except_tok = self.try_consume(TokenKind::Bang);
+
+        // Then we open parentheses to enumerate parameter types.
+        let left_paren = match self.try_consume(TokenKind::LeftParen) {
+            Some(tok) => tok,
+            None => return if ss_tok.is_none() && except_tok.is_none() {
+                ParseAttempt::None
+            }
+            else {
+                ParseAttempt::Err(compiler_messages::Parser::parameter_type_list_expected(self.now()))
+            },
+        };
+
+        let mut types: Vec<TypeNode> = Vec::new();
+        let mut comma_tokens: Vec<Token> = Vec::new();
+        if self.check(TokenKind::RightParen) == false {
+            loop {
+                let ty = match self.parse_type() {
+                    ParseAttempt::Ok(ty) => ty,
+                    ParseAttempt::Err(msg) => return ParseAttempt::Err(msg),
+                    ParseAttempt::None => return ParseAttempt::Err(
+                        compiler_messages::Parser::type_expected(self.now())
+                    ),
+                };
+                types.push(ty);
+
+                // After the type, there may or may not be a comma. If there isn't a comma, then
+                // no more types can be found.
+                if let Some(tok) = self.try_consume(TokenKind::Comma) {
+                    comma_tokens.push(tok);
+                }
+                else {
+                    break;
+                }
+
+                // Trailing commas are allowed, so we may find a comma and still find the closing
+                // parenthesis afterward.
+                if self.check(TokenKind::RightParen) {
+                    break;
+                }
+            }
+        };
+
+        let right_paren = match self.try_consume(TokenKind::RightParen) {
+            Some(tok) => tok,
+            None => return ParseAttempt::Err(compiler_messages::Parser::right_paren_expected(self.now()))
+        };
+
+        // Now, there's 3 possible scenarios: if we encounter '->', this is a function type. If we
+        // don't; then if the type doesn't have an ss token nor an exception token, and there's exactly
+        // one parameter type, then we have actually parsed a grouping type. In the case there's no
+        // '->' but the conditions for a group type aren't fulfilled, we are parsing an incorrect
+        // function or group type.
+
+        // We are parsing a function.
+        if let Some(arrow_tok) = self.try_consume(TokenKind::EqualArrow) {
+            let return_type = match self.parse_type() {
+                ParseAttempt::Ok(ty) => ty,
+                ParseAttempt::Err(msg) => return ParseAttempt::Err(msg),
+                ParseAttempt::None => return ParseAttempt::Err(
+                    compiler_messages::Parser::type_expected(self.now())
+                ),
+            };
+
+            ParseAttempt::Ok(PartialType::Function(Box::from(
+                SyntaxFactory::function_type(
+                    ss_tok,
+                    except_tok,
+                    left_paren,
+                    types,
+                    right_paren,
+                    comma_tokens,
+                    arrow_tok,
+                    return_type
+                )
+            )))
+        }
+        // We are parsing a group type.
+        else if ss_tok.is_none() && except_tok.is_none() {
+            // The group type is empty, which isn't allowed.
+            if types.len() == 0 {
+                ParseAttempt::Err(compiler_messages::Parser::type_expected(self.now()))
+            }
+            // The group type has exactly one type, which is allowed.
+            else if types.len() == 1 {
+                ParseAttempt::Ok(PartialType::Group(Box::from(
+                    SyntaxFactory::group_type(left_paren, types.remove(0), right_paren)
+                )))
+            }
+            // The group type has many types separated by commas, which isn't allowed.
+            else {
+                ParseAttempt::Err(compiler_messages::Parser::right_paren_expected(self.now()))
+            }
+        }
+        // We are parsing an incorrect function type.
+        else {
+            ParseAttempt::Err(compiler_messages::Parser::return_type_expected(self.now()))
+        }
+    }
+
+    // tuple_array_type ::= "[" type ( "," type )* "]"
+    pub fn parse_tuple_array_type(&mut self) -> ParseAttempt<TupleArrayType> {
+        let left_sq_bracket = match self.try_consume(TokenKind::LeftSquareBracket) {
+            Some(tok) => tok,
+            None => return ParseAttempt::None,
+        };
+
+        let mut types: Vec<TypeNode> = Vec::new();
+        let mut comma_tokens: Vec<Token> = Vec::new();
+        if self.check(TokenKind::RightSquareBracket) == false {
+            loop {
+                let ty = match self.parse_type() {
+                    ParseAttempt::Ok(ty) => ty,
+                    ParseAttempt::Err(msg) => return ParseAttempt::Err(msg),
+                    ParseAttempt::None => return ParseAttempt::Err(
+                        compiler_messages::Parser::type_expected(self.now())
+                    ),
+                };
+                types.push(ty);
+
+                // After the type, there may or may not be a comma. If there isn't a comma, then
+                // no more types can be found.
+                if let Some(tok) = self.try_consume(TokenKind::Comma) {
+                    comma_tokens.push(tok);
+                }
+                else {
+                    break;
+                }
+
+                // Trailing commas are allowed, so we may find a comma and still find the closing
+                // parenthesis afterward.
+                if self.check(TokenKind::RightParen) {
+                    break;
+                }
+            }
+        };
+
+        let right_sq_bracket = match self.try_consume(TokenKind::RightSquareBracket) {
+            Some(tok) => tok,
+            None => return ParseAttempt::Err(
+                compiler_messages::Parser::right_square_bracket_expected(self.now())
+            )
+        };
+
+        ParseAttempt::Ok(
+            SyntaxFactory::tuple_array_type(left_sq_bracket, types, right_sq_bracket, comma_tokens)
+        )
+    }
+
+    // literal_type ::= literal
+    pub fn parse_literal_type(&mut self) -> ParseAttempt<LiteralType> {
+        let lit = match self.parse_literal() {
+            ParseAttempt::Ok(lit) => lit,
+            ParseAttempt::Err(msg) => return ParseAttempt::Err(msg),
+            ParseAttempt::None => return ParseAttempt::None,
+        };
+
+        ParseAttempt::Ok(SyntaxFactory::literal_type(lit))
+    }
+    // endregion Types
+
+    fn parse_ownership_token(&mut self) -> Option<Token> {
+        if let Some(tok) = self.try_consume(TokenKind::KwFinal) {
+            Some(tok)
+        }
+        else if let Some(tok) = self.try_consume(TokenKind::KwMut) {
+            Some(tok)
+        }
+        else if let Some(tok) = self.try_consume(TokenKind::KwIn) {
+            Some(tok)
+        }
+        else if let Some(tok) = self.try_consume(TokenKind::KwShared) {
+            Some(tok)
+        }
+        else if let Some(tok) = self.try_consume(TokenKind::KwRef) {
+            Some(tok)
+        }
+        else {
+            None
+        }
+    }
+
     // endregion Parse methods
 
     /// Marks the lexer as containing errors and adds the message to the container.
@@ -1019,6 +1397,12 @@ impl<'a> Parser<'a> {
 
         ParseAttempt::Ok(Expr::Error(SyntaxFactory::error_node()))
     }
+
+    fn register_err_type(&mut self, err: CompilerMessage) -> ParseAttempt<PartialType> {
+        self.messages.add(err);
+
+        ParseAttempt::Ok(PartialType::Error(SyntaxFactory::error_node()))
+    }
 }
 
 pub fn parse(tokens: Vec<Token>) -> ParserResult {
@@ -1041,14 +1425,43 @@ pub fn parse(tokens: Vec<Token>) -> ParserResult {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use crate::judith::lexical::lexer::tokenize;
+    use super::*;
 
-/*pub fn tokenize(src: &str) -> Vec<Token>  {
-    let mut lexer = Lexer::new(src);
-    let mut tokens: Vec<Token> = vec![];
+    #[test]
+    fn valid_identifier_type() {
+        println!("== Testing identifier type ==");
 
-    while tokens.len() == 0 || tokens.last().unwrap().kind() != TokenKind::EOF {
-        tokens.push(lexer.next_token());
+        println!("Testing 'Num'.");
+        let lexer_res = tokenize("Num");
+        let mut parser = Parser::new(&lexer_res.tokens);
+        let ParseAttempt::Ok(node) = parser.parse_type() else { panic!("Parse failed.")};
+
+        assert!(matches!(&node.ty, PartialType::Identifier(ident)));
+        let PartialType::Identifier(ident) = &node.ty else { panic!("???")};
+
+        assert!(matches!(&ident.name, Identifier::Simple(_)));
+        let Identifier::Simple(ident) = &ident.name else { panic!("???")};
+
+        assert_eq!(ident.name, "Num");
+        assert_eq!(node.is_nullable, false);
+        assert_eq!(node.ownership_kind, OwnershipKind::None);
+
+        println!("Testing 'mut String?'.");
+        let lexer_res = tokenize("mut String?");
+        let mut parser = Parser::new(&lexer_res.tokens);
+        let ParseAttempt::Ok(node) = parser.parse_type() else { panic!("Parse failed.")};
+
+        assert!(matches!(&node.ty, PartialType::Identifier(ident)));
+        let PartialType::Identifier(ident) = &node.ty else { panic!("???")};
+
+        assert!(matches!(&ident.name, Identifier::Simple(_)));
+        let Identifier::Simple(ident) = &ident.name else { panic!("???")};
+
+        assert_eq!(ident.name, "String");
+        assert_eq!(node.is_nullable, true);
+        assert_eq!(node.ownership_kind, OwnershipKind::Mut);
     }
-
-    tokens
-}*/
+}

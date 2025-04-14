@@ -5,9 +5,26 @@ use std::path::Path;
 use serde_json::ser;
 use judc::judith::compiler_messages::MessageContainer;
 use judc::judith::lexical::lexer::{tokenize, Lexer};
-use judc::judith::syntax::parser::parse;
+use judc::judith::syntax::parser::{parse, ParseAttempt, Parser};
 
-fn main () {
+fn main  () {
+    let exe_path = env::current_exe().unwrap();
+    let run_path = exe_path.parent().unwrap();
+    let res_path = run_path.join("resources").clone();
+    let out_path = run_path.join(".out").clone();
+
+    //let lexer_res = tokenize("mut sS (Num) -> Num?");
+    let lexer_res = tokenize("Num?[5] | String & ISend");
+    let mut parser = Parser::new(&lexer_res.tokens);
+    let ParseAttempt::Ok(ty) = parser.parse_type() else { panic!("Invalid type???") };
+
+    let ty_json = serde_json::to_string_pretty(&ty).unwrap();
+
+    let mut file = File::create(out_path.join("ast.json")).unwrap();
+    file.write_all(ty_json.as_bytes()).unwrap();
+}
+
+fn main2 () {
     //let formatter = ser::PrettyFormatter::with_indent(b"    ");
     let exe_path = env::current_exe().unwrap();
     let run_path = exe_path.parent().unwrap();

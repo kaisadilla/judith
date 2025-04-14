@@ -73,10 +73,8 @@ pub struct ExprBody {
 #[derive(Debug, Serialize)]
 #[serde(tag = "stmt_kind")]
 pub enum Stmt {
-    #[serde(rename = "Expr")]
     Expr(ExprStmt),
-
-    #[serde(rename = "Error")]
+    LocalDecl(LocalDeclStmt),
     Error(ErrorNode),
 }
 
@@ -84,6 +82,7 @@ impl Stmt {
     pub fn span (&self) -> &Option<SourceSpan> {
         match self {
             Stmt::Expr(stmt) => &stmt.span,
+            Stmt::LocalDecl(stmt) => &stmt.span,
             Stmt::Error(stmt) => &stmt.span,
         }
     }
@@ -94,49 +93,65 @@ pub struct ExprStmt {
     pub expr: Expr,
     pub span: Option<SourceSpan>,
 }
+
+#[derive(Debug, Serialize)]
+pub struct LocalDeclStmt {
+    pub ownership_kind: OwnershipKind,
+    pub decl: PartialLocalDecl,
+    pub initializer: Option<EqualsValueClause>,
+    pub span: Option<SourceSpan>,
+    pub let_token: Option<Token>,
+    pub ownership_token: Option<Token>,
+}
+
+#[derive(Debug, Serialize)]
+pub enum PartialLocalDecl {
+    Regular(RegularLocalDecl),
+    Destructured(DestructuredLocalDecl),
+}
+
+impl PartialLocalDecl {
+    pub fn span(&self) -> &Option<SourceSpan> {
+        match &self {
+            PartialLocalDecl::Regular(decl) => &decl.span,
+            PartialLocalDecl::Destructured(decl) => &decl.span,
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct RegularLocalDecl {
+    pub declarator: LocalDeclarator,
+    pub span: Option<SourceSpan>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DestructuredLocalDecl {
+    pub declarators: Vec<LocalDeclarator>,
+    pub destructuring_kind: DestructuringKind,
+    pub span: Option<SourceSpan>,
+    pub opening_token: Option<Token>,
+    pub closing_token: Option<Token>,
+}
+
 // endregion Statements
 
 // region Expressions
 #[derive(Debug, Serialize)]
 #[serde(tag = "expr_kind")]
 pub enum Expr {
-    #[serde(rename = "If")]
     If(Box<IfExpr>),
-
-    #[serde(rename = "Loop")]
     Loop(Box<LoopExpr>),
-
-    #[serde(rename = "While")]
     While(Box<WhileExpr>),
-
-    #[serde(rename = "Assignment")]
     Assignment(Box<AssignmentExpr>),
-
-    #[serde(rename = "Binary")]
     Binary(Box<BinaryExpr>),
-
-    #[serde(rename = "LeftUnary")]
     LeftUnary(Box<LeftUnaryExpr>),
-
-    #[serde(rename = "Group")]
     Group(Box<GroupExpr>),
-
-    #[serde(rename = "ObjectInit")]
     ObjectInit(Box<ObjectInitExpr>),
-
-    #[serde(rename = "Access")]
     Access(Box<AccessExpr>),
-
-    #[serde(rename = "Call")]
     Call(Box<CallExpr>),
-
-    #[serde(rename = "Identifier")]
     Identifier(Box<IdentifierExpr>),
-
-    #[serde(rename = "Literal")]
     Literal(Box<LiteralExpr>),
-
-    #[serde(rename = "Error")]
     Error(ErrorNode),
 }
 
@@ -346,6 +361,13 @@ pub struct Argument {
 }
 
 #[derive(Debug, Serialize)]
+pub struct LocalDeclarator {
+    pub name: SimpleIdentifier,
+    pub type_annotation: Option<TypeAnnotation>,
+    pub span: Option<SourceSpan>,
+}
+
+#[derive(Debug, Serialize)]
 pub struct FieldInit {
     pub field_name: SimpleIdentifier,
     pub initializer: EqualsValueClause,
@@ -364,34 +386,55 @@ pub struct ObjectInitializer {
 
 // region Type nodes
 #[derive(Debug, Serialize)]
-pub enum TypeNode {
-    Identifier(TypeNodeInfo, IdentifierType),
-    Group(TypeNodeInfo, Box<GroupType>),
-    Function(TypeNodeInfo, Box<FunctionType>),
-    // TODO ObjectType
-    TupleArray(TypeNodeInfo, Box<TupleArrayType>),
-    RawArray(TypeNodeInfo, Box<RawArrayType>),
-    Literal(TypeNodeInfo, LiteralType),
-    Sum(TypeNodeInfo, Box<SumType>),
-    Product(TypeNodeInfo, Box<ProductType>),
+pub struct TypeNode {
+    pub is_nullable: bool,
+    pub ownership_kind: OwnershipKind,
+    pub ty: PartialType,
+    pub nullable_token: Option<Token>,
+    pub ownership_token: Option<Token>,
+}
+
+impl TypeNode {
+    pub fn span(&self) -> &Option<SourceSpan> {
+        match &self.ty {
+            PartialType::Identifier(ty) => &ty.span,
+            PartialType::Group(ty) => &ty.span,
+            PartialType::Function(ty) => &ty.span,
+            PartialType::TupleArray(ty) => &ty.span,
+            PartialType::RawArray(ty) => &ty.span,
+            PartialType::Literal(ty) => &ty.span,
+            PartialType::Sum(ty) => &ty.span,
+            PartialType::Product(ty) => &ty.span,
+            PartialType::Error(err) => &err.span,
+        }
+    }
 }
 
 #[derive(Debug, Serialize)]
-pub struct TypeNodeInfo {
-    pub is_nullable: bool,
-    pub ownership_kind: OwnershipKind,
-    pub span: Option<SourceSpan>,
-    pub nullable_token: Option<Token>,
+#[serde(tag = "type_kind")]
+pub enum PartialType {
+    Identifier(IdentifierType),
+    Group(Box<GroupType>),
+    Function(Box<FunctionType>),
+    // TODO ObjectType
+    TupleArray(Box<TupleArrayType>),
+    RawArray(Box<RawArrayType>),
+    Literal(LiteralType),
+    Sum(Box<SumType>),
+    Product(Box<ProductType>),
+    Error(ErrorNode),
 }
 
 #[derive(Debug, Serialize)]
 pub struct IdentifierType {
     pub name: Identifier,
+    pub span: Option<SourceSpan>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct GroupType {
     pub ty: TypeNode,
+    pub span: Option<SourceSpan>,
     pub left_paren_token: Option<Token>,
     pub right_paren_token: Option<Token>,
 }
@@ -403,24 +446,29 @@ pub struct FunctionType {
     pub is_send: bool,
     pub is_sync: bool,
     pub has_exception: bool,
+    pub span: Option<SourceSpan>,
     pub ss_token: Option<Token>,
     pub exception_mark_token: Option<Token>,
     pub left_paren_token: Option<Token>,
     pub right_paren_token: Option<Token>,
+    pub param_comma_tokens: Option<Vec<Token>>,
     pub return_annotation_token: Option<Token>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct TupleArrayType {
     pub member_types: Vec<TypeNode>,
+    pub span: Option<SourceSpan>,
     pub left_square_bracket_token: Option<Token>,
     pub right_square_bracket_token: Option<Token>,
+    pub comma_tokens: Option<Vec<Token>>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct RawArrayType {
-    pub member_type: Vec<TypeNode>,
+    pub member_type: TypeNode,
     pub length: Expr,
+    pub span: Option<SourceSpan>,
     pub left_square_bracket_token: Option<Token>,
     pub right_square_bracket_token: Option<Token>,
 }
@@ -428,17 +476,20 @@ pub struct RawArrayType {
 #[derive(Debug, Serialize)]
 pub struct LiteralType {
     pub literal: Literal,
+    pub span: Option<SourceSpan>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct SumType {
     pub member_types: Vec<TypeNode>,
+    pub span: Option<SourceSpan>,
     pub or_tokens: Option<Vec<Token>>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct ProductType {
     pub member_types: Vec<TypeNode>,
+    pub span: Option<SourceSpan>,
     pub and_tokens: Option<Vec<Token>>,
 }
 // endregion
@@ -480,5 +531,11 @@ pub enum OwnershipKind {
     Shared,
     Ref,
     In,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub enum DestructuringKind {
+    ArrayPattern, // let [a, b]
+    ObjectPattern, // let { a, b }
 }
 // endregion

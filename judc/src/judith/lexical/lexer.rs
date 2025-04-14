@@ -23,13 +23,13 @@ impl KeywordMap {
         map.insert("and", TokenKind::KwAnd);
         map.insert("break", TokenKind::KwBreak);
         map.insert("class", TokenKind::KwClass);
-        map.insert("const", TokenKind::KwConst);
         map.insert("continue", TokenKind::KwContinue);
         map.insert("do", TokenKind::KwDo);
         map.insert("else", TokenKind::KwElse);
         map.insert("elsif", TokenKind::KwElsif);
         map.insert("end", TokenKind::KwEnd);
         map.insert("false", TokenKind::KwFalse);
+        map.insert("final", TokenKind::KwFinal);
         map.insert("for", TokenKind::KwFor);
         map.insert("func", TokenKind::KwFunc);
         map.insert("generator", TokenKind::KwGenerator);
@@ -38,18 +38,21 @@ impl KeywordMap {
         map.insert("if", TokenKind::KwIf);
         map.insert("in", TokenKind::KwIn);
         map.insert("interface", TokenKind::KwInterface);
+        map.insert("let", TokenKind::KwLet);
         map.insert("loop", TokenKind::KwLoop);
         map.insert("match", TokenKind::KwMatch);
+        map.insert("mut", TokenKind::KwMut);
         map.insert("not", TokenKind::KwNot);
         map.insert("or", TokenKind::KwOr);
         map.insert("pub", TokenKind::KwPub);
+        map.insert("ref", TokenKind::KwRef);
         map.insert("return", TokenKind::KwReturn);
+        map.insert("shared", TokenKind::KwShared);
         map.insert("struct", TokenKind::KwStruct);
         map.insert("then", TokenKind::KwThen);
         map.insert("true", TokenKind::KwTrue);
         map.insert("typedef", TokenKind::KwTypedef);
         map.insert("undefined", TokenKind::KwUndefined);
-        map.insert("var", TokenKind::KwVar);
         map.insert("while", TokenKind::KwWhile);
         map.insert("yield", TokenKind::KwYield);
         map.insert("__p_print", TokenKind::PkwPrint);
@@ -229,6 +232,7 @@ impl<'a> Lexer<'a> {
                 true => self.make_token(TokenKind::GreaterEqual),
                 false => self.make_token(TokenKind::Greater),
             },
+            '&' => self.make_token(TokenKind::Ampersand),
             '|' => self.make_token(TokenKind::Pipe),
             '"' => self.scan_string('"', self.column - 1),
             '`' => self.scan_string('`', self.column - 1),

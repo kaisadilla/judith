@@ -82,6 +82,7 @@ pub enum TokenKind {
     Tilde,
     Dot,
     QuestionMark,
+    Ampersand,
     Pipe,
 
     // Two-character tokens.
@@ -112,8 +113,6 @@ pub enum TokenKind {
     Number,
 
     // Keywords
-    KwConst,
-    KwVar,
     KwTrue,
     KwFalse,
     KwNull,
@@ -146,6 +145,11 @@ pub enum TokenKind {
     KwClass,
     KwHid,
     KwPub,
+    KwLet,
+    KwFinal,
+    KwMut,
+    KwShared,
+    KwRef,
 
     // Private keywords
     PkwPrint,
@@ -181,6 +185,7 @@ impl TokenKind {
             TokenKind::Tilde => "'~'",
             TokenKind::Dot => "'.'",
             TokenKind::QuestionMark => "'?'",
+            TokenKind::Ampersand => "'&'",
             TokenKind::Pipe => "'|'",
             TokenKind::EqualEqual => "'=='",
             TokenKind::BangEqual => "'!='",
@@ -199,9 +204,7 @@ impl TokenKind {
             TokenKind::Identifier => "<identifier>",
             TokenKind::String => "<string literal>",
             TokenKind::Number => "<number literal>",
-            TokenKind::KwConst => "'const'",
-            TokenKind::KwVar => "'var",
-            TokenKind::KwTrue => "'true",
+            TokenKind::KwTrue => "'true'",
             TokenKind::KwFalse => "'false'",
             TokenKind::KwNull => "'null'",
             TokenKind::KwUndefined => "'undefined'",
@@ -233,6 +236,11 @@ impl TokenKind {
             TokenKind::KwClass => "'class'",
             TokenKind::KwHid => "'hid'",
             TokenKind::KwPub => "'pub'",
+            TokenKind::KwLet => "'let'",
+            TokenKind::KwFinal => "'final'",
+            TokenKind::KwMut => "'mut'",
+            TokenKind::KwShared => "'shared'",
+            TokenKind::KwRef => "'ref'",
             TokenKind::PkwPrint => "'__p_print'",
             TokenKind::Comment => "<comment>",
             TokenKind::EOF => "<end of file>",

@@ -1647,7 +1647,7 @@ let loopback: IpAddress = 'V6'["::1"] -- correct
 You can combine variants with different kinds of types:
 
 ```judith
-typedef Message
+typedef option Message
     'quit'
     'move'{ x: Num, y: Num }
     'write'[String]
@@ -1679,6 +1679,27 @@ match message do
         paint_obj(r, g, b, 1)
     end
 end
+```
+
+Options can also define their own fields, shared by every variant:
+
+```judith
+typedef option File
+    name: String -- all 'File' values will always have these two fields
+    path: String
+
+    'json'[String]
+    'image'[List<Byte>]
+    'video'{ content: List<Byte>, duration: I64 }
+end
+
+let vid: File = 'video' {
+    name: 'vid.mp4',
+    path: '~/usr/vid.mp4',
+} {
+    content: get_content(),
+    duration: 13_701,
+}
 ```
 
 Options are efficient by design. When none of the variants contain any additional data, options are as efficient as `Int`.

@@ -107,6 +107,8 @@ pub enum MessageCode {
     InvalidFloatLiteral,
     ParameterTypeMustBeSpecified,
     FieldMustBeInitialized,
+    ParameterTypeListExpected,
+    ReturnTypeExpected,
 }
 
 impl MessageCode {
@@ -217,6 +219,16 @@ impl Parser {
         }
     }
 
+    pub fn type_expected(tok: Token) -> CompilerMessage {
+        CompilerMessage {
+            kind: MessageKind::Error,
+            origin: MessageOrigin::Parser,
+            code: MessageCode::TypeExpected,
+            message: format!("Expected type, found '{:?}'.", tok.kind()),
+            source: MessageSource::Token(tok),
+        }
+    }
+
     pub fn right_paren_expected(tok: Token) -> CompilerMessage {
         CompilerMessage {
             kind: MessageKind::Error,
@@ -233,6 +245,16 @@ impl Parser {
             origin: MessageOrigin::Parser,
             code: MessageCode::RightCurlyBracketExpected,
             message: format!("Expected '}}', found '{:?}'.", tok.kind()),
+            source: MessageSource::Token(tok),
+        }
+    }
+
+    pub fn right_square_bracket_expected(tok: Token) -> CompilerMessage {
+        CompilerMessage {
+            kind: MessageKind::Error,
+            origin: MessageOrigin::Parser,
+            code: MessageCode::RightSquareBracketExpected,
+            message: format!("Expected ']', found '{:?}'.", tok.kind()),
             source: MessageSource::Token(tok),
         }
     }
@@ -303,6 +325,26 @@ impl Parser {
             origin: MessageOrigin::Parser,
             code: MessageCode::FieldMustBeInitialized,
             message: String::from("Field must be initialized."),
+            source: MessageSource::Token(tok),
+        }
+    }
+
+    pub fn parameter_type_list_expected(tok: Token) -> CompilerMessage {
+        CompilerMessage {
+            kind: MessageKind::Error,
+            origin: MessageOrigin::Parser,
+            code: MessageCode::ParameterTypeListExpected,
+            message: format!("Expected parameter type list (<type>...) found '{:?}'.", tok.kind()),
+            source: MessageSource::Token(tok),
+        }
+    }
+
+    pub fn return_type_expected(tok: Token) -> CompilerMessage {
+        CompilerMessage {
+            kind: MessageKind::Error,
+            origin: MessageOrigin::Parser,
+            code: MessageCode::ReturnTypeExpected,
+            message: format!("Expected return type (-> <type>), found '{:?}'.", tok.kind()),
             source: MessageSource::Token(tok),
         }
     }
