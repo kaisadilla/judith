@@ -7,7 +7,7 @@ use judc::judith::compiler_messages::MessageContainer;
 use judc::judith::lexical::lexer::{tokenize, Lexer};
 use judc::judith::syntax::parser::{parse, ParseAttempt, Parser};
 
-fn main  () {
+fn main2 () {
     let exe_path = env::current_exe().unwrap();
     let run_path = exe_path.parent().unwrap();
     let res_path = run_path.join("resources").clone();
@@ -24,7 +24,7 @@ fn main  () {
     file.write_all(ty_json.as_bytes()).unwrap();
 }
 
-fn main2 () {
+fn main () {
     //let formatter = ser::PrettyFormatter::with_indent(b"    ");
     let exe_path = env::current_exe().unwrap();
     let run_path = exe_path.parent().unwrap();

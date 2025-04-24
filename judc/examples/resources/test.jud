@@ -1,54 +1,56 @@
-"lol"
-true
-lmao
-\true
-Parser::result
-a.b
-c(d)
-e.f(g)
-do_thing(arg1,)
-do_thing(arg1, arg2)
+--"lol"
+--true
+--lmao
+--\true
+--Parser::result
+--a.b
+--c(d)
+--e.f(g)
+--do_thing(arg1,)
+--do_thing(arg1, arg2)
+--
+--SomeType {
+--    field1 = 42,
+--    field2 = "My string",
+--    field3 = false,
+--    field4 = \false
+--}
+--
+---val
+--
+--12 * 14
+--3 + 4 * 5 + 1
+--
+--result ~~ 5 + 2
+--
+--3 + 1 or true and false
+--
+--a = b
+--
+--if some_bool then
+--    print("it was true!")
+--elsif other_bool then
+--    print("it was false!")
+--else
+--    print("it wasn't!")
+--end
+--
+--if some_bool_2 then
+--    print("no alternate")
+--end
+--
+--if some_bool_3 then
+--    print("this has alternate")
+--else
+--    print("here it is")
+--end
+--
+--loop
+--    print("This is infinite.")
+--end
+--
+--while i < 10 do
+--    print("This is tenfold.")
+--end
 
-SomeType {
-    field1 = 42,
-    field2 = "My string",
-    field3 = false,
-    field4 = \false
-}
-
--val
-
-12 * 14
-3 + 4 * 5 + 1
-
-result ~~ 5 + 2
-
-3 + 1 or true and false
-
-a = b
-
-if some_bool then
-    print("it was true!")
-elsif other_bool then
-    print("it was false!")
-else
-    print("it wasn't!")
-end
-
-if some_bool_2 then
-    print("no alternate")
-end
-
-if some_bool_3 then
-    print("this has alternate")
-else
-    print("here it is")
-end
-
-loop
-    print("This is infinite.")
-end
-
-while i < 10 do
-    print("This is tenfold.")
-end
+let name: String = "Kevin"

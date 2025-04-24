@@ -99,8 +99,7 @@ pub enum MessageCode {
     ParameterExpected,
     ArgumentExpected,
     HidableItemExpected,
-    LocalDeclaratorExpected,
-    LocalDeclaratorListExpected,
+    VariableDeclaratorExpected,
     FieldInitializationExpected,
     InvalidTopLevelStatement,
     InvalidIntegerLiteral,
@@ -305,6 +304,19 @@ impl Parser {
             origin: MessageOrigin::Parser,
             code: MessageCode::ArgumentExpected,
             message: format!("Expected argument, found '{:?}'.", tok.kind()),
+            source: MessageSource::Token(tok),
+        }
+    }
+
+    pub fn variable_declarator_expected(tok: Token) -> CompilerMessage {
+        CompilerMessage {
+            kind: MessageKind::Error,
+            origin: MessageOrigin::Parser,
+            code: MessageCode::VariableDeclaratorExpected,
+            message: format!(
+                "Expected variable declarator (<name>, [<name>...] or {{ <name>... }}, found '{:?}'.",
+                tok.kind()
+            ),
             source: MessageSource::Token(tok),
         }
     }

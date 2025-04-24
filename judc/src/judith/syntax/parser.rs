@@ -1,5 +1,4 @@
 use std::iter::{Enumerate, Peekable};
-use std::ptr::null;
 use std::slice::Iter;
 use crate::judith::compiler_messages;
 use crate::judith::compiler_messages::{CompilerMessage, MessageContainer};
@@ -242,6 +241,11 @@ impl<'a> Parser<'a> {
 
     // region Parse statements
     pub fn parse_stmt(&mut self) -> ParseAttempt<Stmt> {
+        match self.parse_local_decl_stmt() {
+            ParseAttempt::Ok(stmt) => return ParseAttempt::Ok(Stmt::LocalDecl(stmt)),
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            _ => {}
+        }
         match self.parse_expr_stmt() {
             ParseAttempt::Ok(expr) => return ParseAttempt::Ok(Stmt::Expr(expr)),
             ParseAttempt::Err(err) => return self.register_err_stmt(err),
@@ -261,9 +265,60 @@ impl<'a> Parser<'a> {
         ParseAttempt::Ok(SyntaxFactory::expr_stmt(expr))
     }
 
-    //pub fn parse_local_decl_stmt(&mut self) -> ParseAttempt<LocalDeclStmt> {
-    //
-    //}
+    pub fn parse_local_decl_stmt(&mut self) -> ParseAttempt<LocalDeclStmt> {
+        let let_tok = match self.try_consume(TokenKind::KwLet) {
+            Some(tok) => tok,
+            None => return ParseAttempt::None,
+        };
+
+        let declarator = match self.parse_local_declarator() {
+            ParseAttempt::Ok(declarator) => declarator,
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            ParseAttempt::None => return ParseAttempt::Err(
+                compiler_messages::Parser::variable_declarator_expected(self.now())
+            ),
+        };
+
+        let init = match self.parse_equals_value_clause(false) {
+            ParseAttempt::Ok(init) => Some(init),
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            ParseAttempt::None => None,
+        };
+
+        ParseAttempt::Ok(SyntaxFactory::local_decl_stmt(let_tok, declarator, init))
+    }
+
+    pub fn parse_local_declarator(&mut self) -> ParseAttempt<PartialLocalDecl> {
+        match self.parse_regular_local_declarator() {
+            ParseAttempt::Ok(node) => return ParseAttempt::Ok(node),
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            _ => {}
+        };
+
+        // TODO: Destructure local declarator
+
+        ParseAttempt::None
+    }
+
+    pub fn parse_regular_local_declarator(&mut self) -> ParseAttempt<PartialLocalDecl> {
+        let ownership_tok = self.parse_ownership_token();
+
+        let ident = match self.parse_simple_identifier() {
+            ParseAttempt::Ok(ident) => ident,
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            ParseAttempt::None => return ParseAttempt::None,
+        };
+
+        let type_annot = match self.parse_type_annotation() {
+            ParseAttempt::Ok(type_annot) => Some(type_annot),
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            ParseAttempt::None => None,
+        };
+
+        ParseAttempt::Ok(PartialLocalDecl::Regular(SyntaxFactory::regular_local_decl(
+            SyntaxFactory::local_declarator(ownership_tok, ident, type_annot)
+        )))
+    }
 
     // endregion Parse statements
 
@@ -864,6 +919,24 @@ impl<'a> Parser<'a> {
         ParseAttempt::Ok(SyntaxFactory::equals_value_clause(equal_tok, expressions, comma_tokens))
     }
 
+    pub fn parse_type_annotation(&mut self) -> ParseAttempt<TypeAnnotation> {
+        let delimiter_tok = match self.try_consume(TokenKind::Colon) {
+            Some(tok) => tok,
+            None => return ParseAttempt::None,
+        };
+
+        let ty = match self.parse_type() {
+            ParseAttempt::Ok(ty) => ty,
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            ParseAttempt::None => return ParseAttempt::Err(
+                compiler_messages::Parser::type_expected(self.now())
+            ),
+
+        };
+
+        ParseAttempt::Ok(SyntaxFactory::type_annotation(delimiter_tok, ty))
+    }
+
     pub fn parse_operator(&mut self, kinds: &[TokenKind]) -> ParseAttempt<Operator> {
         let op_tok = self.try_consume_many(kinds);
         if op_tok.is_none() {
@@ -1439,7 +1512,7 @@ mod tests {
         let mut parser = Parser::new(&lexer_res.tokens);
         let ParseAttempt::Ok(node) = parser.parse_type() else { panic!("Parse failed.")};
 
-        assert!(matches!(&node.ty, PartialType::Identifier(ident)));
+        assert!(matches!(&node.ty, PartialType::Identifier(_)));
         let PartialType::Identifier(ident) = &node.ty else { panic!("???")};
 
         assert!(matches!(&ident.name, Identifier::Simple(_)));
@@ -1454,7 +1527,7 @@ mod tests {
         let mut parser = Parser::new(&lexer_res.tokens);
         let ParseAttempt::Ok(node) = parser.parse_type() else { panic!("Parse failed.")};
 
-        assert!(matches!(&node.ty, PartialType::Identifier(ident)));
+        assert!(matches!(&node.ty, PartialType::Identifier(_)));
         let PartialType::Identifier(ident) = &node.ty else { panic!("???")};
 
         assert!(matches!(&ident.name, Identifier::Simple(_)));

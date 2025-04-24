@@ -96,15 +96,14 @@ pub struct ExprStmt {
 
 #[derive(Debug, Serialize)]
 pub struct LocalDeclStmt {
-    pub ownership_kind: OwnershipKind,
     pub decl: PartialLocalDecl,
     pub initializer: Option<EqualsValueClause>,
     pub span: Option<SourceSpan>,
     pub let_token: Option<Token>,
-    pub ownership_token: Option<Token>,
 }
 
 #[derive(Debug, Serialize)]
+#[serde(tag = "decl_type")]
 pub enum PartialLocalDecl {
     Regular(RegularLocalDecl),
     Destructured(DestructuredLocalDecl),
@@ -362,9 +361,11 @@ pub struct Argument {
 
 #[derive(Debug, Serialize)]
 pub struct LocalDeclarator {
+    pub ownership_kind: OwnershipKind,
     pub name: SimpleIdentifier,
     pub type_annotation: Option<TypeAnnotation>,
     pub span: Option<SourceSpan>,
+    pub ownership_token: Option<Token>,
 }
 
 #[derive(Debug, Serialize)]

@@ -2911,7 +2911,7 @@ For immutable pointed variables, the same phenomenon occurs: as the value they r
 
 * `let`: points to an immutable value. These values are always thread-safe.
 * `let mut`: points to a mutable value. This variable is the owner of the mutable value, and as such it can mutate the value, lend it and transfer it.
-* `let shared`: points to a mutable value. That value is owned by an unknown number of variables, including this one. As such, this variable can mutate the value, and can lend it, but cannot transfer it.
+* `let sh`: points to a mutable value. That value is owned by an unknown number of variables, including this one. As such, this variable can mutate the value, and can lend it, but cannot transfer it.
 * `let ref`: points to a value with unknown mutability, owned by someone else. A `ref` can be read, but cannot be shared in any way other than into `ref` parameters. When creating a `ref` variable from a `mut` one, the `mut` one is lending the value to the `ref` variable and, as such, the `mut` one becomes invalid until the `ref` variable has gone out of scope. If the `mut` value escapes the function (e.g. when you are getting it from a value outside the function, or assigning it to one), then passing a `ref` to another thread will force the function to await the thread before it returns.
 
 From this definition, some interesting properties arise:
@@ -2921,13 +2921,13 @@ From this definition, some interesting properties arise:
 * `let mut` is thread-safe only when there's no references to it.
 * `let mut` can transfer its ownership to another `let mut`.
 * `let mut` can be made immutable by transferring its ownership to a `let`.
-* `let mut` can become shared by transferring its ownership to a `let shared`.
-* `let shared` is inherently limited to a single-thread.
-* `let shared` cannot transfer ownership, as there's no guarantee there aren't other `let shared` variables referring to it.
-* In single-thread context, you never have to worry that a value can change mid-function, as only one fragment of code may be executing at the same time. This means that the main reason `let shared` is distinguished from `let mut` is to know whether they can be safely shared with other coroutines or not.
-* `let shared` is a superset of `let mut`: any `let mut` can become `let shared`.
-* `let shared` effectively bypasses ownership and behaves like regular variables in languages that don't have immutability semantics, such as C# or Java.
-* `let ref` may be pointing to a `let`, `let mut` or `let shared` value. As we do not have any information, our options with it are limited to reading it or passing it to functions.
+* `let mut` can become shared by transferring its ownership to a `let sh`.
+* `let sh` is inherently limited to a single-thread.
+* `let sh` cannot transfer ownership, as there's no guarantee there aren't other `let sh` variables referring to it.
+* In single-thread context, you never have to worry that a value can change mid-function, as only one fragment of code may be executing at the same time. This means that the main reason `let sh` is distinguished from `let mut` is to know whether they can be safely shared with other coroutines or not.
+* `let sh` is a superset of `let mut`: any `let mut` can become `let sh`.
+* `let sh` effectively bypasses ownership and behaves like regular variables in languages that don't have immutability semantics, such as C# or Java.
+* `let ref` may be pointing to a `let`, `let mut` or `let sh` value. As we do not have any information, our options with it are limited to reading it or passing it to functions.
 * It doesn't usually make much sense to create a `let ref` variable for a value we can access directly, but it may still be needed when doing actions like retrieving a value from a list.
 
 ## Ownership in locals
@@ -2943,7 +2943,7 @@ let mut b: Person = Person::("John", 35)
 
 -- "c" refers to a mutable value in memory that it, and others, own. Alyce may
 -- change at any time.
-let shared c: Person = Person::("Alyce", 50)
+let sh c: Person = Person::("Alyce", 50)
 
 -- "d" refers to a mutable value in memory borrowed from someone else (in this
 -- case, a "people" variable that is a List that owns Person objects).
@@ -2957,7 +2957,7 @@ From this base, we can now explore the interactions when we assign already-exist
 ```judith
 let var_0 = a -- ok, "var_0" is a new alias for the immutable value "a" holds.
 --let mut var_1 = a -- ERROR: let mut variables have to own their value.
---let shared var_2 = a -- ERROR: let shared variables have to own their value.
+--let sh var_2 = a -- ERROR: let sh variables have to own their value.
 let ref var_3 = a -- ok, "var_3" can borrow from anyone.
 ```
 
@@ -2968,18 +2968,18 @@ let ref var_3 = a -- ok, "var_3" can borrow from anyone.
 let var_0 = in b -- ok, "b" transfers ownership to "var_0", which makes it immutable.
 --let mut var_1 = b -- ERROR: "b" cannot be assigned to other values.
 let mut var_1 = in b -- ok, "b" transfers ownership to "var_1".
---let shared var_2 = b -- ERROR: "b" cannot be assigned to other values.
-let shared var_2 = in b -- ok, "b" transfers ownership to "var_2", who makes it shared.
+--let sh var_2 = b -- ERROR: "b" cannot be assigned to other values.
+let sh var_2 = in b -- ok, "b" transfers ownership to "var_2", who makes it shared.
 let ref var_3 = b -- ok, "var_3" can borrow from anyone.
 let ref var_3 = in b -- ok, but you'll permanently lose ownership of the value.
 ```
 
-3. Assigning `let shared` variables to someone else: 
+3. Assigning `let sh` variables to someone else: 
 
 ```judith
 --let var_0 = c -- ERROR: "var_0" cannot receive values owned by someone else.
 --let mut var_1 = c -- ERROR: let mut variables do not share ownership.
-let shared var_2 = c -- ok, "var_2" and "c" now share ownership.
+let sh var_2 = c -- ok, "var_2" and "c" now share ownership.
 let ref var_3 = c -- ok, "var_3" can borrow from anyone.
 ```
 
@@ -2988,7 +2988,7 @@ let ref var_3 = c -- ok, "var_3" can borrow from anyone.
 ```judith
 --let var_0 = c -- ERROR: "var_0" must be immutable.
 --let mut var_1 = c -- ERROR: let mut variables must take ownership.
---let shared var_2 = c -- ERROR: let shared variables must share ownership.
+--let sh var_2 = c -- ERROR: let sh variables must share ownership.
 let ref var_3 = c -- ok, "var_3" can borrow from anyone.
 ```
 
@@ -3044,21 +3044,21 @@ This is how ownership specifiers work in function parameters:
 
 * `final`: equivalent to `let`. It only accepts immutable values, as it may create new immutable aliases for these values.
 * `mut`: equivalent to `let mut`. It borrows values of any kind, may create references to the values and may mutate the value.
-* `shared`: equivalent to `let shared`. It borrows values of any kind, and may create new owners for that value.
+* `sh`: equivalent to `let sh`. It borrows values of any kind, and may create new owners for that value.
 * `in`: similar to `let mut`, but this kind of parameter takes ownership of the value permanently.
-* `ref`: equivalent to `let ref`. Accepts values of any kind (final, mut, shared or even in). It treats the value as immutable, but won't assume that it's actually immutable and thus won't create new `final` aliases for it. As such, the only variables that can receive `ref` values are other `ref` parameters. When no specifier is used, `ref` is assumed by default.
+* `ref`: equivalent to `let ref`. Accepts values of any kind (final, mut, sh or even in). It treats the value as immutable, but won't assume that it's actually immutable and thus won't create new `final` aliases for it. As such, the only variables that can receive `ref` values are other `ref` parameters. When no specifier is used, `ref` is assumed by default.
 
 ```judith
 func do_0 (a: Person) -- equivalent to "ref a: Person".
 func do_1 (final a: Person)
 func do_2 (mut a: Person)
-func do_3 (shared a: Person)
+func do_3 (sh a: Person)
 func do_4 (in a: Person)
 func do_5 (ref a: Person)
 
 let p0: Person = get_person()
 let mut p1: Person = get_person()
-let shared p2: Person = get_person()
+let sh p2: Person = get_person()
 
 -- "ref" parameter
 do_0(p0) -- valid, "p0" is safe because it won't be mutated.
@@ -3076,7 +3076,7 @@ do_1(p0) -- valid, "p0" won't be mutated.
 do_2(p1) -- valid, "do_2" will not transfer ownership.
 do_2(p2) -- valid, same as above.
 
--- "shared" parameter
+-- "sh" parameter
 --do_3(p0) -- ERROR, "p0" is not shared.
 --do_3(p1) -- ERROR, "p1" is not shared.
 do_3(p2) -- valid
@@ -3118,39 +3118,40 @@ Just like parameters, the value returned by a function is subject to ownership r
 
 * `final`: Indicates that the returned value is an immutable value.
 * `mut`: Indicates that the returned value is a mutable value whose ownership is being transferred to the caller. When no specifier is used, `mut` is assumed by default.
-* `shared`: Indicates that the returned value is shared with others.
+* `sh`: Indicates that the returned value is shared with others.
 
 ```judith
 func get_0 () -> Person end
 func get_1 () -> mut Person end -- same as above
 func get_2 () -> final Person end
-func get_3 () -> shared Person end
+func get_3 () -> sh Person end
 
 -- receiving ownership (T or mut T):
 let p0 = get_0() -- valid, value becomes immutable.
 let mut p1 = get_0() -- valid, "p1" now owns the value.
-let shared p2 = get_0() -- valid, "p2" receives ownership and makes it shared.
+let sh p2 = get_0() -- valid, "p2" receives ownership and makes it shared.
 -- All of these rules would be the same for "get_1".
 
 -- receiving an immutable value (final T):
 let p0 = get_2() -- valid
 --let mut p1 = get_2() -- ERROR, get_2() doesn't transfer ownership.
---let shared p2 = get_2() -- ERROR, same as above.
+--let sh p2 = get_2() -- ERROR, same as above.
 
--- receiving a shared value (shared T):
+-- receiving a shared value (sh T):
 --let p0 = get_3() -- ERROR, "p0" must be immutable.
 --let mut p1 = get_3() -- ERROR, get_3() returns shared ownership.
-let shared p2 = get_3() -- valid
+let sh p2 = get_3() -- valid
 ```
 
 ## Ownership in fields
-Ownership in fields follow the same logic as ownership in locals:
+By default, fields are `mut`, which means they inherit mutability from the variable that contains them.
 
 ```judith
 typedef struct Company
-    boss: Person -- the value held by "boss" is immutable.
-    boss: mut Person -- the value held by "boss" can be mutated.
-    boss: shared Person -- the value held by "boss" is shared.
+    boss: Person -- the value held by "boss" is "mut", meaning that it can be
+                 -- mutated if the variable holding the Company can be mutated.
+    final boss: Person -- the value held by "boss" cannot be mutated.
+    sh boss: Person -- the value held by "boss" is shared.
 end
 ```
 

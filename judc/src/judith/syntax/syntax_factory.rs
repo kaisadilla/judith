@@ -84,7 +84,6 @@ impl SyntaxFactory {
 
     pub fn local_decl_stmt(
         let_tok: Token,
-        ownership_tok: Option<Token>,
         decl: PartialLocalDecl,
         init: Option<EqualsValueClause>
     ) -> LocalDeclStmt {
@@ -99,15 +98,11 @@ impl SyntaxFactory {
             end = decl.span().unwrap().end;
         }
 
-        let ownership_kind = get_ownership(&ownership_tok);
-
         LocalDeclStmt {
-            ownership_kind,
             decl,
             initializer: init,
             span: Some(SourceSpan { start, end, line }),
             let_token: Some(let_tok),
-            ownership_token: ownership_tok,
         }
     }
 
@@ -475,7 +470,9 @@ impl SyntaxFactory {
         }
     }
 
-    pub fn local_declarator(name: SimpleIdentifier, ty: Option<TypeAnnotation>) -> LocalDeclarator {
+    pub fn local_declarator(
+        ownership_tok: Option<Token>, name: SimpleIdentifier, ty: Option<TypeAnnotation>
+    ) -> LocalDeclarator {
         let start = name.span.unwrap().start;
         let end: i64;
         let line = name.span.unwrap().line;
@@ -487,10 +484,14 @@ impl SyntaxFactory {
             end = name.span.unwrap().end;
         };
 
+        let ownership_kind = get_ownership(&ownership_tok);
+
         LocalDeclarator {
+            ownership_kind,
             name,
             type_annotation: ty,
             span: Some(SourceSpan { start, end, line }),
+            ownership_token: ownership_tok,
         }
     }
 
