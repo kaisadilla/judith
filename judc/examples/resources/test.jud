@@ -54,3 +54,7 @@
 --end
 
 let name: String = "Kevin"
+
+func add (mut a, b: Num) -> F64
+    a + b
+end

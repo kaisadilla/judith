@@ -148,7 +148,7 @@ pub enum TokenKind {
     KwLet,
     KwFinal,
     KwMut,
-    KwShared,
+    KwSh,
     KwRef,
 
     // Private keywords
@@ -239,7 +239,7 @@ impl TokenKind {
             TokenKind::KwLet => "'let'",
             TokenKind::KwFinal => "'final'",
             TokenKind::KwMut => "'mut'",
-            TokenKind::KwShared => "'shared'",
+            TokenKind::KwSh => "'sh'",
             TokenKind::KwRef => "'ref'",
             TokenKind::PkwPrint => "'__p_print'",
             TokenKind::Comment => "<comment>",

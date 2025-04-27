@@ -151,6 +151,12 @@ impl<'a> Parser<'a> {
     // region Parse methods
     // node ::= expr
     pub fn parse_top_level_node(&mut self) -> ParseAttempt<SyntaxNode> {
+        match self.parse_item() {
+            ParseAttempt::Ok(it) => return ParseAttempt::Ok(SyntaxNode::Item(it)),
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            _ => {},
+        };
+
         match self.parse_stmt() {
             ParseAttempt::Ok(stmt) => return ParseAttempt::Ok(SyntaxNode::Stmt(stmt)),
             ParseAttempt::Err(err) => return self.register_err_node(err),
@@ -159,6 +165,67 @@ impl<'a> Parser<'a> {
 
         ParseAttempt::None // TODO: Should this be err? How do we detect when there's still tokens, but don't form a top level node?
     }
+
+    // region Parse items
+    pub fn parse_item(&mut self) -> ParseAttempt<Item> {
+        match self.parse_func_def() {
+            ParseAttempt::Ok(func_def) => return ParseAttempt::Ok(Item::FuncDef(func_def)),
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            _ => {},
+        };
+
+        ParseAttempt::None
+    }
+
+    pub fn parse_func_def(&mut self) -> ParseAttempt<FuncDef> {
+        let func_tok = match self.try_consume(TokenKind::KwFunc) {
+            Some(tok) => tok,
+            None => return ParseAttempt::None,
+        };
+
+        let name = match self.parse_simple_identifier() {
+            ParseAttempt::Ok(name) => name,
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            ParseAttempt::None => return ParseAttempt::Err(
+                compiler_messages::Parser::identifier_expected(self.now())
+            ),
+        };
+
+        let param_list = match self.parse_parameter_list() {
+            ParseAttempt::Ok(param_list) => param_list,
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            ParseAttempt::None => return ParseAttempt::Err(
+                compiler_messages::Parser::parameter_list_expected(self.now())
+            )
+        };
+
+        let arrow_tok = self.try_consume(TokenKind::MinusArrow);
+        let return_type = match &arrow_tok {
+            Some(tok) => {
+                match self.parse_type() {
+                    ParseAttempt::Ok(ty) => Some(ty),
+                    ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+                    ParseAttempt::None => return ParseAttempt::Err(
+                        compiler_messages::Parser::type_expected(self.now())
+                    )
+                }
+            }
+            None => None,
+        };
+
+        let body = match self.parse_body(None) {
+            ParseAttempt::Ok(body) => body,
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            ParseAttempt::None => return ParseAttempt::Err(
+                compiler_messages::Parser::body_expected(self.now())
+            )
+        };
+
+        ParseAttempt::Ok(
+            SyntaxFactory::func_def(func_tok, name, param_list, arrow_tok, return_type, body)
+        )
+    }
+    // endregion Parse items
 
     // region Parse bodies
     pub fn parse_body(&mut self, opening_token: Option<TokenKind>) -> ParseAttempt<Body> {
@@ -287,39 +354,6 @@ impl<'a> Parser<'a> {
 
         ParseAttempt::Ok(SyntaxFactory::local_decl_stmt(let_tok, declarator, init))
     }
-
-    pub fn parse_local_declarator(&mut self) -> ParseAttempt<PartialLocalDecl> {
-        match self.parse_regular_local_declarator() {
-            ParseAttempt::Ok(node) => return ParseAttempt::Ok(node),
-            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
-            _ => {}
-        };
-
-        // TODO: Destructure local declarator
-
-        ParseAttempt::None
-    }
-
-    pub fn parse_regular_local_declarator(&mut self) -> ParseAttempt<PartialLocalDecl> {
-        let ownership_tok = self.parse_ownership_token();
-
-        let ident = match self.parse_simple_identifier() {
-            ParseAttempt::Ok(ident) => ident,
-            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
-            ParseAttempt::None => return ParseAttempt::None,
-        };
-
-        let type_annot = match self.parse_type_annotation() {
-            ParseAttempt::Ok(type_annot) => Some(type_annot),
-            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
-            ParseAttempt::None => None,
-        };
-
-        ParseAttempt::Ok(PartialLocalDecl::Regular(SyntaxFactory::regular_local_decl(
-            SyntaxFactory::local_declarator(ownership_tok, ident, type_annot)
-        )))
-    }
-
     // endregion Parse statements
 
     // region Parse expressions
@@ -670,9 +704,9 @@ impl<'a> Parser<'a> {
         let obj_init = match self.parse_object_initializer() {
             ParseAttempt::Ok(obj_init) => obj_init,
             ParseAttempt::Err(err) => return ParseAttempt::Err(err),
-            ParseAttempt::None => match provider {
-                Some(expr) => return ParseAttempt::Ok(expr),
-                None => return ParseAttempt::None,
+            ParseAttempt::None => return match provider {
+                Some(expr) => ParseAttempt::Ok(expr),
+                None => ParseAttempt::None,
             }
         };
 
@@ -946,7 +980,69 @@ impl<'a> Parser<'a> {
         ParseAttempt::Ok(SyntaxFactory::operator(op_tok.unwrap()))
     }
 
-    // arg_list ::= "(" ( arg ( "," arg )* )? ")"
+    // param_list ::= "(" ( param ( "," param )* ","? )? ")"
+    pub fn parse_parameter_list(&mut self) -> ParseAttempt<ParameterList> {
+        let left_paren = match self.try_consume(TokenKind::LeftParen) {
+            Some(tok) => tok,
+            None => return ParseAttempt::None,
+        };
+
+        let mut params: Vec<Parameter> = Vec::new();
+        let mut comma_tokens: Vec<Token> = Vec::new();
+        if self.check(TokenKind::RightParen) == false {
+            loop {
+                let param = match self.parse_parameter() {
+                    ParseAttempt::Ok(param) => param,
+                    ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+                    ParseAttempt::None => return ParseAttempt::Err(
+                        compiler_messages::Parser::parameter_expected(self.now())
+                    ),
+                };
+                params.push(param);
+
+                // After the parameter, there may or may not be a comma. If there isn't a comma
+                // then no more parameters can be found.
+                if let Some(tok) = self.try_consume(TokenKind::Comma) {
+                    comma_tokens.push(tok);
+                }
+                else {
+                    break;
+                }
+
+                // Trailing commas are allowed, so we may find a comma and still find the closing
+                // parenthesis afterward.
+                if self.check(TokenKind::RightParen) {
+                    break;
+                }
+            };
+        }
+
+        let right_paren = match self.try_consume(TokenKind::RightParen) {
+            Some(tok) => tok,
+            None => return ParseAttempt::Err(compiler_messages::Parser::right_paren_expected(self.now())),
+        };
+
+        ParseAttempt::Ok(SyntaxFactory::parameter_list(left_paren, params, right_paren, comma_tokens))
+    }
+
+    // param ::= decl equals_value_clause?
+    pub fn parse_parameter(&mut self) -> ParseAttempt<Parameter> {
+        let decl = match self.parse_regular_local_declarator() {
+            ParseAttempt::Ok(decl) => decl,
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            ParseAttempt::None => return ParseAttempt::None,
+        };
+
+        let default_val = match self.parse_equals_value_clause(false) {
+            ParseAttempt::Ok(val) => Some(val),
+            ParseAttempt::None => None,
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+        };
+
+        ParseAttempt::Ok(SyntaxFactory::parameter(decl, default_val))
+    }
+
+    // arg_list ::= "(" ( arg ( "," arg )* ","? )? ")"
     pub fn parse_argument_list(&mut self) -> ParseAttempt<ArgumentList> {
         let left_paren = match self.try_consume(TokenKind::LeftParen) {
             Some(tok) => tok,
@@ -981,7 +1077,7 @@ impl<'a> Parser<'a> {
                 if self.check(TokenKind::RightParen) {
                     break;
                 }
-            }
+            };
         }
 
         let tok = self.now();
@@ -1002,6 +1098,40 @@ impl<'a> Parser<'a> {
         };
 
         ParseAttempt::Ok(SyntaxFactory::argument(expr))
+    }
+
+    pub fn parse_local_declarator(&mut self) -> ParseAttempt<PartialLocalDecl> {
+        match self.parse_regular_local_declarator() {
+            ParseAttempt::Ok(node) => return ParseAttempt::Ok(
+                PartialLocalDecl::Regular(node)
+            ),
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            _ => {}
+        };
+
+        // TODO: Destructure local declarator
+
+        ParseAttempt::None
+    }
+
+    pub fn parse_regular_local_declarator(&mut self) -> ParseAttempt<RegularLocalDecl> {
+        let ownership_tok = self.parse_ownership_token();
+
+        let ident = match self.parse_simple_identifier() {
+            ParseAttempt::Ok(ident) => ident,
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            ParseAttempt::None => return ParseAttempt::None,
+        };
+
+        let type_annot = match self.parse_type_annotation() {
+            ParseAttempt::Ok(type_annot) => Some(type_annot),
+            ParseAttempt::Err(err) => return ParseAttempt::Err(err),
+            ParseAttempt::None => None,
+        };
+
+        ParseAttempt::Ok(SyntaxFactory::regular_local_decl(
+            SyntaxFactory::local_declarator(ownership_tok, ident, type_annot)
+        ))
     }
 
     pub fn parse_field_init(&mut self) -> ParseAttempt<FieldInit> {
@@ -1434,7 +1564,7 @@ impl<'a> Parser<'a> {
         else if let Some(tok) = self.try_consume(TokenKind::KwIn) {
             Some(tok)
         }
-        else if let Some(tok) = self.try_consume(TokenKind::KwShared) {
+        else if let Some(tok) = self.try_consume(TokenKind::KwSh) {
             Some(tok)
         }
         else if let Some(tok) = self.try_consume(TokenKind::KwRef) {
@@ -1510,13 +1640,13 @@ mod tests {
         println!("Testing 'Num'.");
         let lexer_res = tokenize("Num");
         let mut parser = Parser::new(&lexer_res.tokens);
-        let ParseAttempt::Ok(node) = parser.parse_type() else { panic!("Parse failed.")};
+        let ParseAttempt::Ok(node) = parser.parse_type() else { panic!("Parse failed.") };
 
         assert!(matches!(&node.ty, PartialType::Identifier(_)));
-        let PartialType::Identifier(ident) = &node.ty else { panic!("???")};
+        let PartialType::Identifier(ident) = &node.ty else { panic!("???") };
 
         assert!(matches!(&ident.name, Identifier::Simple(_)));
-        let Identifier::Simple(ident) = &ident.name else { panic!("???")};
+        let Identifier::Simple(ident) = &ident.name else { panic!("???") };
 
         assert_eq!(ident.name, "Num");
         assert_eq!(node.is_nullable, false);
@@ -1525,16 +1655,60 @@ mod tests {
         println!("Testing 'mut String?'.");
         let lexer_res = tokenize("mut String?");
         let mut parser = Parser::new(&lexer_res.tokens);
-        let ParseAttempt::Ok(node) = parser.parse_type() else { panic!("Parse failed.")};
+        let ParseAttempt::Ok(node) = parser.parse_type() else { panic!("Parse failed.") };
 
         assert!(matches!(&node.ty, PartialType::Identifier(_)));
-        let PartialType::Identifier(ident) = &node.ty else { panic!("???")};
+        let PartialType::Identifier(ident) = &node.ty else { panic!("???") };
 
         assert!(matches!(&ident.name, Identifier::Simple(_)));
-        let Identifier::Simple(ident) = &ident.name else { panic!("???")};
+        let Identifier::Simple(ident) = &ident.name else { panic!("???") };
 
         assert_eq!(ident.name, "String");
         assert_eq!(node.is_nullable, true);
-        assert_eq!(node.ownership_kind, OwnershipKind::Mut);
+        assert_eq!(node.ownership_kind, OwnershipKind::Mutable);
+    }
+
+    #[test]
+    fn valid_local_decl_stmt() {
+        println!("== Testing local declaration statement ==");
+
+        println!("Testing 'let n: String = \"Kevin\"'.");
+        let lexer_res = tokenize("let n: String = \"Kevin\"");
+        let mut parser = Parser::new(&lexer_res.tokens);
+        let ParseAttempt::Ok(node) = parser.parse_local_decl_stmt() else { panic!("Parse failed.") };
+
+        assert!(matches!(&node.decl, PartialLocalDecl::Regular(_)));
+        let PartialLocalDecl::Regular(decl) = &node.decl else { panic!("???") };
+
+        assert!(matches!(&decl.declarator.ownership_kind, OwnershipKind::None));
+        assert_eq!(&decl.declarator.name.name, "n");
+        assert!(&decl.declarator.type_annotation.is_some());
+        assert!(node.initializer.is_some());
+
+        println!("Testing 'let mut score = 42'.");
+        let lexer_res = tokenize("let mut score = 42");
+        let mut parser = Parser::new(&lexer_res.tokens);
+        let ParseAttempt::Ok(node) = parser.parse_local_decl_stmt() else { panic!("Parse failed.") };
+
+        assert!(matches!(&node.decl, PartialLocalDecl::Regular(_)));
+        let PartialLocalDecl::Regular(decl) = &node.decl else { panic!("???") };
+
+        assert!(matches!(&decl.declarator.ownership_kind, OwnershipKind::Mutable));
+        assert_eq!(&decl.declarator.name.name, "score");
+        assert!(&decl.declarator.type_annotation.is_none());
+        assert!(node.initializer.is_some());
+
+        println!("Testing 'let sh res");
+        let lexer_res = tokenize("let sh res");
+        let mut parser = Parser::new(&lexer_res.tokens);
+        let ParseAttempt::Ok(node) = parser.parse_local_decl_stmt() else { panic!("Parse failed.") };
+
+        assert!(matches!(&node.decl, PartialLocalDecl::Regular(_)));
+        let PartialLocalDecl::Regular(decl) = &node.decl else { panic!("???") };
+
+        assert!(matches!(&decl.declarator.ownership_kind, OwnershipKind::Shared));
+        assert_eq!(&decl.declarator.name.name, "res");
+        assert!(&decl.declarator.type_annotation.is_none());
+        assert!(node.initializer.is_none());
     }
 }

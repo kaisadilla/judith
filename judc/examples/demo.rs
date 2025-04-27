@@ -7,7 +7,7 @@ use judc::judith::compiler_messages::MessageContainer;
 use judc::judith::lexical::lexer::{tokenize, Lexer};
 use judc::judith::syntax::parser::{parse, ParseAttempt, Parser};
 
-fn main2 () {
+fn __main2__() {
     let exe_path = env::current_exe().unwrap();
     let run_path = exe_path.parent().unwrap();
     let res_path = run_path.join("resources").clone();
@@ -24,28 +24,31 @@ fn main2 () {
     file.write_all(ty_json.as_bytes()).unwrap();
 }
 
-fn main () {
-    //let formatter = ser::PrettyFormatter::with_indent(b"    ");
+fn main() {
     let exe_path = env::current_exe().unwrap();
     let run_path = exe_path.parent().unwrap();
     let res_path = run_path.join("resources").clone();
     let out_path = run_path.join(".out").clone();
 
     let src = fs::read_to_string(res_path.join("test.jud")).unwrap();
+    let mut messages = MessageContainer::new();
 
+    // 1. Build AST
+    // 1.1 Tokenize
     let lexer_res = tokenize(&src);
     let token_json = serde_json::to_string_pretty(&lexer_res.tokens).unwrap();
 
     if lexer_res.messages.count() != 0 { return; }
 
+    // 1.2 Parse
     let parser_res = parse(lexer_res.tokens);
     let ast_json = serde_json::to_string_pretty(&parser_res.nodes).unwrap();
 
-    let mut messages = MessageContainer::new();
     messages.add_all(lexer_res.messages);
     messages.add_all(parser_res.messages);
     let msg_json = serde_json::to_string_pretty(&messages).unwrap();
 
+    // DEBUG FILES:
     if Path::new(&out_path).exists() == false {
         let res = fs::create_dir_all(&out_path);
         if res.is_err() {

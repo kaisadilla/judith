@@ -47,7 +47,7 @@ impl KeywordMap {
         map.insert("pub", TokenKind::KwPub);
         map.insert("ref", TokenKind::KwRef);
         map.insert("return", TokenKind::KwReturn);
-        map.insert("shared", TokenKind::KwShared);
+        map.insert("sh", TokenKind::KwSh);
         map.insert("struct", TokenKind::KwStruct);
         map.insert("then", TokenKind::KwThen);
         map.insert("true", TokenKind::KwTrue);

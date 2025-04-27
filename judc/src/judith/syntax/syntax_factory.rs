@@ -5,6 +5,32 @@ use crate::SourceSpan;
 pub struct SyntaxFactory;
 
 impl SyntaxFactory {
+    // region Items
+    pub fn func_def(
+        func_tok: Token,
+        name: SimpleIdentifier,
+        params: ParameterList,
+        arrow_tok: Option<Token>,
+        return_type: Option<TypeNode>,
+        body: Body
+    ) -> FuncDef {
+        let start = func_tok.base().start;
+        let end = body.span().unwrap().end;
+        let line = func_tok.base().line;
+
+        FuncDef {
+            is_implicit: false,
+            name,
+            params,
+            return_type,
+            body,
+            span: Some(SourceSpan { start, end, line }),
+            func_token: Some(func_tok),
+            return_type_arrow_token: arrow_tok,
+        }
+    }
+    // endregion Items
+
     // region Bodies
     pub fn block_body(
         opening_token: Option<Token>, nodes: Vec<SyntaxNode>, closing_token: Option<Token>
@@ -446,6 +472,39 @@ impl SyntaxFactory {
         }
     }
 
+    pub fn parameter_list(
+        left_paren: Token, params: Vec<Parameter>, right_paren: Token, comma_tokens: Vec<Token>
+    ) -> ParameterList {
+        let start = left_paren.base().start;
+        let end = right_paren.base().end;
+        let line = left_paren.base().line;
+
+        ParameterList {
+            params,
+            span: Some(SourceSpan { start, end, line }),
+            left_paren_token: Some(left_paren),
+            right_paren_token: Some(right_paren),
+            comma_tokens: Some(comma_tokens),
+        }
+    }
+
+    pub fn parameter(decl: RegularLocalDecl, default_val: Option<EqualsValueClause>) -> Parameter {
+        let start = decl.span.unwrap().start;
+        let end = if let Some(evc) = &default_val {
+            evc.span.unwrap().end
+        }
+        else {
+            decl.span.unwrap().end
+        };
+        let line = decl.span.unwrap().line;
+
+        Parameter {
+            declarator: decl,
+            default_val: default_val,
+            span: Some(SourceSpan { start, end, line }),
+        }
+    }
+
     pub fn argument_list(
         left_paren: Token, args: Vec<Argument>, right_paren: Token, comma_tokens: Vec<Token>
     ) -> ArgumentList {
@@ -712,10 +771,10 @@ impl SyntaxFactory {
 fn get_ownership(tok: &Option<Token>) -> OwnershipKind {
     match &tok {
         Some(tok) if tok.kind() == TokenKind::KwFinal => OwnershipKind::Final,
-        Some(tok) if tok.kind() == TokenKind::KwMut => OwnershipKind::Mut,
+        Some(tok) if tok.kind() == TokenKind::KwMut => OwnershipKind::Mutable,
         Some(tok) if tok.kind() == TokenKind::KwIn => OwnershipKind::In,
-        Some(tok) if tok.kind() == TokenKind::KwShared => OwnershipKind::Shared,
-        Some(tok) if tok.kind() == TokenKind::KwRef => OwnershipKind::Ref,
+        Some(tok) if tok.kind() == TokenKind::KwSh => OwnershipKind::Shared,
+        Some(tok) if tok.kind() == TokenKind::KwRef => OwnershipKind::Reference,
         None => OwnershipKind::None,
         _ => panic!("Ownership token can only be None, 'final', 'mut', 'in', 'shared' or 'ref'."),
     }

@@ -4,10 +4,17 @@ use crate::SourceSpan;
 
 extern crate serde;
 
+pub struct CompilerUnit {
+    pub file_name: String,
+    pub top_level_items: Vec<SyntaxNode>,
+    pub impl_func: Option<FuncDef>,
+}
+
 // region Nodes
 #[derive(Debug, Serialize)]
 #[serde(tag = "node_kind")]
 pub enum SyntaxNode {
+    Item(Item),
     Stmt(Stmt),
     Expr(Expr),
     Error(ErrorNode),
@@ -16,12 +23,41 @@ pub enum SyntaxNode {
 impl SyntaxNode {
     pub fn span (&self) -> &Option<SourceSpan> {
         match self {
+            SyntaxNode::Item(item) => item.span(),
             SyntaxNode::Stmt(expr) => expr.span(),
             SyntaxNode::Expr(expr) => expr.span(),
             SyntaxNode::Error(err) => &err.span,
         }
     }
 }
+
+#[derive(Debug, Serialize)]
+#[serde(tag = "item_kind")]
+// region Items
+pub enum Item {
+    FuncDef(FuncDef),
+}
+
+impl Item {
+    pub fn span (&self) -> &Option<SourceSpan> {
+        match self {
+            Item::FuncDef(def) => &def.span,
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct FuncDef {
+    pub is_implicit: bool,
+    pub name: SimpleIdentifier,
+    pub params: ParameterList,
+    pub return_type: Option<TypeNode>,
+    pub body: Body,
+    pub span: Option<SourceSpan>,
+    pub func_token: Option<Token>,
+    pub return_type_arrow_token: Option<Token>,
+}
+// endregion
 
 // region Bodies
 #[derive(Debug, Serialize)]
@@ -345,6 +381,22 @@ pub struct Operator {
 }
 
 #[derive(Debug, Serialize)]
+pub struct ParameterList {
+    pub params: Vec<Parameter>,
+    pub span: Option<SourceSpan>,
+    pub left_paren_token: Option<Token>,
+    pub right_paren_token: Option<Token>,
+    pub comma_tokens: Option<Vec<Token>>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct Parameter {
+    pub declarator: RegularLocalDecl,
+    pub default_val: Option<EqualsValueClause>,
+    pub span: Option<SourceSpan>,
+}
+
+#[derive(Debug, Serialize)]
 pub struct ArgumentList {
     pub arguments: Vec<Argument>,
     pub span: Option<SourceSpan>,
@@ -527,11 +579,11 @@ pub enum OperatorKind {
 pub enum OwnershipKind {
     /// This node doesn't define any ownership kind.
     None,
-    Final,
-    Mut,
-    Shared,
-    Ref,
-    In,
+    Final, // final
+    Mutable, // mut
+    Shared, // sh
+    Reference, // ref
+    In, // in
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -540,3 +592,63 @@ pub enum DestructuringKind {
     ObjectPattern, // let { a, b }
 }
 // endregion
+
+impl CompilerUnit {
+    pub fn from_node_collection(filename: &String, ast: Vec<SyntaxNode>) -> CompilerUnit {
+        let mut top_level_items: Vec<SyntaxNode> = Vec::new();
+        let mut implicit_func_nodes: Vec<SyntaxNode> = Vec::new();
+
+        for node in ast {
+            match node {
+                SyntaxNode::Item(item) => top_level_items.push(SyntaxNode::Item(item)),
+                SyntaxNode::Stmt(stmt) => implicit_func_nodes.push(SyntaxNode::Stmt(stmt)),
+                SyntaxNode::Expr(expr) => panic!("Invalid top level node."),
+                SyntaxNode::Error(err) => top_level_items.push(SyntaxNode::Error(err)),
+            }
+        }
+
+        let implicit_func = if implicit_func_nodes.len() > 0 {
+            let param_list = ParameterList {
+                params: Vec::new(),
+                span: None,
+                left_paren_token: None,
+                right_paren_token: None,
+                comma_tokens: None,
+            };
+
+            let body = BlockBody {
+                nodes: implicit_func_nodes,
+                span: None,
+                opening_token: None,
+                closing_token: None,
+            };
+
+            Some(FuncDef {
+                is_implicit: true,
+                name: SimpleIdentifier {
+                    is_meta_name: true,
+                    name: String::from("!implicit_func"),
+                    is_escaped: false,
+                    raw_token: None,
+                    span: None,
+                },
+                params: param_list,
+                return_type: None,
+                body: Body::Block(body),
+
+                span: None,
+                func_token: None,
+                return_type_arrow_token: None,
+            })
+        }
+        else {
+            None
+        };
+
+        CompilerUnit {
+            file_name: filename.clone(),
+            top_level_items,
+            impl_func: implicit_func,
+        }
+    }
+}

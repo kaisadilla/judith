@@ -98,6 +98,7 @@ pub enum MessageCode {
     EndExpected,
     ParameterExpected,
     ArgumentExpected,
+    ParameterListExpected,
     HidableItemExpected,
     VariableDeclaratorExpected,
     FieldInitializationExpected,
@@ -298,12 +299,32 @@ impl Parser {
         }
     }
 
+    pub fn parameter_expected(tok: Token) -> CompilerMessage {
+        CompilerMessage {
+            kind: MessageKind::Error,
+            origin: MessageOrigin::Parser,
+            code: MessageCode::ParameterExpected,
+            message: format!("Expected parameter, found '{:?}'.", tok.kind()),
+            source: MessageSource::Token(tok),
+        }
+    }
+
     pub fn argument_expected(tok: Token) -> CompilerMessage {
         CompilerMessage {
             kind: MessageKind::Error,
             origin: MessageOrigin::Parser,
             code: MessageCode::ArgumentExpected,
             message: format!("Expected argument, found '{:?}'.", tok.kind()),
+            source: MessageSource::Token(tok),
+        }
+    }
+
+    pub fn parameter_list_expected(tok: Token) -> CompilerMessage {
+        CompilerMessage {
+            kind: MessageKind::Error,
+            origin: MessageOrigin::Parser,
+            code: MessageCode::ParameterListExpected,
+            message: format!("Expected parameter list, found '{:?}'.", tok.kind()),
             source: MessageSource::Token(tok),
         }
     }
