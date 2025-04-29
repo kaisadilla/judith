@@ -1018,6 +1018,8 @@ func start () -> Never
 end
 ```
 
+<quote>_A function that doesn't return can still be marked as faulty, which means that, if it returns, then it'll always return an exception. See [Exceptions](#exceptions).</quote>
+
 ## Generators
 Generators are a special type of function that uses `yield return` statements to return values, one by one, when iterated.
 
