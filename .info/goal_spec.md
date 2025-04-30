@@ -1586,32 +1586,31 @@ let multithread: ISend & ISync -- valid, as a value could implement both interfa
 ## User-defined types
 Developers can define their own types with the `typedef` keyword.
 
-### Alias type
-An alias type is a type that maps to another type. Aliases can be implicit or explicit. Any type can be aliased, including unions, array types, function types, etc.
-
-#### Implicit alias
-Implicit aliases allow the defined type to be used as if it was the original type.
+### Newtype type
+A newtype type is a type that maps to another type. Aliased types are treated as new types, meaning that, if `B` is an alias for `A`, a value created as of type `B` cannot be assigned to a variable of type `A`, and vice versa. Alias types implicitly define an upcast to the type they are derived from - e.g. in the previous example, it is possible to upcast a value of type `B` to type `A` and vice versa.
 
 ```judith
-typedef UniqueId = Int
+typedef new UniqueId = Int
+let id: UniqueId = 32 -- valid, as UniqueId is initialized like Int.
+--let integer: Int = id -- ERROR: cannot assign 'UniqueId' to 'Int'.
+let integer: Int = id:Int -- valid, explicit cast is allowed.
+```
+
+Newtype types contain all the items contained by the original type, and can define new ones for themselves. Items defined in the newtype, though, are not part of the original type.
+
+### Alias type
+Alias types are similar to newtypes, but conceptually do not represent a new type, but rather a different way to name a type that already exists. As such, an value of an alias type can be freely assigned to a variable of the original type, and vice versa. For the same reason, a type and any alias created off it share the same namespace.
+
+```judith
+typedef alias UniqueId = Int
 let id: UniqueId = 32 -- valid, as UniqueId is Int.
 let integer: Int = id -- valid, as UniqueId can be used as an Int.
 ```
 
 The compiler in this example sees `UniqueId` as `Int`.
 
-#### Explicit alias
-Explicit aliases are equivalent to the type they are derived from, but a value whose type is the alias type cannot be used as if it was the original type. Explicit alias implicitly define an explicit upcast to the type they are derived from (as well as any other equivalent).
-
-```judith
-typedef expl UniqueId = Int
-let id: UniqueId = 32 -- valid, as UniqueId is initialized like Int.
---let integer: Int = id -- ERROR: cannot assign 'UniqueId' to 'Int'.
-let integer: Int = id:Int -- valid, explicit cast is allowed.
-```
-
 ### <a name="types-user-option">Option</a>
-An option type is defined as a group of string literals. Literals used in an option are not strings, and so use single quotes rather than double quotes.
+An option type is defined as a group of names, delimited by single quotes (`'`). The names used in an option are **NOT** strings, but instead regular names equivalent to those of enum variants in other languages.
 
 ```judith
 typedef option Country
@@ -1627,10 +1626,10 @@ let mut country: Country = 'Germany'
 country = 'Great Britain' -- invalid, as 'Great Britain' is not part of the option.
 ```
 
-Option types cannot be used as a `String`, but can be upcasted into one:
+Option types cannot be used as a `String`, but their name as a string can be obtained normally with the `str()` method:
 
 ```judith
-let country_name: String = country:String
+let country_name: String = country.str()
 ```
 
 Each option can include additional data as an array or object type:
@@ -1651,33 +1650,36 @@ You can combine variants with different kinds of types:
 ```judith
 typedef option Message
     'quit'
+    'write'(String)
     'move'{ x: Num, y: Num }
-    'write'[String]
     'change_color'[Num, Num, Num]
 end
 ```
 
 This option has four variants with different types:
 * `'quit'` contains no data.
+* `'write'` contains a `String`.
 * `'move'` contains an object type with fields `x` and `y` of type `Num`.
-* `'write'` contains an array with a single `String`.
 * `'change_color'` contains an array of three `Num`.
 
-You can use `match` to pattern match an option type:
+You can use `match` to pattern match an option type. When matching a given variant, you can use `()` to match the object that contains the data associated with that variant. If the type of the associated data supports destructuring, `{}` / `[]` can be used instead to destructure the associated data.
+
+<quote>_See [Destructuring and spreading](#destructuring) for a full explanation of how destructure works. See [Control structures § Match](#match) for additional information of how destructuring in a match case works._</quote>
 
 ```judith
 match message do
     'quit' then -- Basic variant with no additional data.
         Console::log("Connection ended.")
     end
-    'move'(pos) then -- 'Move' object gets assigned to 'pos'.
-        move_obj(pos.x, pos.y)
-    end
-    'write'(txt) then -- 'Write'[0] gets assigned to 'txt'.
+    'write'(txt) then -- 'txt' is a 'String'.
         Console::log(txt)
     end
-    'change_color'(r, g, b) then -- 'change_color'[0] gets assigned to r,
-                                -- [1] to g, [2] to 'b'.
+    'move'(pos) then -- 'pos' is a '{ x: Num, y: Num }'. We could also use
+                     -- 'move'{ x, y } to destructure the associated data.
+        move_obj(pos.x, pos.y)
+    end
+    'change_color'[r, g, b] then -- 'change_color'[0] gets assigned to r,
+                                 -- [1] to g, [2] to 'b'.
         paint_obj(r, g, b, 1)
     end
 end
@@ -1843,7 +1845,7 @@ impl ISummarize for Article
         return .is_read
     end
 
-    impure func mark_as_read (var self)
+    func mark_as_read (var self)
         .is_read = true
     end
 
@@ -1905,7 +1907,8 @@ Just like structs, classes contain fields. However, class fields behave in a dif
 typedef class Person
     name: String (pub get) -- this is readable from the outside
     birth_year: Num? -- this is not accessible from the outside
-    country: (pub get, pub set) -- this is readable and writeable from the outside.
+    country: Country (pub get, pub set) -- this is readable and writeable from
+                                        -- the outside.
 end
 
 let mut person: Person = get_person()
@@ -2008,7 +2011,7 @@ typedef class Announcement
             return .is_read
         end
 
-        impure func mark_as_read (var self)
+        func mark_as_read (var self)
             .is_read = true
         end
     end
@@ -2681,7 +2684,7 @@ In this example, calling `solve_p_np_problem()` will immediately cause the progr
 
 Note that there's no way to recover from a `panic`.
 
-# Destructuring and spreading
+# <a name="destructuring">Destructuring and spreading</a>
 Destructuring is a feature that allows the developer to unpack values from collections and values that contain members.
 
 Destructuring can be done in two ways: by destructuring content, or by destructuring members:
