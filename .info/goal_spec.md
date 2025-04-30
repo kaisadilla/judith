@@ -105,6 +105,8 @@ You can access members of a namespace like this:
     let tau_squared = Math::pow(tau, 2)
 ```
 
+<quote>_Type definitions create their own namespace implicitly. See [Types § Associated items](#associated-items) for a full explanation about these namespaces._</quote>
+
 ## `export` and `hid`.
 By default, top-level items in Judith are visible from anywhere in their project, but not from the outside. To change this, two visibility modifiers exist:
 
@@ -2020,8 +2022,8 @@ typedef class Announcement
 end
 ```
 
-## Associated items
-Top-level items can be associated with a specific type. Defining a top-level item in this way will make it accessible by qualifying it with the Type's name, _as if it was defined inside the type itself_.
+## <a name="associated-items">Associated items</a>
+Type definitions implicitly define their own namespace. This namespace behaves like a normal namespace: it can define its own items, which are then accessed with the `::` operator. These items are called "associated items", since they are items associated to a given type definition by virtue of being defined in that type's namespace.
 
 To define associated items, the name given to these items must be qualified with the type to which the item is associated. The following example associates a static variable called `empty` to `String`.
 
@@ -2078,7 +2080,7 @@ end
 Inside a method, `.` and `::` can be used without any preceding name. If done so, `self` is implied for `.` and the type's name is implied for `::`. The previous method can thus be implemented as such:
 
 ```judith
-met func Vec2::normal (self) -> Vec2
+func Vec2::normal (self) -> Vec2
     const mag = .magnitude() -- ".magnitude" is equivalent to "self.magnitude".
     return self / mag
 end
